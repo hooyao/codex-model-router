@@ -125,7 +125,12 @@ def validate_hook_configuration(plugin_root: Path, errors: list[str]) -> None:
 def validate_policy_files(plugin_root: Path, errors: list[str]) -> None:
     skill_path = plugin_root / "skills" / "model-router" / "SKILL.md"
     policy_path = plugin_root / "skills" / "model-router" / "references" / "routing-policy.md"
-    for path, label in ((skill_path, "model-router Skill"), (policy_path, "routing policy")):
+    naming_path = plugin_root / "hooks" / "subagent_naming.py"
+    for path, label in (
+        (skill_path, "model-router Skill"),
+        (policy_path, "routing policy"),
+        (naming_path, "worker naming helper"),
+    ):
         if not path.is_file():
             errors.append(f"{label} is missing: {path.relative_to(plugin_root)}")
 

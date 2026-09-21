@@ -23,6 +23,16 @@ verify business correctness by opening artifacts or rerunning tests. Missing
 evidence and substantive disagreements go back to workers. Integration workers
 resolve file conflicts, and workers validate the integrated result.
 
+Every dispatch also receives a deterministic user-visible name in the form
+`<purpose>-<model>-<effort>`. The controller normalizes and validates the name
+from the frozen task purpose and resolved routing inputs, passes it through a
+native `name` field when available, and writes the exact same value as both
+`Worker name` and `Task ID` in every worker packet. The worker echoes both
+fields in its result. Invalid, oversized, or duplicate planned names are
+rejected. If native dispatch has no naming field or rejects the value, the
+packet Task ID and result remain the portable fallback; the native worker-card
+title may still be platform-generated.
+
 Router self-improvement, routing-policy review, evaluation design, and benchmark
 selection require an independent reviewer separate from the author/implementer,
 using the highest suitable available model. An implementation request must also
@@ -82,8 +92,9 @@ python -m unittest discover -s tests -v
 The validation command checks package structure and representative lifecycle
 outputs without a network connection or a live Codex session. Regression tests
 check required/forbidden contract language, simple-task and meta-task routing
-instructions, worker responsibilities, and configured context size. These are
-instruction-contract checks, not evidence of live-model compliance or savings.
+instructions, deterministic worker naming, worker responsibilities, and
+configured context size. These are instruction-contract checks, not evidence
+of live-model compliance or savings.
 
 ## MVP Boundaries
 

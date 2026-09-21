@@ -75,6 +75,31 @@ or escalation for missing evidence, failed checks, and incomplete work. Report
 remaining blockers truthfully. Workers must not dispatch subworkers; route any
 additional tasks through the controller.
 
+## Deterministic worker naming
+
+Every dispatch has a canonical user-visible name in the form
+`<purpose>-<model>-<effort>`. Freeze a short English purpose label in the DAG,
+then use that label, the exact resolved native model identifier, and the exact
+resolved effort as the three source components.
+
+For each component, apply Unicode NFKD, discard non-ASCII code points,
+lowercase, replace every maximal run outside `[a-z0-9]` with one hyphen, and
+trim leading and trailing hyphens. Every normalized component must be non-empty;
+purpose, model, and effort are limited to 48, 48, and 24 characters, and the
+whole name is limited to 128 characters. Join the components with single
+hyphens. Before dispatch, recompute the name, require exact equality, require a
+match for `^[a-z0-9]+(?:-[a-z0-9]+)*$`, and check uniqueness across the DAG.
+Retries with unchanged inputs retain the name. Never add generic fallbacks,
+random values, timestamps, retry counters, or suffixes.
+
+Pass the canonical value through a native dispatch `name` field when supported.
+The first packet lines are always `Worker name: <canonical-name>` and
+`Task ID: <canonical-name>`, and the worker echoes both in the final result.
+If the API has no naming field or rejects the canonical value, do not invent an
+unsupported argument. Use the packet Task ID and result echo as the user-visible
+fallback. The native worker card may retain a platform-generated title;
+instruction-layer policy cannot change that UI.
+
 ## Platform boundary
 
 The controller/worker distinction is an agent-instruction policy. The current

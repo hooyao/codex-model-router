@@ -83,7 +83,9 @@ rules apply to follow-ups as well as explicitly named meta-tasks.
 Supply only the context required for the assigned task:
 
 ```text
-Task ID:
+Worker name: <canonical purpose-model-effort name>
+Task ID: the identical canonical purpose-model-effort name.
+Native name: the same canonical name when the discovered spawn schema supports `name`; otherwise `unavailable` with the runtime limitation recorded.
 Objective and worker role (analysis / implementation / review / integration / validation):
 Dependencies:
 Allowed files or evidence and write ownership (or read-only):
@@ -97,6 +99,43 @@ Return format: task ID, outcome, evidence, validation, risks or blockers.
 Evidence must identify inspected sources or changed artifacts. Validation must
 state checks and results, or explicitly say not run and why. The controller
 routes incomplete packets back to workers rather than filling the gaps itself.
+
+## Deterministic worker names
+
+Before every dispatch, record and freeze a short English purpose label in the
+task DAG. Construct the user-visible worker name as
+`<purpose>-<model>-<effort>` from that label, the exact resolved native model
+identifier, and the exact resolved reasoning effort.
+
+Normalize each component in this order:
+
+1. Apply Unicode NFKD normalization.
+2. Discard non-ASCII code points and lowercase the result.
+3. Replace each maximal run outside `[a-z0-9]` with one hyphen.
+4. Remove leading and trailing hyphens.
+
+Reject an empty normalized purpose, model, or effort; all three are invalid
+routing inputs and MUST stop dispatch until corrected. Normalized purpose,
+model, and effort are limited to 48, 48, and 24 characters, and the complete
+name is limited to 128 characters. Join the three normalized components with
+single hyphens. For example, `Implement / Naming`,
+`GPT-5.6 Sol`, and `High` become
+`implement-naming-gpt-5-6-sol-high`.
+
+Validate before dispatch by recomputing from the recorded inputs, requiring
+exact equality, matching `^[a-z0-9]+(?:-[a-z0-9]+)*$`, enforcing the limits,
+and checking uniqueness across the planned DAG. Do not add generic fallbacks,
+random values, timestamps, retry counters, or suffixes. A retry with unchanged
+inputs keeps the name; a model or effort escalation produces a recomputed name.
+
+Use the native dispatch `name` field only when it is exposed and accepts the
+canonical value. Regardless of native support, put identical
+`Worker name: <canonical-name>` and `Task ID: <canonical-name>` lines at the
+start of every packet and require the worker to echo both in the final result.
+If the API lacks a name field or rejects the value, omit the unsupported
+argument and use the packet Task ID and result echo as the user-visible
+fallback. The plugin cannot force the title of a native worker card in that
+case.
 
 ## Enforcement limit
 
