@@ -101,3 +101,6 @@ saving. See the evaluation README for the live-run record format and the
 The completed MVP change is documented under
 [`openspec/changes/add-router-mvp`](openspec/changes/add-router-mvp). Run
 `openspec validate add-router-mvp --strict` to verify the planning artifacts.
+The deterministic worker-name requirement is documented under
+[`openspec/changes/add-subagent-naming`](openspec/changes/add-subagent-naming).
+Run `openspec validate --all --strict` to validate both changes.
