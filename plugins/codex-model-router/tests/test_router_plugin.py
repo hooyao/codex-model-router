@@ -46,12 +46,12 @@ class RouterPluginTests(unittest.TestCase):
             isolated_event["cwd"] = str(self.policy_workspace)
         return hook.build_hook_output(isolated_event)
 
-    def test_default_and_repo_routing_configs_validate_independently(self) -> None:
+    def test_default_and_workspace_routing_configs_validate_independently(self) -> None:
         default_path = PLUGIN_ROOT / "defaults" / "default-routing.json"
-        repo_path = PLUGIN_ROOT.parents[1] / ".codex-model-router" / "routing.json"
+        workspace_path = self.policy_workspace / ".codex-model-router" / "routing.json"
         default = config_module.load_config(default_path)
-        repo = config_module.load_config(repo_path)
-        for label, config in (("default", default), ("repo", repo)):
+        workspace = config_module.load_config(workspace_path)
+        for label, config in (("default", default), ("workspace", workspace)):
             with self.subTest(config=label):
                 self.assertEqual(1, config["schema_version"])
                 self.assertLessEqual(
