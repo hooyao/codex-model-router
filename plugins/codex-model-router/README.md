@@ -221,3 +221,6 @@ Release/CI validation should compare the change target explicitly, for example
 `python scripts/validate_plugin.py --baseline origin/main`. Generated cache
 files are ignored. An unpacked source archive with no Git baseline cannot be
 compared, so run the policy from a Git checkout when enforcement is required.
+The repository pull-request workflow runs the validator against the target
+merge-base and runs the plugin and evaluation test suites. It is read-only and
+does not require secrets, including for fork pull requests.

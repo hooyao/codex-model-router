@@ -442,7 +442,10 @@ class RouterPluginTests(unittest.TestCase):
             self.assertIn(str(config_path), context)
 
     def test_complete_package_validates_offline(self) -> None:
-        self.assertEqual([], validator.validate_package(PLUGIN_ROOT))
+        # The checked-out plugin is an unreleased PR candidate. Compare it with
+        # its pre-release parent rather than requiring a new version for each
+        # uncommitted test edit in the same candidate release.
+        self.assertEqual([], validator.validate_package(PLUGIN_ROOT, baseline="HEAD~1"))
 
     @unittest.skipUnless(shutil.which("git"), "Git is required for version-policy regression tests")
     def test_version_policy_requires_strict_semver_increase_for_tracked_plugin_changes(self) -> None:
@@ -517,11 +520,37 @@ class RouterPluginTests(unittest.TestCase):
         self.assertIsNotNone(validator.parse_semver("0.2.0-rc.1+build.7"))
         self.assertIsNone(validator.parse_semver("01.2.3"))
         self.assertIsNone(validator.parse_semver("0.2.0-01"))
+        self.assertIsNone(validator.parse_semver("1\N{ARABIC-INDIC DIGIT TWO}.2.3"))
+        self.assertIsNone(validator.parse_semver("1.2.\N{ARABIC-INDIC DIGIT THREE}"))
         self.assertGreater(validator.compare_semver("0.1.1", "0.1.0"), 0)
         self.assertGreater(validator.compare_semver("0.2.0", "0.1.99"), 0)
         self.assertGreater(validator.compare_semver("1.0.0", "0.99.99"), 0)
         self.assertLess(validator.compare_semver("0.2.0-rc.1", "0.2.0"), 0)
         self.assertEqual(0, validator.compare_semver("0.1.1+first", "0.1.1+second"))
+
+    def test_bump_command_rejects_unicode_digits_in_manifest_version(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            plugin = Path(temporary_directory) / "codex-model-router"
+            manifest_path = plugin / ".codex-plugin" / "plugin.json"
+            manifest_path.parent.mkdir(parents=True)
+            manifest_path.write_text(
+                json.dumps({"name": "codex-model-router", "version": "1\N{ARABIC-INDIC DIGIT TWO}.2.3"}),
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PLUGIN_ROOT / "scripts" / "bump_version.py"),
+                    "patch",
+                    "--plugin-root",
+                    str(plugin),
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("not valid SemVer", result.stderr)
 
     @unittest.skipUnless(shutil.which("git"), "Git is required for version-policy regression tests")
     def test_version_policy_rejects_non_increasing_and_build_metadata_only(self) -> None:

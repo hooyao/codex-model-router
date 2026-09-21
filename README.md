@@ -128,6 +128,9 @@ script writes only the manifest version after validating the manifest name and
 current SemVer. Pre-release identifiers are allowed by SemVer and compare below
 the corresponding stable release; build metadata is valid syntax but never
 changes release precedence and cannot satisfy the bump requirement.
+Pull requests run this validator against the target merge-base, plus the plugin
+and evaluation test suites. The workflow is read-only and uses no repository
+secrets, so it is safe for fork pull requests.
 The validation policy examines changed tracked files and relevant untracked
 files. It ignores only cache artifacts (`__pycache__`, `.pytest_cache`, `.pyc`,
 and `.pyo`). Relevant ignored files are reported as an error so an ignore rule

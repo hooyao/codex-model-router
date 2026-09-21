@@ -40,7 +40,7 @@ REQUIRED_INTERFACE_FIELDS = {
     "category",
 }
 SEMVER_PATTERN = re.compile(
-    r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
+    r"^(?P<major>0|[1-9][0-9]*)\.(?P<minor>0|[1-9][0-9]*)\.(?P<patch>0|[1-9][0-9]*)"
     r"(?:-(?P<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?"
     r"(?:\+(?P<build>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$"
 )
@@ -64,12 +64,19 @@ def parse_semver(version: object) -> tuple[tuple[int, int, int], tuple[str, ...]
         return None
     prerelease = match.group("prerelease")
     identifiers = tuple(prerelease.split(".")) if prerelease else None
-    if identifiers and any(identifier.isdigit() and len(identifier) > 1 and identifier.startswith("0") for identifier in identifiers):
+    if identifiers and any(
+        _is_ascii_numeric_identifier(identifier) and len(identifier) > 1 and identifier.startswith("0")
+        for identifier in identifiers
+    ):
         return None
     return (
         (int(match.group("major")), int(match.group("minor")), int(match.group("patch"))),
         identifiers,
     )
+
+
+def _is_ascii_numeric_identifier(identifier: str) -> bool:
+    return bool(identifier) and all("0" <= character <= "9" for character in identifier)
 
 
 def compare_semver(left: object, right: object) -> int:
@@ -89,8 +96,8 @@ def compare_semver(left: object, right: object) -> int:
     for left_identifier, right_identifier in zip(left_pre, right_pre):
         if left_identifier == right_identifier:
             continue
-        left_numeric = left_identifier.isdigit()
-        right_numeric = right_identifier.isdigit()
+        left_numeric = _is_ascii_numeric_identifier(left_identifier)
+        right_numeric = _is_ascii_numeric_identifier(right_identifier)
         if left_numeric and right_numeric:
             return (int(left_identifier) > int(right_identifier)) - (int(left_identifier) < int(right_identifier))
         if left_numeric != right_numeric:
