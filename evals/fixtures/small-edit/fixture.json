@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "id": "small-edit",
+  "grader_version": "exact-tree-v1",
+  "prompt": "In README.md, replace the single typo 'plguin' with 'plugin'. Preserve every other byte and file. Run a check that confirms the correction and report the changed file.",
+  "initial": {
+    "path": "initial",
+    "tree": {
+      "files": {
+        "README.md": "be1f60a9b13b5eb7f5560683bbe6cb87e859f9bde057c0295f9dfa9743f57f8c",
+        "settings.json": "957a681d695c034f7f870f9f4ded68af54d29cb1dbef84e188c51fce7b0b5175"
+      },
+      "directories": []
+    }
+  },
+  "reference": {
+    "path": "reference",
+    "tree": {
+      "files": {
+        "README.md": "ee64be17ae0a78333fa97f9a3ef92ee65098490f11a2c0db978aaa621de24157",
+        "settings.json": "957a681d695c034f7f870f9f4ded68af54d29cb1dbef84e188c51fce7b0b5175"
+      },
+      "directories": []
+    }
+  }
+}

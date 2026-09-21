@@ -1,7 +1,9 @@
 {
-  "schema_version": 1,
-  "experiment_id": "codex-model-router-v1-draft",
+  "schema_version": 2,
+  "experiment_id": "codex-model-router-v2-draft",
+  "data_origin": "synthetic",
   "cases_file": "cases.json",
+  "cases_sha256": "8cfb0ce94c538838e8234408ce5c798dbb02aeca8c71d3442ae41a8483dfe83d",
   "variants": ["baseline", "router"],
   "repetitions_per_case": 20,
   "status": "draft",
@@ -12,11 +14,9 @@
     "maximum_latency_ratio": 1.10
   },
   "controls": {
-    "controller_model": null,
-    "controller_reasoning_effort": null,
-    "repository_commit": null,
-    "harness_version": null,
-    "approval_policy": null,
-    "service_tier": null
+    "repository_revision": "09699306adaa9eb9cd72ae243a9ddbdfdd25809bb98c9c512d0d52ef4faf8e89",
+    "harness_version": "offline-fixture-v2",
+    "environment_id": "synthetic-only",
+    "policy": "pure-orchestrator-v1"
   }
 }
