@@ -1,6 +1,6 @@
 {
   "name": "codex-model-router",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Route bounded Codex subagent work by task complexity and risk.",
   "author": {
     "name": "Codex Model Router contributors"
@@ -12,7 +12,9 @@
     "longDescription": "Injects routing and worker-contract context so a primary Codex agent can delegate bounded work with an appropriate model and reasoning effort.",
     "developerName": "Codex Model Router contributors",
     "category": "Productivity",
-    "capabilities": ["Read"],
+    "capabilities": [
+      "Read"
+    ],
     "defaultPrompt": [
       "Break this request into bounded tasks and route suitable work to subagents."
     ]

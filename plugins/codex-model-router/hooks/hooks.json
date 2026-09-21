@@ -8,9 +8,9 @@
           {
             "type": "command",
             "command": "python3 \"$PLUGIN_ROOT/hooks/router_hook.py\"",
-            "commandWindows": "py -3 \"%PLUGIN_ROOT%\\hooks\\router_hook.py\"",
+            "commandWindows": "python \"%PLUGIN_ROOT%\\hooks\\router_hook.py\"",
             "timeout": 10,
-            "additionalContextLimit": 5000
+            "additionalContextLimit": 24576
           }
         ]
       }
@@ -21,9 +21,9 @@
           {
             "type": "command",
             "command": "python3 \"$PLUGIN_ROOT/hooks/router_hook.py\"",
-            "commandWindows": "py -3 \"%PLUGIN_ROOT%\\hooks\\router_hook.py\"",
+            "commandWindows": "python \"%PLUGIN_ROOT%\\hooks\\router_hook.py\"",
             "timeout": 10,
-            "additionalContextLimit": 5000
+            "additionalContextLimit": 24576
           }
         ]
       }
@@ -34,9 +34,9 @@
           {
             "type": "command",
             "command": "python3 \"$PLUGIN_ROOT/hooks/router_hook.py\"",
-            "commandWindows": "py -3 \"%PLUGIN_ROOT%\\hooks\\router_hook.py\"",
+            "commandWindows": "python \"%PLUGIN_ROOT%\\hooks\\router_hook.py\"",
             "timeout": 10,
-            "additionalContextLimit": 5000
+            "additionalContextLimit": 24576
           }
         ]
       }
