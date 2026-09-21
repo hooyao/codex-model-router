@@ -1,0 +1,2 @@
+# Fixture and campaign hashes are byte-sensitive across platforms.
+evals/** text eol=lf

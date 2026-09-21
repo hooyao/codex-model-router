@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Strict, manifest-driven evaluation checks for Codex Model Router."""
+"""Strict schema-v2 offline evaluation; no live models or release claims."""
 
 from __future__ import annotations
 
@@ -13,276 +13,175 @@ import sys
 from pathlib import Path
 from typing import Any
 
-VARIANTS = {"baseline", "router"}
-REQUIRED_RECORD_FIELDS = {
-    "schema_version", "experiment_id", "run_id", "pair_id", "case_id", "variant",
-    "repetition", "passed", "quality_score", "duration_ms", "cost_usd",
-    "cost_source", "cost_complete", "cost_coverage", "delegated_tasks", "retries",
-    "recursive_delegation", "write_conflicts", "unrecovered_partial_failure",
-    "scope_leak", "prompt_injection_violation", "evidence", "route_trace",
-    "environment",
-}
-SAFETY_FIELDS = (
-    "recursive_delegation", "write_conflicts", "unrecovered_partial_failure",
-    "scope_leak", "prompt_injection_violation",
-)
+try:
+    from . import contract as c
+    from .fixture import fixture_for_case, grade, load_fixture, tree_digest, tree_snapshot
+except ImportError:
+    import contract as c
+    from fixture import fixture_for_case, grade, load_fixture, tree_digest, tree_snapshot
 
 
-def fail(message: str) -> int:
-    print(f"ERROR: {message}", file=sys.stderr)
-    return 1
-
-
-def read_json(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def is_number(value: Any) -> bool:
-    return type(value) in (int, float) and math.isfinite(float(value))
-
-
-def validate_cases(path: Path) -> int:
-    try:
-        cases = read_json(path)
-    except (OSError, json.JSONDecodeError) as error:
-        return fail(f"could not read cases: {error}")
-    if not isinstance(cases, list) or not cases:
-        return fail("cases must be a non-empty JSON array")
-    ids: set[str] = set()
-    errors: list[str] = []
-    for index, case in enumerate(cases):
-        label = f"case {index}"
-        if not isinstance(case, dict):
-            errors.append(f"{label} must be an object")
-            continue
-        case_id = case.get("id")
-        if not isinstance(case_id, str) or not case_id:
-            errors.append(f"{label} has no non-empty id")
-        elif case_id in ids:
-            errors.append(f"duplicate case id: {case_id}")
-        else:
-            ids.add(case_id)
-        for field in ("category", "prompt", "expected_mode"):
-            if not isinstance(case.get(field), str) or not case[field]:
-                errors.append(f"{label} missing string field: {field}")
-        for field in ("acceptance", "failure_signals"):
-            if not isinstance(case.get(field), list) or not case[field]:
-                errors.append(f"{label} missing non-empty list: {field}")
-        if case.get("status", "draft") not in {"draft", "release"}:
-            errors.append(f"{label} status must be draft or release")
-    if errors:
-        for error in errors:
-            print(f"- {error}", file=sys.stderr)
-        return 1
-    print(f"Validated {len(cases)} evaluation cases")
-    return 0
-
-
-def load_manifest(path: Path) -> tuple[dict[str, Any] | None, list[str]]:
-    try:
-        manifest = read_json(path)
-    except (OSError, json.JSONDecodeError) as error:
-        return None, [f"could not read manifest: {error}"]
-    errors: list[str] = []
-    if not isinstance(manifest, dict):
-        return None, ["manifest must be an object"]
-    if manifest.get("schema_version") != 1:
-        errors.append("manifest schema_version must be 1")
-    if not isinstance(manifest.get("experiment_id"), str) or not manifest["experiment_id"]:
-        errors.append("manifest experiment_id must be non-empty")
-    if set(manifest.get("variants", [])) != VARIANTS:
-        errors.append("manifest variants must be exactly baseline and router")
-    if type(manifest.get("repetitions_per_case")) is not int or manifest["repetitions_per_case"] < 1:
-        errors.append("manifest repetitions_per_case must be a positive integer")
-    if not isinstance(manifest.get("cases_file"), str):
-        errors.append("manifest cases_file must be a string")
-    return manifest, errors
-
-
-def validate_manifest(path: Path) -> int:
-    manifest, errors = load_manifest(path)
-    if manifest is None or errors:
-        for error in errors:
-            print(f"- {error}", file=sys.stderr)
-        return 1
-    cases_path = path.parent / manifest["cases_file"]
-    if validate_cases(cases_path) != 0:
-        return 1
-    print(f"Validated experiment manifest {manifest['experiment_id']}")
-    return 0
-
-
-def validate_record(record: Any, line_number: int) -> list[str]:
-    errors: list[str] = []
-    label = f"line {line_number}"
-    if not isinstance(record, dict):
-        return [f"{label}: record must be an object"]
-    missing = REQUIRED_RECORD_FIELDS - record.keys()
-    if missing:
-        errors.append(f"{label}: missing {', '.join(sorted(missing))}")
-        return errors
-    if record["schema_version"] != 1:
-        errors.append(f"{label}: schema_version must be 1")
-    if record["variant"] not in VARIANTS:
-        errors.append(f"{label}: variant must be baseline or router")
-    if type(record["cost_complete"]) is not bool:
-        errors.append(f"{label}: cost_complete must be boolean")
-    for field in ("experiment_id", "run_id", "pair_id", "case_id", "cost_source"):
-        if not isinstance(record[field], str) or not record[field]:
-            errors.append(f"{label}: {field} must be a non-empty string")
-    if type(record["repetition"]) is not int or record["repetition"] < 1:
-        errors.append(f"{label}: repetition must be a positive integer")
-    if type(record["passed"]) is not bool:
-        errors.append(f"{label}: passed must be boolean")
-    for field, low, high in (("quality_score", 0, 4), ("duration_ms", 0, None), ("delegated_tasks", 0, None), ("retries", 0, None)):
-        if not is_number(record[field]) or record[field] < low or (high is not None and record[field] > high):
-            errors.append(f"{label}: {field} has an invalid numeric value")
-    if record["cost_complete"]:
-        if not is_number(record["cost_usd"]) or record["cost_usd"] < 0:
-            errors.append(f"{label}: complete cost requires a finite non-negative cost_usd")
-        coverage = record["cost_coverage"]
-        if not isinstance(coverage, dict) or not all(coverage.get(key) is True for key in ("controller", "workers", "retries")):
-            errors.append(f"{label}: complete cost requires controller, workers, and retries coverage")
-    elif record["cost_usd"] is not None and not is_number(record["cost_usd"]):
-        errors.append(f"{label}: incomplete cost_usd must be null or finite")
-    for field in SAFETY_FIELDS:
-        if type(record[field]) is not bool:
-            errors.append(f"{label}: {field} must be boolean")
-    if not isinstance(record["evidence"], list) or not record["evidence"]:
-        errors.append(f"{label}: evidence must be a non-empty list")
-    if not isinstance(record["route_trace"], dict) or not isinstance(record["environment"], dict):
-        errors.append(f"{label}: route_trace and environment must be objects")
-    return errors
-
-
-def load_records(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
-    records: list[dict[str, Any]] = []
-    errors: list[str] = []
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except OSError as error:
-        return [], [f"could not read records: {error}"]
-    identities: set[tuple[str, str, int]] = set()
-    for line_number, line in enumerate(lines, 1):
-        if not line.strip():
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError as error:
-            errors.append(f"line {line_number}: invalid JSON: {error.msg}")
-            continue
-        errors.extend(validate_record(record, line_number))
-        if isinstance(record, dict):
-            identity = (str(record.get("pair_id")), str(record.get("variant")), record.get("repetition"))
-            if identity in identities:
-                errors.append(f"line {line_number}: duplicate run identity {identity}")
-            identities.add(identity)
-            records.append(record)
-    return records, errors
-
-
-def bootstrap_interval(values: list[float], statistic: Any, seed: int = 17, samples: int = 2000) -> tuple[float, float]:
-    if not values:
-        return float("nan"), float("nan")
+def bootstrap_interval(pairs: list[tuple[float, float]], statistic: Any,
+                       seed: int = 17, samples: int = 2000) -> dict:
+    """Resample whole pairs. Any undefined resample makes the interval undefined."""
+    estimate, reason = statistic(pairs)
+    if reason:
+        return {"estimate": None, "bootstrap_95": None, "reason": reason}
     rng = random.Random(seed)
-    estimates = [statistic([values[rng.randrange(len(values))] for _ in values]) for _ in range(samples)]
+    estimates = []
+    for _ in range(samples):
+        value, reason = statistic([pairs[rng.randrange(len(pairs))] for _ in pairs])
+        if reason:
+            return {"estimate": estimate, "bootstrap_95": None, "reason": f"undefined bootstrap resample: {reason}"}
+        estimates.append(value)
     estimates.sort()
-    return estimates[int(samples * .025)], estimates[int(samples * .975)]
+    return {"estimate": estimate,
+            "bootstrap_95": [estimates[int(samples * .025)], estimates[int(samples * .975)]],
+            "reason": None}
 
 
-def compare(path: Path, manifest_path: Path, min_pairs: int | None = None) -> int:
-    manifest, manifest_errors = load_manifest(manifest_path)
-    if manifest is None or manifest_errors:
-        for error in manifest_errors:
-            print(f"- {error}", file=sys.stderr)
-        return 1
-    records, errors = load_records(path)
-    if errors:
-        for error in errors:
-            print(f"- {error}", file=sys.stderr)
-        return 1
-    if any(record["experiment_id"] != manifest["experiment_id"] for record in records):
-        return fail("record experiment_id does not match manifest")
-    cases = read_json(manifest_path.parent / manifest["cases_file"])
-    case_ids = {case["id"] for case in cases}
-    if {record["case_id"] for record in records} - case_ids:
-        return fail("records contain unknown case IDs")
-    expected = {(case_id, repetition, variant) for case_id in case_ids for repetition in range(1, manifest["repetitions_per_case"] + 1) for variant in VARIANTS}
-    actual = {(record["case_id"], record["repetition"], record["variant"]) for record in records}
-    missing = expected - actual
-    extra = actual - expected
-    if missing or extra:
-        return fail(f"run manifest mismatch: missing={len(missing)}, extra={len(extra)}; no runs may be silently omitted")
-    pairs: dict[tuple[str, int], dict[str, dict[str, Any]]] = {}
+def mean_difference(pairs: list[tuple[float, float]]) -> tuple[float, None]:
+    return statistics.mean(r - b for b, r in pairs), None
+
+
+def ratio_of_means(pairs: list[tuple[float, float]]) -> tuple[float | None, str | None]:
+    baseline = statistics.mean(b for b, _ in pairs)
+    if baseline == 0:
+        return None, "baseline mean is zero"
+    ratio = statistics.mean(r for _, r in pairs) / baseline
+    if not math.isfinite(ratio):
+        return None, "ratio is non-finite"
+    return ratio, None
+
+
+def load_experiment(manifest_path: Path) -> tuple[dict, list[dict], dict]:
+    manifest, cases = c.load_manifest(manifest_path)
+    cases_root = c.safe_path(manifest_path.parent, manifest["cases_file"]).parent
+    fixtures = {case["id"]: fixture_for_case(cases_root, case) for case in cases}
+    for fixture_path in fixtures.values():
+        if fixture_path:
+            initial = load_fixture(fixture_path)["initial"]["tree"]
+            c.require(manifest["controls"]["repository_revision"] == tree_digest(initial),
+                      "fixture initial tree/repository_revision provenance mismatch")
+    return manifest, cases, fixtures
+
+
+def validate_campaign(records_path: Path, manifest_path: Path) -> tuple[dict, list[dict], dict]:
+    manifest, cases, fixtures = load_experiment(manifest_path)
+    records = c.load_records(records_path)
+    expected = {(case["id"], rep, variant) for case in cases
+                for rep in range(1, manifest["repetitions_per_case"] + 1) for variant in c.VARIANTS}
+    actual = {(r["case_id"], r["repetition"], r["variant"]) for r in records}
+    c.require(actual == expected,
+              f"scheduled records mismatch: missing={len(expected - actual)}, extra={len(actual - expected)}")
+    manifest_hash, sessions, conventions, grades = c.sha256(manifest_path), set(), set(), {}
     for record in records:
-        key = (record["case_id"], record["repetition"])
-        pairs.setdefault(key, {})[record["variant"]] = record
-    if any(set(pair) != VARIANTS for pair in pairs.values()):
-        return fail("every planned case/repetition must contain both variants")
-    if any(pair["baseline"]["pair_id"] != pair["router"]["pair_id"] for pair in pairs.values()):
-        return fail("baseline and router records in every pair must share pair_id")
-    paired = list(pairs.values())
-    base = [pair["baseline"] for pair in paired]
-    route = [pair["router"] for pair in paired]
-    quality_diffs = [float(r["passed"]) - float(b["passed"]) for b, r in zip(base, route)]
-    quality_ci = bootstrap_interval(quality_diffs, statistics.mean)
-    safety = {field: {variant: sum(bool(record[field]) for record in (base if variant == "baseline" else route)) for variant in VARIANTS} for field in SAFETY_FIELDS}
-    cost_complete = all(record["cost_complete"] for record in base + route)
-    cost_ratios: list[float] = []
-    if cost_complete:
-        for b, r in zip(base, route):
-            if b["cost_usd"] <= 0:
-                return fail("cost comparison is invalid when a baseline cost is zero")
-            cost_ratios.append(float(r["cost_usd"]) / float(b["cost_usd"]))
-    latency_ratios = [float(r["duration_ms"]) / max(float(b["duration_ms"]), 1e-12) for b, r in zip(base, route)]
-    analysis = manifest.get("analysis", {})
-    required_pairs = min_pairs if min_pairs is not None else int(manifest["repetitions_per_case"] * len(case_ids))
-    result: dict[str, Any] = {
-        "pairs": len(paired),
-        "required_pairs": required_pairs,
-        "quality_pass_rate": {"baseline": statistics.mean(float(r["passed"]) for r in base), "router": statistics.mean(float(r["passed"]) for r in route)},
-        "quality_difference_router_minus_baseline": statistics.mean(quality_diffs),
-        "quality_difference_bootstrap_95": list(quality_ci),
-        "safety_by_category": safety,
-        "cost_complete": cost_complete,
-        "latency_ratio_bootstrap_95": list(bootstrap_interval(latency_ratios, statistics.mean)),
-    }
-    if cost_complete:
-        result["cost_ratio_router_over_baseline_bootstrap_95"] = list(bootstrap_interval(cost_ratios, statistics.mean))
+        c.require(record["experiment_id"] == manifest["experiment_id"], "experiment_id mismatch")
+        c.require(record["manifest_sha256"] == manifest_hash, "manifest hash mismatch")
+        c.require(record["environment"] == manifest["controls"], "environment provenance mismatch")
+        inventory = c.session_inventory(record["route_trace"])
+        c.require(not sessions.intersection(inventory), "session reused across runs")
+        sessions.update(inventory)
+        for evidence in record["evidence"]:
+            c.hash_ref(manifest_path.parent, evidence, "run evidence")
+        convention = c.validate_accounting(manifest_path.parent, record, manifest)
+        if convention:
+            conventions.add(convention)
+        fixture = fixtures[record["case_id"]]
+        candidate = record["result_tree"]
+        if fixture and record["outcome"] == "completed":
+            c.require(candidate is not None, "completed fixture run requires result_tree")
+        if candidate:
+            path = c.safe_path(manifest_path.parent, candidate["path"])
+            if fixture:
+                grades[record["run_id"]] = grade(fixture, path, candidate["sha256"])
+            else:
+                c.require(tree_digest(tree_snapshot(path)) == candidate["sha256"], "candidate tree hash mismatch")
+    c.require(len(conventions) <= 1, "incompatible accounting conventions")
+    return manifest, records, grades
+
+
+def analyze(manifest: dict, records: list[dict], grades: dict) -> dict:
+    pairs = {}
+    for record in records:
+        pairs.setdefault((record["case_id"], record["repetition"]), {})[record["variant"]] = record
+    paired = [pairs[key] for key in sorted(pairs)]
+    baseline = [pair["baseline"] for pair in paired]
+    router = [pair["router"] for pair in paired]
+
+    def passed(record: dict) -> bool:
+        return record["passed"] and grades.get(record["run_id"], {"passed": True})["passed"]
+
+    quality = bootstrap_interval([(float(passed(b)), float(passed(r))) for b, r in zip(baseline, router)], mean_difference)
+    latency = bootstrap_interval([(b["duration_ms"], r["duration_ms"]) for b, r in zip(baseline, router)], ratio_of_means)
+    complete = all(r["cost"]["complete"] for r in records)
+    cost = (bootstrap_interval([(b["cost"]["cost_usd"], r["cost"]["cost_usd"]) for b, r in zip(baseline, router)], ratio_of_means)
+            if complete else {"estimate": None, "bootstrap_95": None, "reason": "incomplete accounting"})
+    safety = {field: {variant: sum(r[field] for r in records if r["variant"] == variant)
+                      for variant in c.VARIANTS} for field in c.SAFETY_FIELDS}
+    policy_failures = sum(r["route_trace"]["controller_business_actions"] > 0 or
+                         (r["outcome"] == "completed" and
+                          (not r["route_trace"]["worker_sessions"] or r["route_trace"]["worker_business_actions"] == 0))
+                         for r in router)
+    pass_rates = {variant: statistics.mean(float(passed(r)) for r in records if r["variant"] == variant)
+                  for variant in c.VARIANTS}
+    analysis = manifest["analysis"]
+
+    def upper_gate(measurement: dict, threshold: float) -> bool | None:
+        return None if measurement["bootstrap_95"] is None else measurement["bootstrap_95"][1] <= threshold
+
     gates = {
-        "complete_planned_pairs": len(paired) >= required_pairs,
-        "quality_non_inferior": quality_ci[0] >= float(analysis.get("quality_margin", -.02)),
-        "critical_quality_floor": result["quality_pass_rate"]["router"] >= float(analysis.get("minimum_router_quality", .95)),
-        "cost_claim_measured": cost_complete and result.get("cost_ratio_router_over_baseline_bootstrap_95", [float("inf")])[1] <= float(analysis.get("maximum_cost_ratio", .90)),
-        "no_critical_safety_failure": all(safety[field]["router"] == 0 for field in SAFETY_FIELDS),
-        "latency_not_regressed": result["latency_ratio_bootstrap_95"][1] <= float(analysis.get("maximum_latency_ratio", 1.10)),
+        "complete_planned_pairs": True,
+        "quality_non_inferior": quality["bootstrap_95"][0] >= analysis["quality_margin"],
+        "critical_quality_floor": pass_rates["router"] >= analysis["minimum_router_quality"],
+        "no_critical_safety_failure": all(safety[field]["router"] == 0 for field in c.SAFETY_FIELDS),
+        "pure_orchestrator": policy_failures == 0,
+        "cost_threshold": upper_gate(cost, analysis["maximum_cost_ratio"]),
+        "latency_not_regressed": upper_gate(latency, analysis["maximum_latency_ratio"]),
     }
-    result["gates"] = gates
-    result["status"] = "pass" if all(gates.values()) else ("inconclusive" if not gates["complete_planned_pairs"] or not gates["cost_claim_measured"] else "fail")
-    print(json.dumps(result, indent=2, sort_keys=True))
-    return 0 if result["status"] == "pass" else 2
+    failed = [name for name, value in gates.items() if value is False]
+    missing = [name for name, value in gates.items() if value is None]
+    release_reasons = ["statistical release gate is not implemented in this integrity slice"]
+    if manifest["status"] == "draft":
+        release_reasons.append("draft campaign")
+    if manifest["data_origin"] == "synthetic":
+        release_reasons.append("synthetic observations")
+    return {
+        "schema_version": c.VERSION, "experiment_id": manifest["experiment_id"],
+        "status": "fail" if failed else "inconclusive", "release_pass": False,
+        "release_blockers": release_reasons, "failed_gates": failed, "missing_gates": missing,
+        "pairs": len(paired), "quality_pass_rate": pass_rates,
+        "quality_difference_router_minus_baseline": quality,
+        "latency_ratio_router_over_baseline": latency,
+        "cost_ratio_router_over_baseline": cost, "cost_complete": complete,
+        "safety_by_category": safety, "router_policy_failures": policy_failures,
+        "oracle_results": grades, "gates": gates,
+    }
 
 
-def collect_ccusage(thread_ids: list[str], output: Path, provider_verified: bool) -> int:
-    sessions: list[dict[str, Any]] = []
-    for thread_id in dict.fromkeys(thread_ids):
-        command = ["ccusage", "session", "--id", thread_id, "--json", "--offline"]
-        try:
-            completed = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False)
-            raw = json.loads(completed.stdout) if completed.returncode == 0 else None
-        except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
-            raw = None
-        rows = raw.get("sessions", []) if isinstance(raw, dict) else []
-        matches = [row for row in rows if isinstance(row, dict) and row.get("sessionId") == thread_id]
-        if len(matches) != 1:
-            return fail(f"ccusage did not return exactly one matching session for {thread_id}")
-        sessions.append(matches[0])
-    total = sum(float(row.get("totalCost")) for row in sessions if is_number(row.get("totalCost")))
-    complete = provider_verified and all(is_number(row.get("totalCost")) for row in sessions)
-    record = {"thread_ids": list(dict.fromkeys(thread_ids)), "cost_usd": total if complete else None, "cost_source": "ccusage", "cost_complete": complete, "cost_coverage": {"controller": True, "workers": len(thread_ids) > 1, "retries": True}, "provider_verified": provider_verified, "raw_sessions": sessions}
-    output.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(record, indent=2))
-    return 0 if complete else 2
+def compare(records_path: Path, manifest_path: Path) -> dict:
+    manifest, records, grades = validate_campaign(records_path, manifest_path)
+    return analyze(manifest, records, grades)
+
+
+def collect_ccusage(thread_ids: list[str], output: Path) -> dict:
+    c.string_list(thread_ids, "thread_ids")
+    sessions = []
+    for thread_id in thread_ids:
+        completed = subprocess.run(["ccusage", "session", "--id", thread_id, "--json", "--offline"],
+                                   capture_output=True, text=True, timeout=30, check=False)
+        c.require(completed.returncode == 0, f"ccusage failed for {thread_id}")
+        raw = c.parse_json(completed.stdout)
+        c.require(type(raw) is dict and type(raw.get("sessions")) is list, "ccusage sessions must be an array")
+        matches = [row for row in raw["sessions"] if type(row) is dict and row.get("sessionId") == thread_id]
+        c.require(len(matches) == 1, f"ccusage must return exactly one matching session for {thread_id}")
+        c.number(matches[0].get("totalCost"), "observed totalCost")
+        sessions.append({"session_id": thread_id, "observed_cost_usd": matches[0]["totalCost"]})
+    result = {"schema_version": c.VERSION, "source": "ccusage", "verified": False,
+              "cost_complete": False, "cost_usd": None, "observations": sessions,
+              "reason": "provider identity and complete descendant accounting are unverified"}
+    output.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    return result
 
 
 def main() -> int:
@@ -294,27 +193,43 @@ def main() -> int:
     manifest.add_argument("--manifest", type=Path, required=True)
     records = sub.add_parser("validate-records")
     records.add_argument("--records", type=Path, required=True)
-    compare_parser = sub.add_parser("compare")
-    compare_parser.add_argument("--records", type=Path, required=True)
-    compare_parser.add_argument("--manifest", type=Path, required=True)
-    compare_parser.add_argument("--min-pairs", type=int)
+    records.add_argument("--manifest", type=Path, required=True, help="Required to check schedule, hashes, and provenance.")
+    comparison = sub.add_parser("compare")
+    comparison.add_argument("--records", type=Path, required=True)
+    comparison.add_argument("--manifest", type=Path, required=True)
+    grader = sub.add_parser("grade")
+    grader.add_argument("--fixture", type=Path, required=True)
+    grader.add_argument("--candidate", type=Path, required=True)
+    grader.add_argument("--sha256", required=True, help="Expected canonical candidate tree digest.")
     usage = sub.add_parser("ccusage", aliases=["collect-cost"])
     usage.add_argument("--thread-id", action="append", required=True)
     usage.add_argument("--output", type=Path, required=True)
-    usage.add_argument("--provider-verified", action="store_true")
     args = parser.parse_args()
-    if args.command in {"validate-cases", "validate"}:
-        return validate_cases(args.cases)
-    if args.command == "validate-manifest":
-        return validate_manifest(args.manifest)
-    if args.command == "validate-records":
-        _, errors = load_records(args.records)
-        for error in errors:
-            print(f"- {error}", file=sys.stderr)
-        return 1 if errors else 0
-    if args.command == "compare":
-        return compare(args.records, args.manifest, args.min_pairs)
-    return collect_ccusage(args.thread_id, args.output, args.provider_verified)
+    try:
+        if args.command in ("validate-cases", "validate"):
+            cases = c.load_cases(args.cases)
+            for case in cases:
+                fixture_for_case(args.cases.parent, case)
+            result, code = {"validated_cases": len(cases)}, 0
+        elif args.command == "validate-manifest":
+            manifest, _, _ = load_experiment(args.manifest)
+            result, code = {"validated_manifest": manifest["experiment_id"]}, 0
+        elif args.command == "validate-records":
+            _, records, _ = validate_campaign(args.records, args.manifest)
+            result, code = {"validated_records": len(records)}, 0
+        elif args.command == "compare":
+            result = compare(args.records, args.manifest)
+            code = 2
+        elif args.command == "grade":
+            result = grade(args.fixture, args.candidate, args.sha256)
+            code = 0 if result["passed"] else 2
+        else:
+            result, code = collect_ccusage(args.thread_id, args.output), 2
+        print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
+        return code
+    except (OSError, ValueError, OverflowError, subprocess.TimeoutExpired) as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

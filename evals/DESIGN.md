@@ -1,75 +1,83 @@
-# Evaluation contract, version 2
+# Evaluation integrity design, version 2
 
-## Decision
+## Implemented boundary
 
-Continue using Python's standard library and unittest, matching the existing
-offline evaluator. No model calls, new package manager, or live benchmark runner
-are introduced. Validation, campaign integrity, analysis, and raw cost import
-remain separate functions so deterministic tests can exercise each boundary.
+Continue Python's standard library and unittest, with no model calls or new
+package manager. `contract.py` validates structured inputs, identity and
+accounting; `fixture.py` verifies exact trees; `evaluate.py` validates campaigns
+and computes decisions; `campaigns.py` generates deterministic test inputs.
 
-Version 2 intentionally rejects version 1 records. Those records did not contain
-enough evidence to validate accounting or experiment identity; silently supplying
-defaults would manufacture evidence.
+The executable contract and [CONTRACT.md](CONTRACT.md) supersede v1 and the
+previous aspirational v2 design. No defaults manufacture missing evidence. The
+contract rejects unknown fields, duplicate JSON keys, non-finite measurements,
+malformed thresholds, empty required data, unsafe paths, and mismatched hashes.
 
-## Integrity and accounting
+Cases pin fixture definitions; definitions pin initial/reference file hashes.
+The experiment pins the cases file. Every record pins the experiment's bytes,
+exact environment controls, result-tree digest, and evidence file hashes. Paths
+are confined relative names, with links/reparse points rejected before reading.
+Fixture hashes use LF bytes, enforced by `.gitattributes` for cross-platform
+checkouts. Tree digests include file hashes and directory inventory, not mtimes
+or permissions. Permissions/executable bits are outside this documentation task.
 
-The manifest pins the case file by SHA-256 and defines the exact Cartesian grid
-of cases, repetitions, and two variants. Records bind to the manifest's byte hash.
-Every slot has one terminal record, including timeouts, cancellations, and errors.
-Run IDs are globally unique; pair IDs identify exactly one case/repetition.
-Duplicate JSON keys, duplicate slots, extra slots, and missing slots invalidate
-the campaign before analysis. Comparisons never select a favorable subset.
+The exact Cartesian case/repetition/variant denominator must be present. Duplicate
+slots cannot hide behind a set or overwrite one another. Pair IDs form a
+bijection with case/repetition; run IDs are unique across the entire supplied
+record file. Sessions cannot belong to multiple runs. Timeouts, cancellations,
+errors, and blockers remain terminal records with failed quality and score zero.
 
-The cost ledger contains exclusive per-session totals, with verified provider,
-USD currency, billing/estimation method, pricing version, and evidence references.
-Its session IDs must equal the trace inventory across controller, workers, retries,
-verification, and abandoned work. Overlapping role membership is allowed; each
-session is billed once. In-session retries belong in that session's exclusive
-total. Coverage and provider verification are explicit harness attestations,
-not facts that can be inferred from the number of supplied IDs. Ledger totals
-must reconcile with the run total. All compared complete ledgers must use the
-same accounting convention. API-price estimates are labeled as estimates.
+## Accounting
 
-The legacy ccusage command is an unverified observation importer only. Its output
-cannot establish provider identity or discover descendants; no command-line flag
-can turn those observations into complete run accounting.
+The supplied ledger contains exclusive per-session USD totals. Its IDs must
+equal the trace inventory for controller, workers, retries, verification, and
+abandoned work. A session may have multiple trace roles but is billed once.
+The controller cannot be listed as its own worker. In-session retries are
+included in that session's exclusive total. Ledger provenance and totals must
+match the run; compared ledgers must share provider, currency, method, and
+pricing version. API-price estimates remain labeled estimates in the input.
 
-## Statistical scope
+The ccusage importer cannot assert completeness, identify a trusted provider,
+or discover descendants. Its observations are never a complete ledger. Hashes
+and ledger structure are integrity checks, not signatures or receipt
+authentication. A supplied harness ledger still depends on a trusted collector;
+synthetic ledgers exercise this boundary using invented numbers.
 
-The current suite consists of draft scenarios, not executable benchmark tasks.
-Only draft manifests/cases are supported. A draft can fail a gate or be
-inconclusive, but cannot produce a release pass. Supporting release campaigns
-requires a separately reviewed fixture, grader, power, and provenance contract.
+## Analysis and decisions
 
-The declared exploratory estimand weights independent clusters equally, cases
-equally within each cluster, and repetitions equally within each case. Related
-tasks must share a cluster ID (for example, a repository family). The supplied
-scenarios all share one cluster and therefore cannot estimate generalization.
+Use paired bootstrap resampling (2,000 samples, seed 17) over every scheduled
+case/repetition, preserving both variants. Every pair has equal weight. Quality
+uses the difference of mean effective pass indicators. Cost and latency use
+ratios of means, including failed attempts, rather than means of individual
+ratios. Elapsed time is intended to cover request-to-terminal time, including
+worker, retry, and verification time; the offline evaluator cannot observe that
+boundary itself.
 
-Resample entire paired clusters, preserving both variants and every repetition.
-Report deterministic percentile bootstrap intervals for paired differences and
-ratios of weighted means. Cost uses total spending per submitted task, including
-failed attempts, rather than mean individual ratios or median spending. Latency
-uses the same request-to-terminal boundary in both arms, including timeouts;
-it is mean elapsed time, not p95 or verified-success latency.
+The bootstrap is exploratory. Repeated runs of the same fixture are not
+independent task clusters; all-success binary intervals can collapse to zero
+width. No cluster model, Hoeffding gate, power calculation, rubric interval,
+p95/median measurement, token aggregation, or routing-accuracy estimator is
+implemented. These limits prevent any release pass in this slice, including for
+a manifest labeled release. This replaces the earlier design's unimplemented
+claims with behavior exercised by deterministic tests.
 
-For binary quality, an all-success bootstrap would misleadingly have zero width.
-Use bounded-mean Hoeffding intervals across independent clusters for the quality
-gate and absolute success floor, and for the rubric-score difference. These
-conservative intervals do not collapse on all-success samples. Their validity
-still assumes independent, representative clusters; bootstrap intervals are
-exploratory and are not a substitute for a preregistered power analysis. A minimum
-cluster count is a reporting guard, never a power claim.
+Undefined zero-denominator or overflowing ratios have null estimates/intervals
+and reasons. If even one bootstrap resample is undefined, the interval is null;
+the valid point estimate may remain. Incomplete cost yields no cost ratio. A
+false measurement/policy gate always takes precedence over missing evidence or
+release readiness. With no false gate the result is inconclusive. Invalid input
+is a separate error before analysis, not a selected or omitted observation.
 
-Undefined ratios have null intervals and an explicit reason, never epsilon
-denominators or silently discarded resamples. Missing cost leaves quality and
-latency usable. A demonstrated failure takes precedence over missing evidence.
-Safety gates apply separately to each router category with zero tolerated
-violations; baseline incidents cannot offset them.
+## Scope and policy
 
-## Remaining boundary
+The baseline may execute business work directly; router business work always
+belongs to workers. The oracle runs as an offline evaluation tool or assigned
+verification-worker check; it does not authorize controller business inspection.
+Router meta-task review remains the controller's separate assignment. This
+implementation worker does not discover capabilities or delegate.
 
-The evaluator validates a supplied contract and evidence references. It does not
-authenticate receipts, execute fixtures, verify hook delivery, grade artifacts,
-discover child sessions, enforce an append-only store, or prove preregistration.
-These must be supplied by a trusted harness before industrial release claims.
+Exactly one public fixture-backed task is shipped. The grader verifies the
+artifact; it cannot verify the claimed validation command, hidden thought
+process, lifecycle-hook delivery, or truth of a route trace. Local hashes do not
+prevent coordinated replacement of all artifacts or concurrent filesystem
+mutation during a check. Trusted collection, immutable snapshots, authenticated
+receipts, hidden holdouts, and independent review remain future harness work.

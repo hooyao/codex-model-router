@@ -84,17 +84,21 @@ without requiring a network connection or a live Codex session.
 
 ## Evaluation
 
-Task-level evaluation lives under [`evals`](evals/README.md). It compares
-paired baseline and router runs for quality, provider-measured cost, latency,
-and operational safety. Validate the case matrix with:
+Offline evaluation lives under [`evals`](evals/README.md). The strict v2 contract
+checks complete paired campaigns, hashes, provenance, accounting ledgers, and
+failure precedence. Exactly one fixture-backed task (`small-edit`) has an
+exact-tree grader; eight other scenarios remain draft. Validate the matrix with:
 
 ```powershell
 python evals/scripts/evaluate.py validate --cases evals/cases.json
 ```
 
-The evaluation does not treat missing or provider-incompatible cost data as a
-saving. See the evaluation README for the live-run record format and the
-`ccusage` adapter.
+The router variant delegates even small edits; direct baseline work is allowed.
+Ten reproducible synthetic campaigns test integrity and decision behavior without
+live models. Reports include pass rates, exploratory paired quality differences,
+ratios of mean cost/latency, and safety/policy counts. They do not establish router
+savings or authorize a release pass. The `ccusage` importer always produces
+unverified observations. See the evaluation README for commands and limitations.
 
 ## OpenSpec
 
@@ -103,4 +107,8 @@ The completed MVP change is documented under
 `openspec validate add-router-mvp --strict` to verify the planning artifacts.
 The deterministic worker-name requirement is documented under
 [`openspec/changes/add-subagent-naming`](openspec/changes/add-subagent-naming).
-Run `openspec validate --all --strict` to validate both changes.
+The superseding evaluation and pure-orchestrator reconciliation is documented in
+[`openspec/changes/add-evaluation-integrity-fixture`](openspec/changes/add-evaluation-integrity-fixture).
+Its policy requirements take precedence over the original MVP's direct-work
+and recursive-delegation exceptions. Run `openspec validate --all --strict` to
+validate all changes.
