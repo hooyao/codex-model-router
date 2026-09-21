@@ -211,7 +211,7 @@ codex plugin add codex-model-router@personal
 Choose `patch` for a bug fix or small compatible change, `minor` for new
 backward-compatible functionality, and `major` for a breaking change.
 Pre-releases follow SemVer precedence (for example, `0.2.0-rc.1` is lower than
-`0.2.0`). Build metadata is ignored for precedence, so `0.1.1+anything` cannot
+`0.2.0`). Build metadata is ignored for precedence, so a build-metadata-only change cannot
 replace a release bump. `scripts/validate_plugin.py` enforces this against
 `HEAD` for changed tracked and relevant untracked plugin content and reports
 the changed paths when the manifest version is not strictly higher. Relevant Git-ignored plugin files fail with a

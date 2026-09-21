@@ -442,10 +442,7 @@ class RouterPluginTests(unittest.TestCase):
             self.assertIn(str(config_path), context)
 
     def test_complete_package_validates_offline(self) -> None:
-        # The checked-out plugin is an unreleased PR candidate. Compare it with
-        # its pre-release parent rather than requiring a new version for each
-        # uncommitted test edit in the same candidate release.
-        self.assertEqual([], validator.validate_package(PLUGIN_ROOT, baseline="HEAD~1"))
+        self.assertEqual([], validator.validate_package(PLUGIN_ROOT))
 
     @unittest.skipUnless(shutil.which("git"), "Git is required for version-policy regression tests")
     def test_version_policy_requires_strict_semver_increase_for_tracked_plugin_changes(self) -> None:
