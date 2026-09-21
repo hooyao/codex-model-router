@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "experiment_id": "codex-model-router-v1-draft",
+  "cases_file": "cases.json",
+  "variants": ["baseline", "router"],
+  "repetitions_per_case": 20,
+  "status": "draft",
+  "analysis": {
+    "quality_margin": -0.02,
+    "minimum_router_quality": 0.95,
+    "maximum_cost_ratio": 0.90,
+    "maximum_latency_ratio": 1.10
+  },
+  "controls": {
+    "controller_model": null,
+    "controller_reasoning_effort": null,
+    "repository_commit": null,
+    "harness_version": null,
+    "approval_policy": null,
+    "service_tier": null
+  }
+}
