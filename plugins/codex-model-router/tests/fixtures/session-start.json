@@ -1,0 +1,7 @@
+{
+  "hook_event_name": "SessionStart",
+  "session_id": "session-fixture",
+  "cwd": "C:/workspace",
+  "source": "startup",
+  "model": "gpt-5.6-terra"
+}
