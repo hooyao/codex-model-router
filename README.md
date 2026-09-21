@@ -17,6 +17,9 @@ analysis, repository inspection, edits, commands, tests, and result validation.
 - Repeats a strict pure-orchestrator contract on `SessionStart` and
   `UserPromptSubmit`, including for simple tasks.
 - Injects a bounded worker contract on `SubagentStart`.
+- Gives every dispatch a deterministic user-visible
+  `<purpose>-<model>-<effort>` name, with a packet/result fallback when native
+  dispatch cannot name the worker card.
 - Routes clear and repeatable work toward Luna, everyday and read-heavy work
   toward Terra, complex open-ended work toward Sol, and high-risk or
   sustained-judgment work toward Astra.
@@ -39,6 +42,9 @@ or store credentials.
 The pure-orchestrator contract is policy enforcement at the agent-instruction
 layer. Context injection cannot intercept tool calls and is not an OS/tool
 permission barrier. Offline tests check the emitted policy, not live compliance.
+When a native dispatch API has no supported name field, the canonical worker
+name remains the worker packet Task ID and appears in the result, but the
+platform-generated worker-card title cannot be changed by this plugin.
 
 ## Repository Layout
 

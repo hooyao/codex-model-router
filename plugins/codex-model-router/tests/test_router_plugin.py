@@ -23,6 +23,7 @@ def load_module(name: str, path: Path):
 
 validator = load_module("router_validator", PLUGIN_ROOT / "scripts" / "validate_plugin.py")
 hook = load_module("router_hook", PLUGIN_ROOT / "hooks" / "router_hook.py")
+naming = load_module("subagent_naming", PLUGIN_ROOT / "hooks" / "subagent_naming.py")
 
 
 class RouterPluginTests(unittest.TestCase):
@@ -94,6 +95,67 @@ class RouterPluginTests(unittest.TestCase):
                     "Serialize overlapping write scopes",
                 ):
                     self.assertIn(expected, context)
+
+    def test_controller_requires_canonical_user_visible_worker_names(self) -> None:
+        for event_name, context in self.controller_contexts():
+            with self.subTest(event=event_name):
+                for expected in (
+                    "purpose-model-effort", "Unicode NFKD",
+                    "discard non-ASCII code points", "lowercase",
+                    "duplicate planned identifier", "as both Worker name and Task ID",
+                    "native spawn schema supports name",
+                    "cannot show a native user-visible worker name",
+                ):
+                    self.assertIn(expected, context)
+
+    def test_worker_result_echoes_canonical_name(self) -> None:
+        context = hook.build_hook_output({"hook_event_name": "SubagentStart"})["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("Worker name: the unchanged canonical purpose-model-effort identifier", context)
+        self.assertIn("Task ID: the same canonical purpose-model-effort identifier", context)
+
+    def test_naming_policy_documents_normalization_validation_and_fallback(self) -> None:
+        for relative_path in (
+            "skills/model-router/SKILL.md",
+            "skills/model-router/references/routing-policy.md",
+        ):
+            with self.subTest(path=relative_path):
+                content = (PLUGIN_ROOT / relative_path).read_text(encoding="utf-8")
+                normalized_content = content.lower()
+                for expected in (
+                    "<purpose>-<model>-<effort>", "unicode nfkd",
+                    "discard non-ASCII code points", "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                    "worker name: <canonical-name>", "native worker card",
+                ):
+                    self.assertIn(expected.lower(), normalized_content)
+        skill = (PLUGIN_ROOT / "skills" / "model-router" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("implement-naming-gpt-5-6-sol-high", skill)
+
+    def test_worker_name_helper_builds_and_validates_canonical_name(self) -> None:
+        expected = "implement-naming-gpt-5-6-sol-high"
+        actual = naming.build_subagent_name("Implement / Naming", "GPT-5.6 Sol", "High")
+        self.assertEqual(expected, actual)
+        naming.validate_subagent_name(actual, "Implement / Naming", "GPT-5.6 Sol", "High")
+        self.assertEqual(actual, naming.build_subagent_name("Implement / Naming", "GPT-5.6 Sol", "High"))
+
+    def test_worker_name_helper_rejects_invalid_components_and_duplicate_dag_names(self) -> None:
+        for purpose, model, effort in (("修复", "gpt-5.6-terra", "low"), ("implement naming", "", "low"), ("implement naming", "gpt-5.6-terra", "修复")):
+            with self.subTest(purpose=purpose, model=model, effort=effort):
+                with self.assertRaises(ValueError):
+                    naming.build_subagent_name(purpose, model, effort)
+        for purpose, model, effort in (("a" * 49, "terra", "low"), ("review", "b" * 49, "low"), ("review", "terra", "c" * 25)):
+            with self.subTest(purpose=purpose, model=model, effort=effort):
+                with self.assertRaisesRegex(ValueError, "at most"):
+                    naming.build_subagent_name(purpose, model, effort)
+        with self.assertRaisesRegex(ValueError, "at most"):
+            naming.validate_subagent_name(("a" * 126) + "-b-c")
+        with self.assertRaises(ValueError):
+            naming.validate_subagent_name(
+                "review-naming-gpt-5-6-sol-high",
+                "implement naming", "gpt-5.6-sol", "high",
+            )
+        name = naming.build_subagent_name("review naming", "gpt-5.6-sol", "high")
+        with self.assertRaisesRegex(ValueError, "unique"):
+            naming.validate_unique_subagent_names((name, name))
 
     def test_meta_prompt_requires_high_capability_independent_review(self) -> None:
         for prompt in (
