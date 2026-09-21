@@ -38,8 +38,5 @@ jobs:
       - name: Run plugin tests
         run: python -m unittest discover -s plugins/codex-model-router/tests -v
 
-      - name: Run evaluation checks
-        run: |
-          python -m unittest discover -s evals/tests -v
-          python evals/scripts/evaluate.py validate-manifest --manifest evals/experiment.json
-          python evals/scripts/evaluate.py validate-records --records evals/runs.example.jsonl
+# Repository evaluation-integrity checks have separate data and release gates.
+# They intentionally do not run in this plugin-version enforcement workflow.
