@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "campaign_id": "evalplus-clean-codex-cli-v1",
+  "reviewed_selection": {
+    "benchmarks": [
+      "HumanEval+",
+      "MBPP+"
+    ],
+    "tasks_per_benchmark": 3,
+    "repetitions_per_arm": 2,
+    "review_model": "gpt-6-astra",
+    "review_reasoning_effort": "xhigh"
+  },
+  "datasets": [
+    {
+      "id": "humaneval-plus",
+      "name": "HumanEvalPlus",
+      "version": "v0.1.10",
+      "url": "https://github.com/evalplus/humanevalplus_release/releases/download/v0.1.10/HumanEvalPlus.jsonl.gz",
+      "filename": "HumanEvalPlus-v0.1.10.jsonl.gz",
+      "sha256": "272720b90ac375502c8ed23cd791c2a93dfb22a911641a494da74a426c09f101",
+      "size_bytes": 925932
+    },
+    {
+      "id": "mbpp-plus",
+      "name": "MbppPlus",
+      "version": "v0.2.0",
+      "url": "https://github.com/evalplus/mbppplus_release/releases/download/v0.2.0/MbppPlus.jsonl.gz",
+      "filename": "MbppPlus-v0.2.0.jsonl.gz",
+      "sha256": "af43697e8791c4c149bdfd6b489d8b5412507551ac20e28a439f650b8225db63",
+      "size_bytes": 336032
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "HumanEval/0",
+      "dataset_id": "humaneval-plus",
+      "entry_point": "has_close_elements",
+      "record_sha256": "48301fdf165591d98537dba7f67e2df80bec18346e0610d01f810895f2ab0d5d",
+      "prompt_sha256": "00b2e074e127a6a9d1376278bef732933760ab706057ec755a8c2642217b557a"
+    },
+    {
+      "task_id": "HumanEval/63",
+      "dataset_id": "humaneval-plus",
+      "entry_point": "fibfib",
+      "record_sha256": "29c47761f765f25653ad6c00936a69841b2460a384ace0bf3bcce52640d258d7",
+      "prompt_sha256": "3f6b45cdf3c576835537ba1cce2414a28f96b7a82157533ba221807ea2aa6147"
+    },
+    {
+      "task_id": "HumanEval/90",
+      "dataset_id": "humaneval-plus",
+      "entry_point": "next_smallest",
+      "record_sha256": "65a44c625f07765d74eeca753150dfdb25d420f7a720aab5005f2e6496d012de",
+      "prompt_sha256": "c411484e97c83ae8e5869ae414e5687f429deda4f5fb49e367e60c85635fed1e"
+    },
+    {
+      "task_id": "Mbpp/11",
+      "dataset_id": "mbpp-plus",
+      "entry_point": "remove_Occ",
+      "record_sha256": "85564628447778a8af80601aae5efc5fc98b257e4490d40ef60bfc4c5990e2e4",
+      "prompt_sha256": "ce3265aa1927ddc7c738f0363321ea4bdddefaf6a37711b1e015f7bb10414960"
+    },
+    {
+      "task_id": "Mbpp/12",
+      "dataset_id": "mbpp-plus",
+      "entry_point": "sort_matrix",
+      "record_sha256": "feb08fe71a452f435c91f408620554592d3a7edfd3f7b5753b0a03c36fbd0e6f",
+      "prompt_sha256": "0b911f36d7fb9d91570e2d8d66a622b803d9a75d2f70cdae9a5ba76f56605864"
+    },
+    {
+      "task_id": "Mbpp/67",
+      "dataset_id": "mbpp-plus",
+      "entry_point": "bell_number",
+      "record_sha256": "31f436b4ee0ba14a64cc142d562afff63196896e9b86c425a798d6159c047b87",
+      "prompt_sha256": "6c631a68cf4f8609fe3073ac395f50d49ff4686e1f95c3656f33daa0c28fd78a"
+    }
+  ],
+  "variants": [
+    {
+      "id": "baseline",
+      "router_enabled": false,
+      "codex_home_environment": "EVALPLUS_BASELINE_CODEX_HOME"
+    },
+    {
+      "id": "router",
+      "router_enabled": true,
+      "codex_home_environment": "EVALPLUS_ROUTER_CODEX_HOME"
+    }
+  ],
+  "execution": {
+    "codex_cli_minimum_version": "0.144.1",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "sandbox": "workspace-write",
+    "repetitions": 2,
+    "maximum_parallel_runs": 1,
+    "planned_run_ceiling": 24,
+    "token_reservation_per_run": 200000,
+    "campaign_token_ceiling": 4800000,
+    "campaign_cost_ceiling_usd": "44.24",
+    "router_plugin": {
+      "name": "codex-model-router",
+      "version": "0.1.3"
+    },
+    "required_flags": [
+      "--ephemeral",
+      "--ignore-user-config",
+      "--ignore-rules",
+      "--json"
+    ]
+  },
+  "grading": {
+    "evalplus_package_version": "0.3.1",
+    "selected_task_count": 6,
+    "samples_per_task_arm_repetition": 1,
+    "required_backend": [
+      "docker",
+      "wsl"
+    ],
+    "direct_host_execution": false,
+    "score_rule": "A run passes only when EvalPlus reports both base_pass and plus_pass; every scheduled run remains in the denominator."
+  },
+  "stop_rules": {
+    "no_paid_retry": true,
+    "stop_on_provider_guard_failure": true,
+    "stop_before_run_or_token_or_cost_reservation_ceiling": true,
+    "stop_on_dataset_or_workspace_isolation_failure": true,
+    "stop_on_missing_terminal_usage": false,
+    "missing_terminal_usage_effect": "Preserve the run and raw stream, but mark cost_complete false."
+  }
+}
