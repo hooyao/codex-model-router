@@ -147,6 +147,7 @@ class TreatmentEvidenceTests(unittest.TestCase):
                 return {"exit_code": 1}
 
             with mock.patch.object(isolation, "validate_homes", return_value={"candidate_sha256": "a" * 64}), \
+                    mock.patch("evals.scripts.evalplus_live.clone_slot_home", side_effect=lambda home, *args: home), \
                     mock.patch.object(hooks, "require_hook_receipt"), \
                     mock.patch.object(isolation, "validate_runtime_flags"), \
                     mock.patch.object(isolation, "capture", side_effect=failed_capture) as capture, \

@@ -203,6 +203,7 @@ def execute_soft_campaign(manifest_path, campaign, baseline_home, router_home, p
         status["variant"] = arm
         status["run_id"] = run_id
         runner.write_json(campaign / "raw" / (run_id + ".status.json"), status)
+        isolation.validate_execution_home(homes[arm], home, arm, identity, task, campaign / "raw", run_id)
         if status["exit_code"] != 0:
             stop = "CLI failure; no paid retry"
             break

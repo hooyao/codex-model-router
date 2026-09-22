@@ -197,6 +197,8 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         add_write_capability(requests[0]["body"], self.workspace)
         runner.write_json(evidence / "worker-simulation.request.json", requests)
         runner.write_json(evidence / "worker-simulation.status.json", self.status)
+        isolation.config_receipt.begin(evidence, "worker-simulation", home, self.workspace)
+        isolation.config_receipt.finish(evidence, "worker-simulation", home, self.workspace)
         self.assertTrue(hooks.validate_worker_simulation(evidence, self.identity)["exact_contract"])
         for before, after in (("You are authorized and required to perform", "You may not perform"),
                               ('"schema_version":1', '"schema_version":')):
@@ -230,7 +232,8 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         evidence = root / "hook-delivery"
         evidence.mkdir()
         names = [arm + suffix for arm in (*homes, "worker-simulation") for suffix in
-                 (".registry.json", ".request.json", ".command.json", ".status.json", ".jsonl", ".stderr.txt")]
+                 (".registry.json", ".request.json", ".command.json", ".status.json", ".jsonl", ".stderr.txt",
+                  ".config-before.json", ".config-after.json")]
         names += ["worker-simulation.event.json"]
         names += [arm + ".editor.json" for arm in homes]
         names += [arm + "-workspace-outside-sentinel.txt" for arm in homes]
@@ -245,6 +248,7 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
             runner.write_json(path, {"fixture": name})
             receipt["mcp_cli_proofs"][name] = runner.sha256_file(path)
         with mock.patch.object(isolation, "validate_homes", return_value={}), \
+                mock.patch.object(isolation, "validate_execution_home"), \
                 mock.patch.object(hooks, "bindings", return_value={"candidate": "current"}), \
                 mock.patch.object(hooks, "validate_worker_simulation", return_value={}), \
                 mock.patch.object(hooks.write_gate, "require_editor_proof"), \

@@ -20,10 +20,12 @@ try:
     from . import evalplus_runner as runner
     from . import evalplus_profile as profile
     from . import evalplus_write_gate as write_gate
+    from . import evalplus_config_receipt as config_receipt
 except ImportError:
     import evalplus_runner as runner
     import evalplus_profile as profile
     import evalplus_write_gate as write_gate
+    import evalplus_config_receipt as config_receipt
 
 
 TRANSPORT_FIELDS = {
@@ -180,6 +182,10 @@ def capture(root, name, command, cwd, environment=None, prompt=None, timeout=120
         raise runner.HarnessError("refusing to repeat/overwrite " + name)
     started = time.monotonic()
     status = {"argv": command, "cwd": str(cwd), "exit_code": None}
+    invocation_home = None
+    if len(command) > 1 and command[1] == "exec" and environment and environment.get("CODEX_HOME"):
+        invocation_home = Path(environment["CODEX_HOME"])
+        config_receipt.begin(root, name, invocation_home, Path(cwd))
     runner.write_json(root / (name + ".command.json"), status)
     with raw.open("wb") as stdout, stderr.open("wb") as errors:
         try:
@@ -191,6 +197,8 @@ def capture(root, name, command, cwd, environment=None, prompt=None, timeout=120
             status["timed_out"] = True
         except OSError as error:
             status["error"] = str(error)
+    if invocation_home is not None:
+        status["config_integrity"] = config_receipt.finish(root, name, invocation_home, Path(cwd))
     status.update({"elapsed_seconds": time.monotonic() - started,
                    "raw_sha256": runner.sha256_file(raw),
                    "stderr_sha256": runner.sha256_file(stderr)})
@@ -303,6 +311,28 @@ def validate_runtime_flags(manifest):
             raise runner.HarnessError("installed CLI lacks flags: " + repr(sorted(required - available)))
 
 
+def validate_execution_home(template, home, arm, identity, workspace, evidence, name):
+    """Validate only this invocation's enrolled project trust, never all projects."""
+    proof = config_receipt.require(evidence, name, home, workspace, identity["config_sha256"][arm])
+    for relative in ("AGENTS.md", "AGENTS.override.md", "hooks.json"):
+        if (home / relative).exists():
+            raise runner.HarnessError("unexpected invocation instructions")
+    if any((home / "skills").rglob("SKILL.md")) or any((home / "memories").rglob("*.md")):
+        raise runner.HarnessError("unexpected invocation skill or memory")
+    manifests = set((home / "plugins").rglob(".codex-plugin/plugin.json"))
+    directory = home / profile.PROFILE_DIRECTORY
+    if arm == "baseline":
+        if manifests or directory.exists():
+            raise runner.HarnessError("baseline invocation contains router/plugin material")
+    else:
+        installed = home / Path(identity["installed_path"]).relative_to(template)
+        if manifests != {installed / ".codex-plugin/plugin.json"} or tree_hash(installed) != identity["candidate_sha256"]:
+            raise runner.HarnessError("invocation candidate package changed")
+        if tree_hash(directory) != identity["profile_sha256"]:
+            raise runner.HarnessError("invocation router profile changed")
+    return proof
+
+
 def check_grader(campaign_root, image):
     """Import the pinned grader in a locked-down container; never run a sample."""
     evidence = campaign_root / "grader-preflight"
@@ -387,14 +417,16 @@ def run_preflight(manifest, campaign_root, homes):
     # Registration and both lifecycle deliveries must pass before a paid probe.
     try:
         from .evalplus_hooks import require_hook_receipt
+        from .evalplus_live import clone_slot_home
     except ImportError:
         from evalplus_hooks import require_hook_receipt
+        from evalplus_live import clone_slot_home
     require_hook_receipt(campaign_root, homes)
     record = validate_homes(homes)
     validate_runtime_flags(manifest)
     evidence = campaign_root / "treatment-preflight"
     evidence.mkdir(parents=True, exist_ok=False)
-    reports, errors, write_proofs, challenges = {}, [], {}, {}
+    reports, errors, write_proofs, challenges, config_proofs = {}, [], {}, {}, {}
     # Exactly one attempt per arm. A failing arm cannot trigger model retries.
     for arm, home in homes.items():
         task = evidence / (arm + "-workspace")
@@ -404,11 +436,17 @@ def run_preflight(manifest, campaign_root, homes):
         challenge_path = evidence / (arm + ".write-challenge.json")
         runner.write_json(challenge_path, challenge)
         challenges[challenge_path.name] = runner.sha256_file(challenge_path)
+        # The seed homes remain byte-identical. Runtime project trust belongs
+        # only to this invocation's clone, never to a later task or arm.
+        invocation_home = clone_slot_home(home, evidence / "homes" / arm, arm, record)
         command = runner.build_codex_command(manifest, {"variant": arm}, task)
-        status = capture(evidence, arm, command, task, arm_environment(home), write_gate.write_prompt(challenge), 240)
+        status = capture(evidence, arm, command, task, arm_environment(invocation_home), write_gate.write_prompt(challenge), 240)
         try:
             if status["exit_code"] != 0:
                 raise runner.HarnessError("preflight CLI did not complete")
+            validate_execution_home(home, invocation_home, arm, record, task, evidence, arm)
+            config_proofs[arm] = {suffix: runner.sha256_file(evidence / (arm + suffix))
+                                 for suffix in (".config-before.json", ".config-after.json")}
             report = model_messages(evidence / (arm + ".jsonl"))
             reports[arm] = report
             validate_probe_report(arm, report)
@@ -418,6 +456,7 @@ def run_preflight(manifest, campaign_root, homes):
     receipt = {
         "passed": not errors, "errors": errors, "reports": reports,
         "write_proofs": write_proofs, "write_challenges_sha256": challenges,
+        "config_proofs_sha256": config_proofs,
         "isolation_sha256": runner.sha256_file(homes["baseline"].parent / "isolation.json"),
         "candidate_sha256": record["candidate_sha256"],
         "command_sha256": runner.sha256_file(Path(runner.__file__)),
@@ -440,6 +479,8 @@ def require_treatment_receipt(campaign_root, manifest, homes):
         raise runner.HarnessError("treatment preflight did not pass")
     if set(receipt.get("write_proofs", {})) != set(homes):
         raise runner.HarnessError("paid write-artifact proof missing")
+    if set(receipt.get("config_proofs_sha256", {})) != set(homes):
+        raise runner.HarnessError("paid invocation config proof missing")
     for arm in homes:
         raw = campaign_root / "treatment-preflight" / (arm + ".jsonl")
         if model_messages(raw) != receipt["reports"][arm]:
@@ -450,6 +491,13 @@ def require_treatment_receipt(campaign_root, manifest, homes):
             raise runner.HarnessError("paid write challenge changed")
         challenge = runner.read_json(challenge_path)
         expected_workspace = campaign_root / "treatment-preflight" / (arm + "-workspace")
+        evidence = campaign_root / "treatment-preflight"
+        proof = receipt["config_proofs_sha256"][arm]
+        if set(proof) != {".config-before.json", ".config-after.json"} or any(
+                runner.sha256_file(evidence / (arm + suffix)) != digest for suffix, digest in proof.items()):
+            raise runner.HarnessError("paid invocation config evidence changed")
+        validate_execution_home(homes[arm], evidence / "homes" / arm, arm, record,
+                                expected_workspace, evidence, arm)
         if challenge.get("arm") != arm or Path(challenge["workspace"]).resolve() != expected_workspace.resolve():
             raise runner.HarnessError("paid write challenge scope changed")
         if write_gate.verify_artifact(challenge, raw) != receipt["write_proofs"][arm]:

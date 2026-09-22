@@ -1144,10 +1144,13 @@ def execute_live(
     # Inventory alone does not prove that exec loads the installed treatment.
     try:
         from . import evalplus_isolation as isolation
+        from . import evalplus_live as live
     except ImportError:
         import evalplus_isolation as isolation
+        import evalplus_live as live
     isolation.require_treatment_receipt(campaign_root, manifest, homes)
     isolation.require_grader_receipt(campaign_root)
+    identity = isolation.validate_homes(homes)
     plan = preflight_plan(manifest, prepared, campaign_root, run_limit)
     reservations = cost_reservations_microusd(
         manifest["execution"]["campaign_cost_ceiling_usd"], len(prepared["schedule"])
@@ -1177,27 +1180,24 @@ def execute_live(
         ]
         prepared["state"]["reserved_cost_microusd"] += required_micros
         write_json(campaign_root / "campaign.json", prepared)
-        environment = isolation.arm_environment(homes[run["variant"]])
+        arm = run["variant"]
+        home = live.clone_slot_home(homes[arm], campaign_root / "slot-homes" / run_id, arm, identity)
+        environment = isolation.arm_environment(home)
         prompt = (task_root / "TASK.md").read_text(encoding="utf-8")
-        with raw_path.open("wb") as raw_output, stderr_path.open("wb") as error_output:
-            process = subprocess.run(
-                build_codex_command(manifest, run, task_root),
-                input=prompt.encode("utf-8"),
-                stdout=raw_output,
-                stderr=error_output,
-                cwd=str(task_root),
-                env=environment,
-            )
+        captured = isolation.capture(campaign_root / "raw", run_id, build_codex_command(manifest, run, task_root),
+                                     task_root, environment, prompt, 900)
         status = {
             "run_id": run_id,
-            "exit_code": process.returncode,
+            "exit_code": captured["exit_code"],
+            "config_integrity": captured["config_integrity"],
             "raw_jsonl_sha256": sha256_file(raw_path),
             "stderr_sha256": sha256_file(stderr_path),
             "token_reservation": manifest["execution"]["token_reservation_per_run"],
             "cost_reservation_microusd": required_micros,
         }
         write_json(campaign_root / "raw" / (run_id + ".status.json"), status)
-        if process.returncode:
+        isolation.validate_execution_home(homes[arm], home, arm, identity, task_root, campaign_root / "raw", run_id)
+        if captured["exit_code"] != 0:
             raise HarnessError("codex exec failed for %s; no paid retry is permitted" % run_id)
         prepared["state"]["completed_run_ids"].append(run_id)
         write_json(campaign_root / "campaign.json", prepared)

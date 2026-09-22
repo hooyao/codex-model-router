@@ -132,6 +132,12 @@ class FixtureReceiptTests(unittest.TestCase):
         names = ("cli.command.json", "cli.jsonl", "cli.status.json", "cli.stderr.txt", "outside.txt", "requests.json", "scripted-events.json")
         for name in names:
             (self.root / name).write_text("fixture", encoding="utf-8")
+        home = self.root / "home"
+        home.mkdir()
+        (home / "config.toml").write_text("# offline config\n", encoding="utf-8")
+        probe.isolation.config_receipt.begin(self.root, "cli", home, task)
+        probe.isolation.config_receipt.finish(self.root, "cli", home, task)
+        names += ("cli.config-before.json", "cli.config-after.json")
         self.receipt = {"passed": True, "approval": True, "code_mode": False, "model_invocations": 0,
                         "scripted_fixture": True, "inside_write_succeeded": True,
                         "outside_unchanged": True, "expected_tool_output_observed": True,

@@ -71,6 +71,11 @@ the benchmark. Normal plugin files and normal user configuration are unchanged.
 
 ## Offline and paid gates
 
+[Invocation-scoped config receipts](PROJECT-TRUST-RECEIPTS.md) preserve the exact
+pre-launch baseline and permit only the CLI's expected trust entry for that task.
+Preflight uses cloned homes; seed configs remain immutable. All other config,
+package, and router-profile changes still fail admission.
+
 The zero-model request capture now requires the editor's two tools, restricted
 networking, and exactly one effective writable root in the CLI's filesystem
 context. It rejects shell/execution tools, unrelated MCP tools, and extra write

@@ -108,6 +108,7 @@ def run_fixture(evidence, code_mode=False, approval=True):
         except runner.HarnessError as error:
             capability_errors.append(str(error))
     passed = (status["exit_code"] == 1 and len(requests) == len(operations) + 1
+              and status.get("config_integrity", {}).get("passed") is True
               and unchanged and expected_outputs and inside_ok == approval
               and not capability_errors and capabilities and not capabilities[-1]["deferred_editor_catalog"])
     result = {"passed": passed, "code_mode": code_mode, "approval": approval, "model_invocations": 0,
@@ -133,12 +134,13 @@ def require_fixture(evidence, code_mode):
             or runner.sha256_file(evidence / "task/cli-proof.txt") != result.get("inside_sha256")):
         raise runner.HarnessError("CLI-mediated MCP write proof missing or stale")
     required = {"cli.command.json", "cli.jsonl", "cli.status.json", "cli.stderr.txt",
-                "outside.txt", "requests.json", "scripted-events.json"}
+                "cli.config-before.json", "cli.config-after.json", "outside.txt", "requests.json", "scripted-events.json"}
     if set(result.get("evidence_sha256", {})) != required:
         raise runner.HarnessError("CLI MCP fixture evidence inventory incomplete")
     for name, digest in result["evidence_sha256"].items():
         if runner.sha256_file(evidence / name) != digest:
             raise runner.HarnessError("CLI MCP fixture evidence changed")
+    isolation.config_receipt.require(evidence, "cli", evidence / "home", evidence / "task")
     return result
 
 
