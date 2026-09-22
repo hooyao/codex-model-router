@@ -91,7 +91,7 @@ init when you want an immediate preflight before trusting hooks.
 
 On success, init prints whether it created or validated the config, the actual
 Python executable and version used for the smoke test, and the resolved config
-path. It verifies Python 3.10+, standard-library runtime imports, the template,
+path. It verifies Python 3.9+, standard-library runtime imports, the template,
 workspace discovery, and config creation/loading. On Windows it runs every
 configured `commandWindows` lifecycle command through `cmd.exe /d /s /c`, with
 the installed plugin root supplied as `PLUGIN_ROOT`, and validates each event's
@@ -153,7 +153,7 @@ handlers. The hooks add developer context for `SessionStart`,
 `hooks/router_hook.py` program.
 
 The non-Windows hook command requires `python3`. The Windows override requires
-`python` on `PATH` and Python 3.10 or newer. Ask Codex to initialize the router
+`python` on `PATH` and Python 3.9 or newer. Ask Codex to initialize the router
 in the project before trusting hooks when you want post-launch runtime,
 template, workspace, config, and hook-smoke assumptions checked immediately.
 
