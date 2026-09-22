@@ -14,7 +14,7 @@ from evals.scripts import evalplus_isolation as isolation
 from evals.scripts import evalplus_live as live
 from evals.scripts import evalplus_runner as runner
 from evals.scripts import evalplus_profile as profile
-from evals.tests.profile_fixture import CATALOG, provision
+from evals.tests.profile_fixture import CATALOG, provision, add_write_capability
 
 try:
     import tomllib
@@ -82,6 +82,8 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.home = Path(self.temp.name) / "router"
+        self.workspace = Path(self.temp.name) / "task"
+        self.workspace.mkdir()
         relative = "plugins/cache/evalplus-candidate/codex-model-router/0.1.3"
         self.identity = provision(self.home)
         active = [{"enabled": True, "isManaged": False, "eventName": event, "source": "user",
@@ -98,7 +100,8 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
             "tools": [{"name": "multi_agent_v1", "tools": [{"name": "spawn_agent", "description": "\n".join(
                 "- `" + m["slug"] + "`: Test. Reasoning efforts: low, medium, high, xhigh." for m in CATALOG["models"]), "parameters": {
                 "properties": {"model": {}, "reasoning_effort": {}}}}]}]}}]
-        self.status = {"exit_code": 1, "argv": ["codex", "exec", "--dangerously-bypass-hook-trust"]}
+        add_write_capability(self.requests[0]["body"], self.workspace)
+        self.status = {"exit_code": 1, "cwd": str(self.workspace), "argv": ["codex", "exec", "--dangerously-bypass-hook-trust"]}
 
     def validate(self, registered=None, requests=None, status=None):
         return hooks.validate_delivery("router", registered or self.registered, requests or self.requests,
@@ -120,7 +123,7 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
 
     def test_registration_trust_and_clean_source_are_all_required(self):
         with self.assertRaisesRegex(runner.HarnessError, "trust"):
-            self.validate(status={"exit_code": 1, "argv": ["codex", "exec"]})
+            self.validate(status=dict(self.status, argv=["codex", "exec"]))
         for key, value in (("enabled", False), ("source", "plugin"), ("command", "echo forged")):
             changed = copy.deepcopy(self.registered)
             changed["hooks"]["data"][0]["hooks"][0][key] = value
@@ -152,6 +155,7 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         empty = {"hooks": {"data": [{"hooks": [], "errors": [], "warnings": []}]}}
         requests = [{"path": "/responses", "body": {
             "model": "gpt-6-astra", "reasoning": {"effort": "xhigh"}, "input": []}}]
+        add_write_capability(requests[0]["body"], self.workspace)
         report = hooks.validate_delivery("baseline", empty, requests, self.status, self.home, self.identity)
         self.assertEqual({"model": "gpt-6-astra", "reasoning_effort": "xhigh"}, report["primary_request"])
 
@@ -189,6 +193,7 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         text = profile.build_output(home / profile.PROFILE_DIRECTORY, {"hook_event_name": "SubagentStart"})[
             "hookSpecificOutput"]["additionalContext"]
         requests = [{"path": "/responses", "body": {"input": [{"role": "developer", "content": [{"text": text}]}]}}]
+        add_write_capability(requests[0]["body"], self.workspace)
         runner.write_json(evidence / "worker-simulation.request.json", requests)
         runner.write_json(evidence / "worker-simulation.status.json", self.status)
         self.assertTrue(hooks.validate_worker_simulation(evidence, self.identity)["exact_contract"])
@@ -226,6 +231,8 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         names = [arm + suffix for arm in (*homes, "worker-simulation") for suffix in
                  (".registry.json", ".request.json", ".command.json", ".status.json", ".jsonl", ".stderr.txt")]
         names += ["worker-simulation.event.json"]
+        names += [arm + ".editor.json" for arm in homes]
+        names += [arm + "-workspace-outside-sentinel.txt" for arm in homes]
         for name in names:
             (evidence / name).write_text("{}", encoding="utf-8")
         receipt = {"passed": True, "model_invocations": 0, "bindings": {"candidate": "old"},
@@ -234,6 +241,7 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         with mock.patch.object(isolation, "validate_homes", return_value={}), \
                 mock.patch.object(hooks, "bindings", return_value={"candidate": "current"}), \
                 mock.patch.object(hooks, "validate_worker_simulation", return_value={}), \
+                mock.patch.object(hooks.write_gate, "require_editor_proof"), \
                 mock.patch.object(hooks, "validate_delivery", return_value={}) as validate:
             runner.write_json(root / "hook-delivery.json", receipt)
             with self.assertRaisesRegex(runner.HarnessError, "binding changed"):

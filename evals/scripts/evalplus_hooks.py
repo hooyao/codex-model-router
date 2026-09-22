@@ -17,11 +17,15 @@ try:
     from . import evalplus_runner as runner
     from . import evalplus_live as live
     from . import evalplus_profile as profile
+    from . import evalplus_write_gate as write_gate
+    from . import evalplus_workspace as workspace_editor
 except ImportError:
     import evalplus_isolation as isolation
     import evalplus_runner as runner
     import evalplus_live as live
     import evalplus_profile as profile
+    import evalplus_write_gate as write_gate
+    import evalplus_workspace as workspace_editor
 
 
 def offline_overrides(port, provider_id="copilot-bridge"):
@@ -135,6 +139,7 @@ def validate_delivery(arm, registered, requests, status, home, identity):
     active = [h for h in hooks if h["enabled"] and not h["isManaged"]]
     body = requests[0]["body"]
     primary_request = validate_primary_request(body)
+    capability = write_gate.validate_capability(body, Path(status["cwd"]))
     developer = ["\n".join(c.get("text", "") for c in m.get("content", []))
                  for m in body.get("input", []) if m.get("role") == "developer"]
     contexts = [text for text in developer if "CONTROLLER ROLE ONLY:" in text]
@@ -143,7 +148,8 @@ def validate_delivery(arm, registered, requests, status, home, identity):
         if (active or skills or contexts or any(h.get("source") == "plugin" for h in hooks)
                 or any("ROUTING_CONFIG_" in text or "WORKER ROLE OVERRIDE" in text for text in developer)):
             raise runner.HarnessError("baseline has candidate or ambient hook/skill context")
-        return {"events": [], "skills": [], "registered_hooks": [], "primary_request": primary_request}
+        return {"events": [], "skills": [], "registered_hooks": [], "primary_request": primary_request,
+                "write_capability": capability}
     expected = {"sessionStart", "userPromptSubmit", "subagentStart"}
     if len(active) != 3 or {h["eventName"] for h in active} != expected:
         raise runner.HarnessError("candidate hooks are not explicitly registered")
@@ -183,6 +189,7 @@ def validate_delivery(arm, registered, requests, status, home, identity):
             raise runner.HarnessError("resolved route unavailable in the captured native spawn schema")
     return {"events": ["SessionStart", "UserPromptSubmit"], "skills": skills,
             "primary_request": primary_request,
+            "write_capability": capability,
             "registered_hooks": [{key: h[key] for key in ("key", "eventName", "currentHash", "trustStatus")}
                                  for h in active],
             "trust_activation": "--dangerously-bypass-hook-trust",
@@ -251,6 +258,7 @@ def validate_worker_simulation(evidence, identity):
         raise runner.HarnessError("worker simulation candidate/profile changed")
     developer = ["\n".join(c.get("text", "") for c in m.get("content", []))
                  for m in requests[0]["body"].get("input", []) if m.get("role") == "developer"]
+    capability = write_gate.validate_capability(requests[0]["body"], Path(status["cwd"]))
     contexts = [text for text in developer if "WORKER ROLE OVERRIDE" in text]
     if len(contexts) != 1 or any("CONTROLLER ROLE ONLY:" in text for text in developer):
         raise runner.HarnessError("worker override absent or mixed with controller output")
@@ -258,7 +266,7 @@ def validate_worker_simulation(evidence, identity):
         report = profile.parse_context(contexts[0], home / profile.PROFILE_DIRECTORY, "SubagentStart")
     except ValueError as error:
         raise runner.HarnessError("worker critical context gate failed: " + str(error))
-    return dict(report, actual_worker_spawned=False, event_simulation=True,
+    return dict(report, actual_worker_spawned=False, event_simulation=True, write_capability=capability,
                 context_sha256=runner.sha256_bytes(contexts[0].encode()))
 
 
@@ -271,7 +279,7 @@ def bindings(homes, identity):
             "cli_sha256": runner.sha256_file(Path(executable)),
             "python_sha256": runner.sha256_file(Path(sys.executable)),
             "code_sha256": {Path(m.__file__).name: runner.sha256_file(Path(m.__file__))
-                            for m in (isolation, runner, live, profile)},
+                            for m in (isolation, runner, live, profile, write_gate, workspace_editor)},
             "probe_sha256": runner.sha256_file(Path(__file__))}
 
 
@@ -292,6 +300,7 @@ def run_probe(campaign, homes):
         status, requests = capture_request(manifest, home, workspace, arm, evidence)
         try:
             result["reports"][arm] = validate_delivery(arm, registered, requests, status, home, identity)
+            write_gate.exercise_editor(workspace, evidence / (arm + ".editor.json"), isolation.arm_environment(home))
         except (runner.HarnessError, KeyError, TypeError) as error:
             result["errors"].append(arm + ": " + str(error))
     if not result["errors"]:
@@ -316,6 +325,8 @@ def require_hook_receipt(campaign, homes):
     required = {arm + suffix for arm in (*homes, "worker-simulation") for suffix in
                 (".registry.json", ".request.json", ".command.json", ".status.json", ".jsonl", ".stderr.txt")}
     required.add("worker-simulation.event.json")
+    required.update(arm + ".editor.json" for arm in homes)
+    required.update(arm + "-workspace-outside-sentinel.txt" for arm in homes)
     if set(receipt.get("evidence_sha256", {})) != required:
         raise runner.HarnessError("hook delivery evidence inventory incomplete")
     for name, digest in receipt["evidence_sha256"].items():
@@ -328,6 +339,7 @@ def require_hook_receipt(campaign, homes):
                                    evidence / "homes" / arm, identity)
         if report != receipt["reports"][arm]:
             raise runner.HarnessError("hook delivery report changed")
+        write_gate.require_editor_proof(evidence / (arm + ".editor.json"), evidence / (arm + "-workspace"))
     if validate_worker_simulation(evidence, identity) != receipt["reports"]["worker-simulation"]:
         raise runner.HarnessError("worker delivery report changed")
     return receipt

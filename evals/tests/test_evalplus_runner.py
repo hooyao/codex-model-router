@@ -116,7 +116,11 @@ class EvalPlusManifestAndScheduleTests(unittest.TestCase):
             self.assertIn("model_supports_reasoning_summaries=true", command)
         self.assertEqual("gpt-6-astra", baseline[baseline.index("--model") + 1])
         self.assertIn('model_reasoning_effort="xhigh"', baseline)
-        self.assertEqual("workspace-write", baseline[baseline.index("--sandbox") + 1])
+        for command in (baseline, routed):
+            self.assertNotIn("--sandbox", command)
+            self.assertIn('default_permissions="evalplus-task"', command)
+            self.assertIn("permissions.evalplus-task.network.enabled=false", command)
+            self.assertEqual("--disable", command[command.index("shell_tool") - 1])
         self.assertEqual("-", baseline[-1])
         self.assertEqual("disable", baseline[baseline.index("plugins") - 1].lstrip("-"))
         self.assertEqual("enable", routed[routed.index("plugins") - 1].lstrip("-"))
@@ -327,6 +331,8 @@ class EvalPlusSafetyRefusalTests(unittest.TestCase):
             request_path = root / "request.json"
             request = {
                 "backend": "docker",
+                "campaign_state_sha256": "b" * 64,
+                "attempted_run_ids": ["run-a", "run-b"],
                 "samples": [
                     {"run_id": "run-a", "task_id": "HumanEval/0"},
                     {"run_id": "run-b", "task_id": "Mbpp/11"},
