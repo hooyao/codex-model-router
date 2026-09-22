@@ -276,7 +276,7 @@ def validate_manifest(path: Path = DEFAULT_MANIFEST) -> Dict[str, Any]:
         raise HarnessError("router_plugin name mismatch")
     _string(router_plugin["version"], "router_plugin version")
     required_flags = execution["required_flags"]
-    if required_flags != ["--ephemeral", "--ignore-user-config", "--ignore-rules", "--json"]:
+    if required_flags != ["--ignore-rules", "--json", "--strict-config"]:
         raise HarnessError("required_flags changed from the clean CLI contract")
 
     grading = manifest["grading"]
@@ -467,7 +467,9 @@ def _task_instruction(task_id: str) -> str:
         "Complete the EvalPlus task in solution.py. Preserve the supplied function signature "
         "and write only the implementation needed for task %s. Do not access parent directories, "
         "network resources, hidden tests, grader assets, or other run directories. Do not execute "
-        "or import hidden grader code. You may inspect and edit files in this task directory."
+        "or import hidden grader code. Do not execute generated code on the host, including "
+        "solution.py or any implementation you generate. Grading runs separately in a container "
+        "after you finish. You may inspect and edit files in this task directory."
     ) % task_id
 
 
@@ -534,8 +536,6 @@ def build_codex_command(
     command = [
         "codex",
         "exec",
-        "--ephemeral",
-        "--ignore-user-config",
         "--ignore-rules",
         "--json",
         "--strict-config",
@@ -557,6 +557,18 @@ def build_codex_command(
         "in_app_browser",
         "--disable",
         "apps",
+        "--disable",
+        "remote_plugin",
+        "--disable",
+        "memories",
+        "--config",
+        "skills.bundled.enabled=false",
+        "--config",
+        "memories.use_memories=false",
+        "--config",
+        "memories.generate_memories=false",
+        "--config",
+        "project_doc_max_bytes=0",
     ]
     if run["variant"] == "baseline":
         command.extend(["--disable", "plugins", "--disable", "hooks", "--disable", "multi_agent"])
@@ -1031,8 +1043,8 @@ def validate_plugin_inventories(
             for plugin in payload["installed"]
             if isinstance(plugin, dict) and plugin.get("name") == target["name"]
         ]
-        if variant == "baseline" and matches:
-            raise HarnessError("baseline CODEX_HOME must not install codex-model-router")
+        if variant == "baseline" and payload["installed"]:
+            raise HarnessError("baseline CODEX_HOME must not install any plugin")
         if variant == "router":
             if len(matches) != 1:
                 raise HarnessError("router CODEX_HOME must install exactly one codex-model-router")
@@ -1043,13 +1055,11 @@ def validate_plugin_inventories(
                 plugin.get("name")
                 for plugin in payload["installed"]
                 if isinstance(plugin, dict)
-                and plugin.get("enabled") is True
                 and plugin.get("name") != target["name"]
-                and plugin.get("marketplaceName") not in ("openai-bundled", "openai-primary-runtime")
             ]
             if contaminating:
                 raise HarnessError(
-                    "router CODEX_HOME has unrelated enabled third-party plugins: "
+                    "router CODEX_HOME has unrelated enabled or disabled plugins: "
                     + repr(sorted(contaminating))
                 )
 
@@ -1062,6 +1072,12 @@ def _version_tuple(text: str) -> Tuple[int, int, int]:
 
 
 def validate_codex_homes(manifest: Mapping[str, Any], homes: Mapping[str, Path]) -> None:
+    try:
+        from . import evalplus_isolation as isolation
+    except ImportError:
+        import evalplus_isolation as isolation
+    isolation.validate_homes(homes)
+    isolation.validate_runtime_flags(manifest)
     version = subprocess.run(["codex", "--version"], capture_output=True, text=True)
     if version.returncode:
         raise HarnessError("cannot read Codex CLI version: " + version.stderr.strip())
@@ -1071,13 +1087,13 @@ def validate_codex_homes(manifest: Mapping[str, Any], homes: Mapping[str, Path])
         raise HarnessError("Codex CLI is below the pinned minimum version")
     inventories: Dict[str, Any] = {}
     for variant in ("baseline", "router"):
-        environment = os.environ.copy()
-        environment["CODEX_HOME"] = str(homes[variant])
+        environment = isolation.arm_environment(homes[variant])
         plugins = subprocess.run(
             ["codex", "plugin", "list", "--json"],
             capture_output=True,
             text=True,
             env=environment,
+            cwd=str(homes[variant].parent),
         )
         if plugins.returncode:
             raise HarnessError("cannot inspect %s CODEX_HOME plugins: %s" % (variant, plugins.stderr.strip()))
@@ -1085,11 +1101,8 @@ def validate_codex_homes(manifest: Mapping[str, Any], homes: Mapping[str, Path])
             inventories[variant] = json.loads(plugins.stdout)
         except json.JSONDecodeError as error:
             raise HarnessError("%s plugin inventory is invalid JSON: %s" % (variant, error))
-        login = subprocess.run(
-            ["codex", "login", "status"], capture_output=True, text=True, env=environment
-        )
-        if login.returncode:
-            raise HarnessError("%s CODEX_HOME is not authenticated" % variant)
+        # The model-visible preflight validates the configured transport. A custom
+        # command-auth provider need not have an OpenAI login in auth.json.
     validate_plugin_inventories(manifest, inventories["baseline"], inventories["router"])
 
 
@@ -1114,6 +1127,13 @@ def execute_live(
         if not home.is_dir():
             raise HarnessError("%s CODEX_HOME is missing: %s" % (variant, home))
     validate_codex_homes(manifest, homes)
+    # Inventory alone does not prove that exec loads the installed treatment.
+    try:
+        from . import evalplus_isolation as isolation
+    except ImportError:
+        import evalplus_isolation as isolation
+    isolation.require_treatment_receipt(campaign_root, manifest, homes)
+    isolation.require_grader_receipt(campaign_root)
     plan = preflight_plan(manifest, prepared, campaign_root, run_limit)
     reservations = cost_reservations_microusd(
         manifest["execution"]["campaign_cost_ceiling_usd"], len(prepared["schedule"])
@@ -1143,8 +1163,7 @@ def execute_live(
         ]
         prepared["state"]["reserved_cost_microusd"] += required_micros
         write_json(campaign_root / "campaign.json", prepared)
-        environment = os.environ.copy()
-        environment["CODEX_HOME"] = str(homes[run["variant"]])
+        environment = isolation.arm_environment(homes[run["variant"]])
         prompt = (task_root / "TASK.md").read_text(encoding="utf-8")
         with raw_path.open("wb") as raw_output, stderr_path.open("wb") as error_output:
             process = subprocess.run(
