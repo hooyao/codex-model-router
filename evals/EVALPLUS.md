@@ -81,9 +81,10 @@ copied.
 - Router home: exactly one enabled `codex-model-router` v0.1.3 installation,
   installed by CLI from a fresh local marketplace containing the candidate
   package. The source, snapshot, and installed file-tree hashes must match.
-  Its three candidate hook programs are also registered in the generated user
-  config; duplicate plugin hook entries are disabled. See the
-  [CLI delivery decision](EVALPLUS-ISOLATION.md#offline-cli-hook-delivery-repair).
+  Its three event groups use a bounded benchmark adapter in the generated user
+  config; duplicate plugin hook entries are disabled. The adapter preserves the
+  complete original contracts and uses a minimal valid routing file only in the
+  isolated home. See the [benchmark profile](BENCHMARK-PROFILE.md).
 
 The harness loads only the new arm's config and ignores execpolicy rules. It
 checks installed CLI flags before probes, since current documentation can describe
@@ -109,7 +110,10 @@ config/package without authentication, inspects the CLI `hooks/list` registry,
 then sends each arm's first outgoing request to a rejecting loopback HTTP sink.
 The sink implements no model and forwards nothing. It captures separate developer
 messages from SessionStart and UserPromptSubmit, the routing block, skill catalog,
-and native dispatch schema. A nonzero CLI exit is expected because the sink
+and native dispatch schema. A third capture simulates SubagentStart through the
+CLI context injector without spawning a worker. All three contexts must exactly
+match the original contracts, contain the complete schema-valid routing JSON,
+and fit the 8,000-byte ceiling. A nonzero CLI exit is expected because the sink
 rejects the request. No generated code runs. Its receipt is mandatory before
 the paid treatment preflight and before either formal-run admission path.
 
@@ -123,7 +127,10 @@ proof that instructions mechanically enforce policy. Offline `debug prompt-input
 can show the skill catalog but is not proof of lifecycle hook delivery. Failed
 or missing probes prohibit formal generation. Receipts bind candidate/config,
 runner code, and raw evidence; changing these requires a new authorized preflight.
-The offline receipt additionally binds the CLI and Python executable hashes.
+The offline receipt additionally binds the CLI and Python executable hashes and
+the benchmark profile/adapter. Presence-only receipts from earlier revisions
+are insufficient. The bundled model catalog resolves worker examples without
+contacting a model; backend entitlement is still a later live-validation check.
 
 The grader gate imports EvalPlus 0.3.1 in an immutable Docker image with networking
 off, a read-only filesystem, dropped capabilities, and resource limits. It does

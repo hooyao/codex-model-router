@@ -18,8 +18,10 @@ from pathlib import Path
 
 try:
     from . import evalplus_runner as runner
+    from . import evalplus_profile as profile
 except ImportError:
     import evalplus_runner as runner
+    import evalplus_profile as profile
 
 
 TRANSPORT_FIELDS = {
@@ -117,16 +119,15 @@ def candidate_hooks_config(home, installed_path):
     """Register the exact candidate program in the CLI's active user layer.
 
     CLI 0.144.1 lists plugin hooks but does not deliver them in codex exec.
-    Preserve candidate event metadata; only adapt program lookup/shell syntax.
+    Preserve candidate event metadata; use the bounded benchmark adapter.
     CODEX_HOME-relative commands remain valid in fresh per-slot copies.
     """
-    relative = installed_path.relative_to(home).as_posix()
     definitions = runner.read_json(installed_path / "hooks/hooks.json")["hooks"]
     events = {"SessionStart": "session_start", "UserPromptSubmit": "user_prompt_submit",
               "SubagentStart": "subagent_start"}
     if set(definitions) != set(events):
         raise runner.HarnessError("unexpected candidate lifecycle events")
-    program = relative + "/hooks/router_hook.py"
+    program = profile.PROFILE_DIRECTORY + "/hook.py"
     if not (installed_path / "hooks/router_hook.py").is_file():
         raise runner.HarnessError("candidate hook program missing")
     windows = "& '" + sys.executable.replace("'", "''") + "' (Join-Path $env:CODEX_HOME '" + program.replace("'", "''") + "')"
@@ -144,6 +145,24 @@ def candidate_hooks_config(home, installed_path):
     definitions["state"] = state
     return '\n[hooks]\n' + '\n'.join(key + ' = ' + _toml_value(value)
                                       for key, value in definitions.items()) + '\n'
+
+
+def provision_profile(home, installed_path, catalog):
+    directory = home / profile.PROFILE_DIRECTORY
+    directory.mkdir(exist_ok=False)
+    routes = profile.resolve_routes(catalog)
+    runner.write_json(directory / "profile.json", {
+        "schema_version": 1, "candidate_relative": installed_path.relative_to(home).as_posix(),
+        "controller_model": runner.validate_manifest()["execution"]["model"],
+        "resolved_routes": routes,
+        "catalog_sha256": runner.sha256_bytes(json.dumps(catalog, sort_keys=True).encode()),
+    })
+    runner.write_json(directory / "routing.json", profile.minimal_routing(routes))
+    shutil.copyfile(Path(profile.__file__), directory / "hook.py")
+    # Render all events now; oversize or schema-invalid profiles cannot be installed.
+    for event in profile.EVENTS:
+        profile.build_output(directory, {"hook_event_name": event})
+    return tree_hash(directory)
 
 
 def capture(root, name, command, cwd, environment=None, prompt=None, timeout=120):
@@ -214,6 +233,12 @@ def prepare_homes(state_root, candidate, transport_path, auth_path=None):
         raise runner.HarnessError("installed package escaped isolated router home")
     if tree_hash(installed_path) != source_hash:
         raise runner.HarnessError("installed package does not match exact candidate")
+    catalog_status = capture(state_root / "setup", "model-catalog",
+                             ["codex", "debug", "models", "--bundled"], state_root, environment)
+    if catalog_status["exit_code"] != 0:
+        raise runner.HarnessError("cannot read the offline CLI model catalog")
+    profile_hash = provision_profile(homes["router"], installed_path,
+                                     runner.read_json(state_root / "setup/model-catalog.jsonl"))
     config_path = homes["router"] / "config.toml"
     config_path.write_text(config_path.read_text(encoding="utf-8")
                            + candidate_hooks_config(homes["router"], installed_path), encoding="utf-8")
@@ -223,6 +248,7 @@ def prepare_homes(state_root, candidate, transport_path, auth_path=None):
         "homes": {arm: str(home) for arm, home in homes.items()},
         "config_sha256": {arm: runner.sha256_file(home / "config.toml") for arm, home in homes.items()},
         "transport_sha256": runner.sha256_file(transport_path),
+        "profile_sha256": profile_hash,
     }
     runner.write_json(state_root / "isolation.json", record)
     return record
@@ -242,11 +268,18 @@ def validate_homes(homes):
                 raise runner.HarnessError("unexpected user context in isolated home: " + relative)
         if any((home / "skills").rglob("SKILL.md")) or any((home / "memories").rglob("*.md")):
             raise runner.HarnessError("unexpected user skill or memory")
-        profile = home.parent / (home.name + "-profile")
-        if any(profile.rglob("SKILL.md")) or any(profile.rglob("AGENTS.md")):
+        user_profile = home.parent / (home.name + "-profile")
+        if any(user_profile.rglob("SKILL.md")) or any(user_profile.rglob("AGENTS.md")):
             raise runner.HarnessError("unexpected user profile instructions")
     if tree_hash(Path(record["installed_path"])) != record["candidate_sha256"]:
         raise runner.HarnessError("installed candidate changed since setup")
+    if (homes["baseline"] / profile.PROFILE_DIRECTORY).exists():
+        raise runner.HarnessError("baseline contains a benchmark router profile")
+    directory = homes["router"] / profile.PROFILE_DIRECTORY
+    if not directory.is_dir() or tree_hash(directory) != record.get("profile_sha256"):
+        raise runner.HarnessError("benchmark router profile missing or changed")
+    if runner.sha256_file(directory / "hook.py") != runner.sha256_file(Path(profile.__file__)):
+        raise runner.HarnessError("benchmark adapter changed; reprovision the isolated homes")
     return record
 
 

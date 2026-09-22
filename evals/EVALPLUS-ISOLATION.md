@@ -127,10 +127,21 @@ contains the successful user-layer registration and both outgoing hook contexts.
 This repair invoked no model, delegated no worker, graded no Docker task, and
 started no formal benchmark slot. It does not authorize a subsequent paid probe.
 
-Remaining CLI limitation: 0.144.1 spills/truncates these approximately 2,800-token
+At that revision, CLI 0.144.1 spilled/truncated these approximately 2,800-token
 hook outputs despite their `additionalContextLimit` metadata. Both lifecycle
 messages and routing delimiters reach the outgoing request; full output is saved
 by Codex, but this receipt does not prove that every policy sentence is delivered
 inline or that a worker follows it. SubagentStart registration is checked without
 dispatching a worker. A later authorized treatment probe must still pass before
 formal generation; no benchmark quality, cost, or latency improvement is claimed.
+
+## Compact profile follow-up
+
+The subsequent authorized paid presence probe passed both arms, but inspection
+of the captured routing blocks found invalid JSON after truncation. The campaign
+stopped before any formal slot. The [benchmark-only compact profile](BENCHMARK-PROFILE.md)
+now preserves the full candidate controller/worker contracts while reducing the
+routing JSON to 1,044 bytes. Exact full-context and JSON checks pass for both
+controller events and a zero-model worker event simulation. The original plugin
+and normal user/workspace config remain unchanged. See that decision for the
+byte bound, evidence, simulation limits, and next authorized validation step.

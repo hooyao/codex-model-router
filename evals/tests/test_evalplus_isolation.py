@@ -11,6 +11,7 @@ from unittest import mock
 from evals.scripts import evalplus_isolation as isolation
 from evals.scripts import evalplus_runner as runner
 from evals.scripts import evalplus_hooks as hooks
+from evals.tests.profile_fixture import CATALOG
 
 
 class ArmIsolationTests(unittest.TestCase):
@@ -70,11 +71,13 @@ class ArmIsolationTests(unittest.TestCase):
                     package = root / "state/router/plugins/cache/evalplus-candidate/codex-model-router/0.1.3"
                     shutil.copytree(root / "state/candidate-marketplace/plugins/codex-model-router", package)
                     runner.write_json(evidence / "plugin-add.jsonl", {"installedPath": str(package)})
+                if name == "model-catalog":
+                    runner.write_json(evidence / "model-catalog.jsonl", CATALOG)
                 return {"exit_code": 0}
 
             with mock.patch.object(isolation, "capture", side_effect=fake_capture):
                 record = isolation.prepare_homes(root / "state", candidate, transport)
-            self.assertEqual(["marketplace-add", "plugin-add"], [call[0] for call in calls])
+            self.assertEqual(["marketplace-add", "plugin-add", "model-catalog"], [call[0] for call in calls])
             self.assertTrue(all(call[2]["CODEX_HOME"].endswith("router") for call in calls))
             self.assertFalse((root / "state/baseline/plugins").exists())
             self.assertEqual(isolation.tree_hash(candidate), record["candidate_sha256"])
