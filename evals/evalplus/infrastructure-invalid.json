@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "campaigns": [
+    {
+      "campaign_state_sha256": "64d6bbba617ac9d17ba0f031e42c5ee293020e5b45dc79695acbcb48e657129e",
+      "label": "astra-xhigh-native-campaign-20260922",
+      "cost_ledger_sha256": "70cea3bf543ce45481ae17950c5080fa18062172ea529d18855959cb98be5c06",
+      "generation_results_sha256": "b2b96e50ce88424b4c6ed05e958d4082192272b687034e78e6847ba309b3a69b",
+      "reason": "Invalid infrastructure: effective read-only filesystem and unavailable baseline patch path. Costs remain in the ledger; these attempts are excluded from both pass@1 numerator and denominator.",
+      "run_ids": [
+        "r01-humaneval-0-baseline",
+        "r01-humaneval-0-router",
+        "r01-humaneval-63-baseline",
+        "r01-humaneval-63-router"
+      ]
+    }
+  ]
+}

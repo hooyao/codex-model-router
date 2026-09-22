@@ -469,7 +469,8 @@ def _task_instruction(task_id: str) -> str:
         "network resources, hidden tests, grader assets, or other run directories. Do not execute "
         "or import hidden grader code. Do not execute generated code on the host, including "
         "solution.py or any implementation you generate. Grading runs separately in a container "
-        "after you finish. You may inspect and edit files in this task directory."
+        "after you finish. Use evalplus_workspace.read_file and write_file with root-level relative "
+        "filenames such as solution.py. You may inspect and edit files only in this task directory."
     ) % task_id
 
 
@@ -548,8 +549,6 @@ def build_codex_command(
         "model_supports_reasoning_summaries=true",
         "--config",
         'approval_policy="never"',
-        "--sandbox",
-        execution["sandbox"],
         "--cd",
         str(task_root.resolve()),
         "--disable",
@@ -589,6 +588,11 @@ def build_codex_command(
         )
     else:
         raise HarnessError("unknown variant: " + str(run["variant"]))
+    try:
+        from .evalplus_workspace import command_overrides
+    except ImportError:
+        from evalplus_workspace import command_overrides
+    command.extend(command_overrides(task_root))
     command.append("-")
     return command
 
@@ -976,6 +980,8 @@ def make_grader_request(
     request = {
         "schema_version": 1,
         "contract": "evalplus-isolated-subset-v1",
+        "campaign_state_sha256": sha256_file(campaign_root / "campaign.json"),
+        "attempted_run_ids": prepared["state"]["attempted_run_ids"],
         "campaign_id": manifest["campaign_id"],
         "backend": backend,
         "direct_host_execution": False,
@@ -1026,12 +1032,17 @@ def verify_grader_result(request_path: Path, result_path: Path) -> Dict[str, Any
         passed += int(item["base_pass"] and item["plus_pass"])
     if observed != expected:
         raise HarnessError("grader result does not cover the exact scheduled sample set")
-    return {
-        "scheduled_runs": len(expected),
-        "passed_runs": passed,
-        "pass_rate": passed / len(expected),
-        "complete": True,
-    }
+    campaign_hash = _sha(request.get("campaign_state_sha256"), "scoring campaign_state_sha256")
+    attempted = request.get("attempted_run_ids")
+    if (not isinstance(attempted, list) or any(not isinstance(s, str) for s in attempted)
+            or len(set(attempted)) != len(attempted)
+            or set(attempted) - {run_id for run_id, _ in expected}):
+        raise HarnessError("scoring requires the exact attempted-run inventory")
+    try:
+        from .evalplus_scoring import score_rows
+    except ImportError:
+        from evalplus_scoring import score_rows
+    return score_rows(result["results"], campaign_hash, attempted)
 
 
 def validate_plugin_inventories(

@@ -19,9 +19,11 @@ from pathlib import Path
 try:
     from . import evalplus_runner as runner
     from . import evalplus_profile as profile
+    from . import evalplus_write_gate as write_gate
 except ImportError:
     import evalplus_runner as runner
     import evalplus_profile as profile
+    import evalplus_write_gate as write_gate
 
 
 TRANSPORT_FIELDS = {
@@ -102,7 +104,7 @@ def clean_config(transport):
         'model = "gpt-6-astra"', 'model_reasoning_effort = "xhigh"',
         # CLI 0.144.1 fallback model metadata otherwise omits reasoning entirely.
         'model_supports_reasoning_summaries = true',
-        'approval_policy = "never"', 'sandbox_mode = "workspace-write"',
+        'approval_policy = "never"', 'default_permissions = "evalplus-task"',
         'web_search = "disabled"', 'project_doc_max_bytes = 0',
         'model_provider = ' + json.dumps(provider_id),
         '[features]', 'apps = false', 'remote_plugin = false',
@@ -110,6 +112,9 @@ def clean_config(transport):
         '[skills.bundled]', 'enabled = false',
         '[memories]', 'use_memories = false', 'generate_memories = false',
         '[agents]', 'max_depth = 1', 'max_threads = 2',
+        '[permissions.evalplus-task.filesystem]', '":minimal" = "read"',
+        '[permissions.evalplus-task.network]', 'enabled = false',
+        '[windows]', 'sandbox = "unelevated"',
         '[model_providers.' + json.dumps(provider_id) + ']',
     ]
     lines.extend(json.dumps(key) + ' = ' + _toml_value(value) for key, value in provider.items())
@@ -389,24 +394,30 @@ def run_preflight(manifest, campaign_root, homes):
     validate_runtime_flags(manifest)
     evidence = campaign_root / "treatment-preflight"
     evidence.mkdir(parents=True, exist_ok=False)
-    reports, errors = {}, []
+    reports, errors, write_proofs, challenges = {}, [], {}, {}
     # Exactly one attempt per arm. A failing arm cannot trigger model retries.
     for arm, home in homes.items():
         task = evidence / (arm + "-workspace")
         task.mkdir()
         subprocess.run(["git", "init", "--quiet"], cwd=str(task), check=True)
+        challenge = write_gate.create_challenge(task, arm)
+        challenge_path = evidence / (arm + ".write-challenge.json")
+        runner.write_json(challenge_path, challenge)
+        challenges[challenge_path.name] = runner.sha256_file(challenge_path)
         command = runner.build_codex_command(manifest, {"variant": arm}, task)
-        status = capture(evidence, arm, command, task, arm_environment(home), PROBE_PROMPT, 240)
+        status = capture(evidence, arm, command, task, arm_environment(home), write_gate.write_prompt(challenge), 240)
         try:
             if status["exit_code"] != 0:
                 raise runner.HarnessError("preflight CLI did not complete")
             report = model_messages(evidence / (arm + ".jsonl"))
             reports[arm] = report
             validate_probe_report(arm, report)
+            write_proofs[arm] = write_gate.verify_artifact(challenge, evidence / (arm + ".jsonl"))
         except (runner.HarnessError, ValueError) as error:
             errors.append(arm + ": " + str(error))
     receipt = {
         "passed": not errors, "errors": errors, "reports": reports,
+        "write_proofs": write_proofs, "write_challenges_sha256": challenges,
         "isolation_sha256": runner.sha256_file(homes["baseline"].parent / "isolation.json"),
         "candidate_sha256": record["candidate_sha256"],
         "command_sha256": runner.sha256_file(Path(runner.__file__)),
@@ -427,11 +438,22 @@ def require_treatment_receipt(campaign_root, manifest, homes):
     receipt = runner.read_json(campaign_root / "treatment-preflight.json")
     if receipt.get("passed") is not True:
         raise runner.HarnessError("treatment preflight did not pass")
+    if set(receipt.get("write_proofs", {})) != set(homes):
+        raise runner.HarnessError("paid write-artifact proof missing")
     for arm in homes:
         raw = campaign_root / "treatment-preflight" / (arm + ".jsonl")
         if model_messages(raw) != receipt["reports"][arm]:
             raise runner.HarnessError("preflight report differs from saved model output")
         validate_probe_report(arm, receipt["reports"][arm])
+        challenge_path = campaign_root / "treatment-preflight" / (arm + ".write-challenge.json")
+        if runner.sha256_file(challenge_path) != receipt.get("write_challenges_sha256", {}).get(challenge_path.name):
+            raise runner.HarnessError("paid write challenge changed")
+        challenge = runner.read_json(challenge_path)
+        expected_workspace = campaign_root / "treatment-preflight" / (arm + "-workspace")
+        if challenge.get("arm") != arm or Path(challenge["workspace"]).resolve() != expected_workspace.resolve():
+            raise runner.HarnessError("paid write challenge scope changed")
+        if write_gate.verify_artifact(challenge, raw) != receipt["write_proofs"][arm]:
+            raise runner.HarnessError("paid write artifact changed")
     expected = {
         "isolation_sha256": runner.sha256_file(homes["baseline"].parent / "isolation.json"),
         "candidate_sha256": record["candidate_sha256"],

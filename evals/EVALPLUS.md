@@ -17,8 +17,8 @@ maximum is USD 44.24; the harness cannot establish account billing truth itself.
 
 ## Arms and schedule
 
-Both top-level arms use `gpt-6-astra` at `xhigh` effort and a
-`workspace-write` sandbox. The baseline disables plugins, hooks, and native
+Both top-level arms use `gpt-6-astra` at `xhigh` effort and the confined
+`evalplus-task` permission profile. The baseline disables plugins, hooks, and native
 multi-agent support. The router arm enables those capabilities and requires
 exactly `codex-model-router` v0.1.3 in a separate `CODEX_HOME`. The first
 repetition orders each pair baseline then router; the second reverses that order.
@@ -30,7 +30,7 @@ Each command is built with:
 codex exec --ephemeral --ignore-rules --json --strict-config
 ```
 
-It also supplies the model, reasoning effort, sandbox, approval policy, current
+It also supplies the model, reasoning effort, named permission profile, approval policy, current
 task directory, feature isolation, and prompt on stdin. This follows the
 [official Codex non-interactive mode documentation](https://learn.chatgpt.com/docs/non-interactive-mode),
 including the documented terminal `turn.completed.usage` event. Raw JSONL and
@@ -117,7 +117,7 @@ and fit the 8,000-byte ceiling. A nonzero CLI exit is expected because the sink
 rejects the request. No generated code runs. Its receipt is mandatory before
 the paid treatment preflight and before either formal-run admission path.
 
-The `evalplus_isolation.py preflight` command makes exactly one diagnostic request per arm, sequentially, and refuses
+The `evalplus_isolation.py preflight` command makes one diagnostic invocation per arm, sequentially, and refuses
 to overwrite or repeat its evidence. These requests can incur cost and are not
 benchmark slots. It saves raw CLI events, stderr, exact commands, timings, and
 model reports. Baseline must report no skills or hook context. Router must report
@@ -127,6 +127,11 @@ proof that instructions mechanically enforce policy. Offline `debug prompt-input
 can show the skill catalog but is not proof of lifecycle hook delivery. Failed
 or missing probes prohibit formal generation. Receipts bind candidate/config,
 runner code, and raw evidence; changing these requires a new authorized preflight.
+It additionally requires a fresh, exact write-probe artifact in each workspace;
+the router must dispatch a native worker for its write. Saved artifact hashes are
+revalidated before formal slots. Both arms expose only the bounded file editor,
+with shell execution and task-tool networking disabled. See
+[write capability](WRITE-CAPABILITY.md) for the profile, boundaries, and evidence.
 The offline receipt additionally binds the CLI and Python executable hashes and
 the benchmark profile/adapter. Presence-only receipts from earlier revisions
 are insufficient. The bundled model catalog resolves worker examples without
@@ -286,7 +291,9 @@ python evals/scripts/evalplus_runner.py verify-grader-result `
 
 The harness has no host-execution option: `--backend host` is accepted only so it
 can produce an explicit refusal. A run passes only when both EvalPlus base and
-plus tests pass. Timeouts, blockers, errors, and missing completions remain
-failures in the 24-run denominator. Report per-arm pass rates and paired
-differences; do not infer a cost or latency improvement from six tasks and two
-repetitions.
+plus tests pass. Only attempted, infrastructure-valid samples enter the scoring
+denominator; ordinary failed implementations remain failures. The four declared
+historical infrastructure failures stay in the cost ledger but never count
+toward pass@1. Unstarted samples are unscored and incomplete campaigns cannot
+claim a full result. Report exclusions explicitly and do not infer a cost or
+latency improvement from six tasks and two repetitions.
