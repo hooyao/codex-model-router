@@ -11,7 +11,7 @@ from evals.scripts import evalplus_write_gate as gate
 from evals.scripts import evalplus_isolation as isolation
 from evals.scripts import evalplus_runner as runner
 from evals.scripts import evalplus_scoring as scoring
-from evals.tests.profile_fixture import add_write_capability
+from evals.tests.profile_fixture import add_write_capability, provision
 
 try:
     import tomllib
@@ -183,8 +183,19 @@ class PaidWriteGateTests(unittest.TestCase):
             campaign = root / "campaign"
             homes = {arm: root / arm for arm in ("baseline", "router")}
             runner.write_json(root / "isolation.json", {})
+            homes["baseline"].mkdir()
+            identity = provision(homes["router"])
+            for home in homes.values():
+                (home / "config.toml").write_text('# isolated config\nmodel = "gpt-6-astra"\n', encoding="utf-8")
+            identity["config_sha256"] = {arm: runner.sha256_file(home / "config.toml") for arm, home in homes.items()}
 
             def captured(evidence, arm, command, workspace, environment, prompt, timeout):
+                home = Path(environment["CODEX_HOME"])
+                self.assertNotEqual(homes[arm], home)
+                isolation.config_receipt.begin(evidence, arm, home, workspace)
+                config = home / "config.toml"
+                config.write_bytes(config.read_bytes().replace(b"\r\n", b"\n") + isolation.config_receipt.trust_suffixes(workspace)[0])
+                isolation.config_receipt.finish(evidence, arm, home, workspace)
                 challenge = runner.read_json(evidence / (arm + ".write-challenge.json"))
                 editor.WorkspaceEditor(workspace).write(gate.MARKER, challenge["content"])
                 report = {"skills": [], "session_start_excerpt": None, "user_prompt_submit_excerpt": None,
@@ -199,13 +210,27 @@ class PaidWriteGateTests(unittest.TestCase):
                 (evidence / (arm + ".jsonl")).write_text("\n".join(json.dumps(e) for e in events), encoding="utf-8")
                 return {"exit_code": 0}
 
-            with mock.patch.object(isolation, "validate_homes", return_value={"candidate_sha256": "a" * 64}), \
+            with mock.patch.object(isolation, "validate_homes", return_value=identity), \
                     mock.patch.object(isolation, "validate_runtime_flags"), \
                     mock.patch("evals.scripts.evalplus_hooks.require_hook_receipt"), \
                     mock.patch.object(isolation, "capture", side_effect=captured):
                 receipt = isolation.run_preflight(runner.validate_manifest(), campaign, homes)
                 self.assertTrue(receipt["passed"])
+                for arm, home in homes.items():
+                    self.assertEqual(identity["config_sha256"][arm], runner.sha256_file(home / "config.toml"))
                 isolation.require_treatment_receipt(campaign, runner.validate_manifest(), homes)
+                missing = copy.deepcopy(receipt)
+                del missing["config_proofs_sha256"]
+                runner.write_json(campaign / "treatment-preflight.json", missing)
+                with self.assertRaisesRegex(runner.HarnessError, "invocation config proof missing"):
+                    isolation.require_treatment_receipt(campaign, runner.validate_manifest(), homes)
+                runner.write_json(campaign / "treatment-preflight.json", receipt)
+                runtime_config = campaign / "treatment-preflight/homes/router/config.toml"
+                original_config = runtime_config.read_bytes()
+                runtime_config.write_bytes(original_config.replace(b'gpt-6-astra', b'gpt-5.6-sol'))
+                with self.assertRaisesRegex(runner.HarnessError, "exact task-scoped"):
+                    isolation.require_treatment_receipt(campaign, runner.validate_manifest(), homes)
+                runtime_config.write_bytes(original_config)
                 (campaign / "treatment-preflight/router-workspace" / gate.MARKER).write_text("tampered", encoding="utf-8")
                 with self.assertRaisesRegex(runner.HarnessError, "match fresh"):
                     isolation.require_treatment_receipt(campaign, runner.validate_manifest(), homes)

@@ -220,13 +220,14 @@ def simulate_worker(manifest, home, identity, evidence):
     config += '\n[hooks]\nSessionStart = ' + isolation._toml_value([{"hooks": [{
         "type": "command", "command": command, "timeout": 10}]}]) + '\n'
     (destination / "config.toml").write_text(config, encoding="utf-8")
+    config_sha256 = runner.sha256_file(destination / "config.toml")
     registered = registry(destination, workspace, "router")
     runner.write_json(evidence / "worker-simulation.registry.json", registered)
     status, requests = capture_request(manifest, destination, workspace, "worker-simulation", evidence, variant="router")
     runner.write_json(evidence / "worker-simulation.event.json", {
         "event": "SubagentStart", "carrier": "SessionStart", "actual_worker_spawned": False,
         "source_hook_key": handler["key"], "source_hook_hash": handler["currentHash"],
-        "config_sha256": runner.sha256_file(destination / "config.toml"),
+        "config_sha256": config_sha256,
     })
     return validate_worker_simulation(evidence, identity)
 
@@ -236,13 +237,13 @@ def validate_worker_simulation(evidence, identity):
     event = runner.read_json(evidence / "worker-simulation.event.json")
     requests = runner.read_json(evidence / "worker-simulation.request.json")
     status = runner.read_json(evidence / "worker-simulation.status.json")
+    isolation.config_receipt.require(evidence, "worker-simulation", home, Path(status["cwd"]), event["config_sha256"])
     registered = runner.read_json(evidence / "worker-simulation.registry.json")["hooks"]["data"]
     source = runner.read_json(evidence / "router.registry.json")["hooks"]["data"][0]["hooks"]
     handler = next(h for h in source if h["key"] == event["source_hook_key"])
     if (event["event"] != "SubagentStart" or event["carrier"] != "SessionStart"
             or event["actual_worker_spawned"] is not False or handler["eventName"] != "subagentStart"
-            or handler["currentHash"] != event["source_hook_hash"]
-            or runner.sha256_file(home / "config.toml") != event["config_sha256"]):
+            or handler["currentHash"] != event["source_hook_hash"]):
         raise runner.HarnessError("worker simulation event binding changed")
     if (len(registered) != 1 or registered[0]["errors"] or registered[0]["warnings"]
             or len(requests) != 1 or requests[0].get("path") != "/responses" or status["exit_code"] != 1
@@ -279,7 +280,7 @@ def bindings(homes, identity):
             "cli_sha256": runner.sha256_file(Path(executable)),
             "python_sha256": runner.sha256_file(Path(sys.executable)),
             "code_sha256": {Path(m.__file__).name: runner.sha256_file(Path(m.__file__))
-                            for m in (isolation, runner, live, profile, write_gate, workspace_editor)},
+                            for m in (isolation, runner, live, profile, write_gate, workspace_editor, isolation.config_receipt)},
             "probe_sha256": runner.sha256_file(Path(__file__)),
             "mcp_fixture_sha256": runner.sha256_file(Path(__file__).with_name("evalplus_mcp_probe.py"))}
 
@@ -300,6 +301,7 @@ def run_probe(campaign, homes):
         runner.write_json(evidence / (arm + ".registry.json"), registered)
         status, requests = capture_request(manifest, home, workspace, arm, evidence)
         try:
+            isolation.validate_execution_home(homes[arm], home, arm, identity, workspace, evidence, arm)
             result["reports"][arm] = validate_delivery(arm, registered, requests, status, home, identity)
             write_gate.exercise_editor(workspace, evidence / (arm + ".editor.json"), isolation.arm_environment(home))
         except (runner.HarnessError, KeyError, TypeError) as error:
@@ -340,7 +342,8 @@ def require_hook_receipt(campaign, homes):
         raise runner.HarnessError("CLI-mediated editor receipt inventory incomplete")
     evidence = campaign / "hook-delivery"
     required = {arm + suffix for arm in (*homes, "worker-simulation") for suffix in
-                (".registry.json", ".request.json", ".command.json", ".status.json", ".jsonl", ".stderr.txt")}
+                (".registry.json", ".request.json", ".command.json", ".status.json", ".jsonl", ".stderr.txt",
+                 ".config-before.json", ".config-after.json")}
     required.add("worker-simulation.event.json")
     required.update(arm + ".editor.json" for arm in homes)
     required.update(arm + "-workspace-outside-sentinel.txt" for arm in homes)
@@ -350,6 +353,8 @@ def require_hook_receipt(campaign, homes):
         if runner.sha256_file(evidence / name) != digest:
             raise runner.HarnessError("hook delivery evidence changed")
     for arm in homes:
+        isolation.validate_execution_home(homes[arm], evidence / "homes" / arm, arm, identity,
+                                           evidence / (arm + "-workspace"), evidence, arm)
         report = validate_delivery(arm, runner.read_json(evidence / (arm + ".registry.json")),
                                    runner.read_json(evidence / (arm + ".request.json")),
                                    runner.read_json(evidence / (arm + ".status.json")),
