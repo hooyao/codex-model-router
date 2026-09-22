@@ -100,6 +100,8 @@ def clean_config(transport):
     # Both HTTP and stream retries are disabled, including inherited workers.
     lines = [
         'model = "gpt-6-astra"', 'model_reasoning_effort = "xhigh"',
+        # CLI 0.144.1 fallback model metadata otherwise omits reasoning entirely.
+        'model_supports_reasoning_summaries = true',
         'approval_policy = "never"', 'sandbox_mode = "workspace-write"',
         'web_search = "disabled"', 'project_doc_max_bytes = 0',
         'model_provider = ' + json.dumps(provider_id),

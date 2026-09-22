@@ -132,6 +132,13 @@ the benchmark profile/adapter. Presence-only receipts from earlier revisions
 are insufficient. The bundled model catalog resolves worker examples without
 contacting a model; backend entitlement is still a later live-validation check.
 
+Both primary commands/configs set `model_supports_reasoning_summaries=true` as
+well as exact `gpt-6-astra`/`xhigh`. This is required for CLI 0.144.1 to serialize
+reasoning when Astra metadata is missing. The offline gate rejects either arm
+unless the captured body contains that exact model and `reasoning.effort=xhigh`.
+See [Astra request delivery](ASTRA-REASONING.md) for raw evidence and regression
+checks; the flag's presence alone cannot satisfy admission.
+
 The grader gate imports EvalPlus 0.3.1 in an immutable Docker image with networking
 off, a read-only filesystem, dropped capabilities, and resource limits. It does
 not run generated samples. Formal generation requires successful offline hook,
