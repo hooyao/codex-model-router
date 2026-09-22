@@ -10,6 +10,7 @@ from unittest import mock
 
 from evals.scripts import evalplus_isolation as isolation
 from evals.scripts import evalplus_runner as runner
+from evals.scripts import evalplus_hooks as hooks
 
 
 class ArmIsolationTests(unittest.TestCase):
@@ -23,6 +24,7 @@ class ArmIsolationTests(unittest.TestCase):
         inherited = {"CODEX_HOME": "ambient", "CODEX_SQLITE_HOME": "ambient-db",
                      "CODEX_THREAD_ID": "desktop", "CODEX_APP_TOOLS_PIPE_PATH": "pipe",
                      "HOME": "personal", "USERPROFILE": "personal", "PATH": "python",
+                     "APPDATA": "personal-roaming", "LOCALAPPDATA": "personal-local",
                      "PYTHONPATH": "ambient-modules", "RUST_LOG": "trace"}
         with tempfile.TemporaryDirectory() as temp:
             baseline = isolation.arm_environment(Path(temp) / "baseline", inherited)
@@ -30,7 +32,7 @@ class ArmIsolationTests(unittest.TestCase):
         self.assertTrue(routed["PATH"].endswith(os.pathsep + "python"))
         for key in ("CODEX_THREAD_ID", "CODEX_APP_TOOLS_PIPE_PATH", "PYTHONPATH", "RUST_LOG"):
             self.assertNotIn(key, routed)
-        for key in ("CODEX_HOME", "CODEX_SQLITE_HOME", "HOME", "USERPROFILE", "XDG_CONFIG_HOME"):
+        for key in ("CODEX_HOME", "CODEX_SQLITE_HOME", "HOME", "USERPROFILE", "XDG_CONFIG_HOME", "APPDATA", "LOCALAPPDATA"):
             self.assertNotEqual(baseline[key], routed[key])
             self.assertNotIn(routed[key], inherited.values())
         self.assertEqual("ambient", inherited["CODEX_HOME"])
@@ -56,8 +58,8 @@ class ArmIsolationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             candidate = root / "source/codex-model-router"
-            runner.write_json(candidate / ".codex-plugin/plugin.json", {"name": "codex-model-router", "version": "0.1.3"})
-            (candidate / "hook.py").write_text("# exact candidate\n")
+            shutil.copytree(runner.ROOT / "plugins/codex-model-router", candidate,
+                            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
             transport = root / "transport.json"
             runner.write_json(transport, self.transport)
             calls = []
@@ -140,6 +142,7 @@ class TreatmentEvidenceTests(unittest.TestCase):
                 return {"exit_code": 1}
 
             with mock.patch.object(isolation, "validate_homes", return_value={"candidate_sha256": "a" * 64}), \
+                    mock.patch.object(hooks, "require_hook_receipt"), \
                     mock.patch.object(isolation, "validate_runtime_flags"), \
                     mock.patch.object(isolation, "capture", side_effect=failed_capture) as capture, \
                     mock.patch.object(isolation.subprocess, "run"):

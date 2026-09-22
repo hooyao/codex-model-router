@@ -118,11 +118,13 @@ def admit_next(ledger, pricing):
     return Decimal(ledger["observed_cost_usd"]) < Decimal(pricing["soft_cap_usd"])
 
 
-def clone_slot_home(template, destination, arm, identity):
+def clone_slot_home(template, destination, arm, identity, include_auth=True):
     """Only configuration, authentication, and the exact router package survive."""
     destination.mkdir(parents=True, exist_ok=False)
     (destination.parent / (destination.name + "-profile")).mkdir()
     for name in ("config.toml", "auth.json"):
+        if name == "auth.json" and not include_auth:
+            continue
         if (template / name).is_file():
             shutil.copyfile(template / name, destination / name)
     if runner.sha256_file(destination / "config.toml") != identity["config_sha256"][arm]:

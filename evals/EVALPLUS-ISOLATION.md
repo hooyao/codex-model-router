@@ -70,3 +70,67 @@ the treatment stop. Any continuation must apply the user's current budget
 instruction rather than treat the legacy guard as a user requirement. Raw
 execution artifacts, terminal refusals, offline context renderings, the empty
 repair-session inventory, and cost ledger are retained outside the source tree.
+
+## Offline CLI hook delivery repair
+
+The installed executable is Codex CLI 0.144.1 (SHA-256
+`cbacbb9726262ef558b4af0438a1b2a5bba9076132401d947b5b4d2bf92ab0e4`).
+Its `exec --help` documents `--dangerously-bypass-hook-trust`; the official
+[hook documentation](https://developers.openai.com/codex/hooks/) distinguishes
+hook discovery from trusting an exact definition. `hooks/list` exposes the
+definition key, source, event, enabled state, current hash, and trust status.
+Non-managed entries start untrusted; the invocation flag explicitly activates
+enabled entries after the harness verifies its isolated config/package hashes.
+This does not persist trust or bypass tool approvals/sandboxing.
+
+The preceding failed paid probe already supplied the trust flag. A new
+zero-model diagnostic reproduced the failure: `hooks/list` listed all three
+candidate plugin handlers as enabled and untrusted, while `codex exec` sent
+skills but no lifecycle context. An inline user-layer control produced both
+event messages. Thus plugin discovery alone is insufficient on this executable;
+we do not claim that a newer CLI shares this observed behavior.
+
+Provisioning now renders the exact candidate event groups in `[hooks]` in the
+fresh router `config.toml`. It preserves matchers, timeout, and output-limit
+metadata, resolves the unchanged `router_hook.py` under the child's `CODEX_HOME`,
+and pins the Python interpreter running the harness. Windows commands use
+PowerShell call/path syntax instead of `%PLUGIN_ROOT%`; POSIX commands use shell
+quoting and `$CODEX_HOME`. The original plugin keys have `enabled = false` in
+`hooks.state` to prevent double delivery. The baseline has no such registration
+or package. No candidate files or routing-policy text change, and config bytes
+remain identical when copied into fresh formal-slot homes.
+
+The CLI's `--profile` option layers `<name>.config.toml` in this version. The
+harness uses the generated base `config.toml` directly, with no named profile or
+legacy `[profiles]` assumptions. Child HOME/USERPROFILE, XDG, APPDATA, and
+LOCALAPPDATA paths are isolated. Mandatory system-managed Windows Defender
+hooks are still visible in the CLI registry; they are not imported user config
+and are neither modified nor bypassed by this repair.
+
+`evalplus_hooks.py` proves delivery using the production command builder and
+fresh per-slot clones. Read-only app-server RPCs inspect registration. A local
+HTTP server captures and rejects `/responses`; it has no model implementation,
+credentials, forwarding, or successful response. CLI retries and remote model
+discovery are disabled. Two distinct developer messages must contain the
+SessionStart/UserPromptSubmit contract and routing delimiters. Baseline must
+have no router or other skill context. The receipt binds candidate, isolation,
+CLI/Python executables, harness code, registry, command/status, and raw request
+evidence. Missing, stale, changed, or incomplete evidence blocks both formal
+paths and the paid treatment preflight before any model request.
+
+The fixed offline verification passed on fresh homes with unchanged candidate
+hash `1536c1d802842afd5ff289532b4959bc59cbf106becf5004c808190310a8dd97`.
+Evidence is retained under
+`Q:\MyProjects\codex-model-router-benchmarks\cli-hook-delivery-repair-20260922`.
+The `diagnosis` directory contains the bundled-registration failure; `verification`
+contains the successful user-layer registration and both outgoing hook contexts.
+This repair invoked no model, delegated no worker, graded no Docker task, and
+started no formal benchmark slot. It does not authorize a subsequent paid probe.
+
+Remaining CLI limitation: 0.144.1 spills/truncates these approximately 2,800-token
+hook outputs despite their `additionalContextLimit` metadata. Both lifecycle
+messages and routing delimiters reach the outgoing request; full output is saved
+by Codex, but this receipt does not prove that every policy sentence is delivered
+inline or that a worker follows it. SubagentStart registration is checked without
+dispatching a worker. A later authorized treatment probe must still pass before
+formal generation; no benchmark quality, cost, or latency improvement is claimed.

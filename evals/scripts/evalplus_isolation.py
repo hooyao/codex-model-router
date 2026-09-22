@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -53,6 +54,8 @@ def arm_environment(home, inherited=None):
         "USERPROFILE": str(profile.resolve()),
         "XDG_CONFIG_HOME": str((profile / ".config").resolve()),
         "XDG_DATA_HOME": str((profile / ".local/share").resolve()),
+        "APPDATA": str((profile / "AppData/Roaming").resolve()),
+        "LOCALAPPDATA": str((profile / "AppData/Local").resolve()),
         "PYTHONDONTWRITEBYTECODE": "1",
         # Plugin hooks call `python` on Windows. Use the interpreter that is
         # actually running this harness, without changing the host's PATH.
@@ -76,7 +79,9 @@ def tree_hash(root):
 def _toml_value(value):
     if isinstance(value, dict):
         return "{ " + ", ".join(json.dumps(k) + " = " + _toml_value(v) for k, v in value.items()) + " }"
-    if isinstance(value, (str, bool, int, list)):
+    if isinstance(value, list):
+        return "[" + ", ".join(_toml_value(item) for item in value) + "]"
+    if isinstance(value, (str, bool, int)):
         return json.dumps(value)
     raise runner.HarnessError("unsupported transport configuration value")
 
@@ -106,6 +111,39 @@ def clean_config(transport):
     lines.extend(json.dumps(key) + ' = ' + _toml_value(value) for key, value in provider.items())
     lines.extend(['request_max_retries = 0', 'stream_max_retries = 0'])
     return '\n'.join(lines) + '\n'
+
+
+def candidate_hooks_config(home, installed_path):
+    """Register the exact candidate program in the CLI's active user layer.
+
+    CLI 0.144.1 lists plugin hooks but does not deliver them in codex exec.
+    Preserve candidate event metadata; only adapt program lookup/shell syntax.
+    CODEX_HOME-relative commands remain valid in fresh per-slot copies.
+    """
+    relative = installed_path.relative_to(home).as_posix()
+    definitions = runner.read_json(installed_path / "hooks/hooks.json")["hooks"]
+    events = {"SessionStart": "session_start", "UserPromptSubmit": "user_prompt_submit",
+              "SubagentStart": "subagent_start"}
+    if set(definitions) != set(events):
+        raise runner.HarnessError("unexpected candidate lifecycle events")
+    program = relative + "/hooks/router_hook.py"
+    if not (installed_path / "hooks/router_hook.py").is_file():
+        raise runner.HarnessError("candidate hook program missing")
+    windows = "& '" + sys.executable.replace("'", "''") + "' (Join-Path $env:CODEX_HOME '" + program.replace("'", "''") + "')"
+    posix = shlex.quote(sys.executable) + ' "$CODEX_HOME/' + program + '"'
+    state = {}
+    for event, groups in definitions.items():
+        for group_index, group in enumerate(groups):
+            for index, handler in enumerate(group["hooks"]):
+                if handler.get("type") != "command" or handler.get("command") != 'python3 "$PLUGIN_ROOT/hooks/router_hook.py"':
+                    raise runner.HarnessError("candidate hook command is not the reviewed program")
+                handler["command"] = posix
+                handler["commandWindows"] = windows
+                key = "codex-model-router@evalplus-candidate:hooks/hooks.json:%s:%d:%d" % (events[event], group_index, index)
+                state[key] = {"enabled": False}
+    definitions["state"] = state
+    return '\n[hooks]\n' + '\n'.join(key + ' = ' + _toml_value(value)
+                                      for key, value in definitions.items()) + '\n'
 
 
 def capture(root, name, command, cwd, environment=None, prompt=None, timeout=120):
@@ -176,6 +214,9 @@ def prepare_homes(state_root, candidate, transport_path, auth_path=None):
         raise runner.HarnessError("installed package escaped isolated router home")
     if tree_hash(installed_path) != source_hash:
         raise runner.HarnessError("installed package does not match exact candidate")
+    config_path = homes["router"] / "config.toml"
+    config_path.write_text(config_path.read_text(encoding="utf-8")
+                           + candidate_hooks_config(homes["router"], installed_path), encoding="utf-8")
     record = {
         "schema_version": 1, "candidate_path": str(candidate.resolve()),
         "candidate_sha256": source_hash, "installed_path": str(installed_path),
@@ -303,6 +344,12 @@ def validate_probe_report(arm, report):
 
 
 def run_preflight(manifest, campaign_root, homes):
+    # Registration and both lifecycle deliveries must pass before a paid probe.
+    try:
+        from .evalplus_hooks import require_hook_receipt
+    except ImportError:
+        from evalplus_hooks import require_hook_receipt
+    require_hook_receipt(campaign_root, homes)
     record = validate_homes(homes)
     validate_runtime_flags(manifest)
     evidence = campaign_root / "treatment-preflight"
@@ -336,6 +383,11 @@ def run_preflight(manifest, campaign_root, homes):
 
 
 def require_treatment_receipt(campaign_root, manifest, homes):
+    try:
+        from .evalplus_hooks import require_hook_receipt
+    except ImportError:
+        from evalplus_hooks import require_hook_receipt
+    require_hook_receipt(campaign_root, homes)
     record = validate_homes(homes)
     receipt = runner.read_json(campaign_root / "treatment-preflight.json")
     if receipt.get("passed") is not True:
