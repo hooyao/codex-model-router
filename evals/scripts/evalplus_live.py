@@ -135,6 +135,10 @@ def clone_slot_home(template, destination, arm, identity, include_auth=True):
         shutil.copytree(source, target)
         if isolation.tree_hash(target) != identity["candidate_sha256"]:
             raise runner.HarnessError("slot candidate differs from preflight")
+        profile = isolation.profile.PROFILE_DIRECTORY
+        shutil.copytree(template / profile, destination / profile)
+        if isolation.tree_hash(destination / profile) != identity.get("profile_sha256"):
+            raise runner.HarnessError("slot benchmark profile differs from preflight")
     return destination
 
 

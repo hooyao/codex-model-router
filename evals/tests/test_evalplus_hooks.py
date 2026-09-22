@@ -11,6 +11,8 @@ from evals.scripts import evalplus_hooks as hooks
 from evals.scripts import evalplus_isolation as isolation
 from evals.scripts import evalplus_live as live
 from evals.scripts import evalplus_runner as runner
+from evals.scripts import evalplus_profile as profile
+from evals.tests.profile_fixture import CATALOG, provision
 
 try:
     import tomllib
@@ -23,9 +25,8 @@ class HookConfigurationTests(unittest.TestCase):
     def test_real_candidate_rendering_and_slot_relocation(self):
         with tempfile.TemporaryDirectory(prefix="hook profile '") as temp:
             home = Path(temp) / "router"
-            installed = home / "plugins/cache/evalplus-candidate/codex-model-router/0.1.3"
-            shutil.copytree(runner.ROOT / "plugins/codex-model-router", installed,
-                            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            identity = provision(home)
+            installed = Path(identity["installed_path"])
             digest = isolation.tree_hash(installed)
             config = isolation.clean_config({"provider_id": "offline", "provider": {
                 "name": "offline", "wire_api": "responses", "base_url": "http://127.0.0.1:1"}})
@@ -47,8 +48,7 @@ class HookConfigurationTests(unittest.TestCase):
             self.assertTrue(all(s == {"enabled": False} for s in parsed["hooks"]["state"].values()))
             (home / "config.toml").write_text(config, encoding="utf-8")
             (home / "auth.json").write_text('{"secret":"do not copy"}')
-            identity = {"config_sha256": {"router": runner.sha256_file(home / "config.toml")},
-                        "installed_path": str(installed), "candidate_sha256": digest}
+            identity["config_sha256"] = {"router": runner.sha256_file(home / "config.toml")}
             slot = live.clone_slot_home(home, Path(temp) / "slot", "router", identity, include_auth=False)
             self.assertFalse((slot / "auth.json").exists())
             self.assertEqual(config, (slot / "config.toml").read_text(encoding="utf-8"))
@@ -76,18 +76,19 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.home = Path(self.temp.name) / "router"
         relative = "plugins/cache/evalplus-candidate/codex-model-router/0.1.3"
-        self.identity = {"homes": {"router": str(self.home)}, "installed_path": str(self.home / relative)}
+        self.identity = provision(self.home)
         active = [{"enabled": True, "isManaged": False, "eventName": event, "source": "user",
-                   "sourcePath": str(self.home / "config.toml"), "command": sys.executable + " " + relative + "/hooks/router_hook.py",
+                   "sourcePath": str(self.home / "config.toml"), "command": sys.executable + " " + profile.PROFILE_DIRECTORY + "/hook.py",
                    "currentHash": "sha256:" + "a" * 64, "key": event, "trustStatus": "untrusted"}
                   for event in ("sessionStart", "userPromptSubmit", "subagentStart")]
         self.registered = {"hooks": {"data": [{"hooks": active, "errors": [], "warnings": []}]}}
-        messages = ["- codex-model-router:initialize-router: Init (file: fake)\n- codex-model-router:model-router: Route (file: fake)",
-                    "Codex Model Router\nActive controller model: gpt-6-astra.\nCONTROLLER ROLE ONLY:\nROUTING_CONFIG_BEGIN\n{}\nROUTING_CONFIG_END",
-                    "CONTROLLER ROLE ONLY:\nROUTING_CONFIG_BEGIN\n{}\nROUTING_CONFIG_END"]
+        messages = ["- codex-model-router:initialize-router: Init (file: fake)\n- codex-model-router:model-router: Route (file: fake)"]
+        messages += [profile.build_output(self.home / profile.PROFILE_DIRECTORY, {"hook_event_name": event})[
+            "hookSpecificOutput"]["additionalContext"] for event in ("SessionStart", "UserPromptSubmit")]
         self.requests = [{"path": "/responses", "body": {
             "input": [{"role": "developer", "content": [{"text": text}]} for text in messages],
-            "tools": [{"name": "multi_agent_v1", "tools": [{"name": "spawn_agent", "parameters": {
+            "tools": [{"name": "multi_agent_v1", "tools": [{"name": "spawn_agent", "description": "\n".join(
+                "- `" + m["slug"] + "`: Test. Reasoning efforts: low, medium, high, xhigh." for m in CATALOG["models"]), "parameters": {
                 "properties": {"model": {}, "reasoning_effort": {}}}}]}]}}]
         self.status = {"exit_code": 1, "argv": ["codex", "exec", "--dangerously-bypass-hook-trust"]}
 
@@ -125,6 +126,51 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(runner.HarnessError, "baseline"):
             hooks.validate_delivery("baseline", empty, self.requests, self.status, self.home, self.identity)
 
+    def test_captured_json_corruption_or_contract_weakening_blocks_receipt(self):
+        for before, after in (('"schema_version":1', '"schema_version":'),
+                              ("pure orchestrator", "business executor")):
+            corrupted = copy.deepcopy(self.requests)
+            text = corrupted[0]["body"]["input"][1]["content"][0]
+            text["text"] = text["text"].replace(before, after)
+            with self.assertRaisesRegex(runner.HarnessError, "critical context gate"):
+                self.validate(requests=corrupted)
+
+    def test_resolved_pairs_must_be_exposed_by_actual_spawn_schema(self):
+        missing = copy.deepcopy(self.requests)
+        missing[0]["body"]["tools"][0]["tools"][0]["description"] = "no model overrides"
+        with self.assertRaisesRegex(runner.HarnessError, "resolved route unavailable"):
+            self.validate(requests=missing)
+
+    def test_worker_capture_requires_exact_override_and_routing_json(self):
+        evidence = Path(self.temp.name) / "worker-evidence"
+        home = evidence / "homes/worker-simulation"
+        provision(home)
+        (home / "config.toml").write_text("# simulation-only config", encoding="utf-8")
+        source = self.registered["hooks"]["data"][0]["hooks"][2]
+        registered = copy.deepcopy(self.registered)
+        registered["hooks"]["data"][0]["hooks"] = [dict(source, eventName="sessionStart",
+                                                       command=source["command"] + " --simulate-subagent-start")]
+        runner.write_json(evidence / "router.registry.json", self.registered)
+        runner.write_json(evidence / "worker-simulation.registry.json", registered)
+        runner.write_json(evidence / "worker-simulation.event.json", {
+            "event": "SubagentStart", "carrier": "SessionStart", "actual_worker_spawned": False,
+            "source_hook_key": source["key"], "source_hook_hash": source["currentHash"],
+            "config_sha256": runner.sha256_file(home / "config.toml"),
+        })
+        text = profile.build_output(home / profile.PROFILE_DIRECTORY, {"hook_event_name": "SubagentStart"})[
+            "hookSpecificOutput"]["additionalContext"]
+        requests = [{"path": "/responses", "body": {"input": [{"role": "developer", "content": [{"text": text}]}]}}]
+        runner.write_json(evidence / "worker-simulation.request.json", requests)
+        runner.write_json(evidence / "worker-simulation.status.json", self.status)
+        self.assertTrue(hooks.validate_worker_simulation(evidence, self.identity)["exact_contract"])
+        for before, after in (("You are authorized and required to perform", "You may not perform"),
+                              ('"schema_version":1', '"schema_version":')):
+            corrupted = copy.deepcopy(requests)
+            corrupted[0]["body"]["input"][0]["content"][0]["text"] = text.replace(before, after)
+            runner.write_json(evidence / "worker-simulation.request.json", corrupted)
+            with self.assertRaisesRegex(runner.HarnessError, "worker critical context gate"):
+                hooks.validate_worker_simulation(evidence, self.identity)
+
     def test_missing_offline_receipt_blocks_paid_probe_and_both_formal_modes(self):
         root = Path(self.temp.name)
         homes = {arm: root / arm for arm in ("baseline", "router")}
@@ -148,15 +194,17 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         homes = {arm: root / arm for arm in ("baseline", "router")}
         evidence = root / "hook-delivery"
         evidence.mkdir()
-        names = [arm + suffix for arm in homes for suffix in
+        names = [arm + suffix for arm in (*homes, "worker-simulation") for suffix in
                  (".registry.json", ".request.json", ".command.json", ".status.json", ".jsonl", ".stderr.txt")]
+        names += ["worker-simulation.event.json"]
         for name in names:
             (evidence / name).write_text("{}", encoding="utf-8")
         receipt = {"passed": True, "model_invocations": 0, "bindings": {"candidate": "old"},
-                   "reports": {"baseline": {}, "router": {}},
+                   "reports": {"baseline": {}, "router": {}, "worker-simulation": {}},
                    "evidence_sha256": {name: runner.sha256_file(evidence / name) for name in names}}
         with mock.patch.object(isolation, "validate_homes", return_value={}), \
                 mock.patch.object(hooks, "bindings", return_value={"candidate": "current"}), \
+                mock.patch.object(hooks, "validate_worker_simulation", return_value={}), \
                 mock.patch.object(hooks, "validate_delivery", return_value={}) as validate:
             runner.write_json(root / "hook-delivery.json", receipt)
             with self.assertRaisesRegex(runner.HarnessError, "binding changed"):
@@ -165,6 +213,11 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
             missing = copy.deepcopy(receipt)
             del missing["evidence_sha256"]["router.request.json"]
             runner.write_json(root / "hook-delivery.json", missing)
+            with self.assertRaisesRegex(runner.HarnessError, "inventory incomplete"):
+                hooks.require_hook_receipt(root, homes)
+            missing_worker = copy.deepcopy(receipt)
+            del missing_worker["evidence_sha256"]["worker-simulation.event.json"]
+            runner.write_json(root / "hook-delivery.json", missing_worker)
             with self.assertRaisesRegex(runner.HarnessError, "inventory incomplete"):
                 hooks.require_hook_receipt(root, homes)
             runner.write_json(root / "hook-delivery.json", receipt)
