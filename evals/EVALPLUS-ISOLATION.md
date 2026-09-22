@@ -1,6 +1,6 @@
 # Treatment isolation decision and bounded repair result
 
-## Decision
+## Initial repair decision
 
 The CLI must load a harness-created config in each fresh arm home. An installed
 plugin inventory is insufficient: `--ignore-user-config` suppresses the config
@@ -53,7 +53,17 @@ validation, official plugin validation, both official skill validators, and
 Python 3.9 installation was missing its `codecs` module; no system installation
 was changed.
 
-The campaign is blocked on a newly authorized live treatment preflight. The
+## Authorized continuation
+
+The controller subsequently authorized one new paid preflight per arm and the
+formal campaign on success. The continuation uses fresh homes/workspaces and
+ephemeral sessions, and explicitly opts into the frozen Astra-card USD 50 soft
+cap. The `--soft-budget-pricing` path requires no hard provider-budget guard.
+CLI-visible descendant usage is inventoried once; absent usage is reported as
+incomplete. This supersedes the initial session-persistence decision above.
+
+At the end of the initial repair, the campaign was blocked on another authorized
+live treatment preflight. The
 existing `run --live` path still uses its original provider guard; the requested
 USD 50 soft-cap campaign was not entered or substituted for that guard after
 the treatment stop. Any continuation must apply the user's current budget

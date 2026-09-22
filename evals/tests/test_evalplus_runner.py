@@ -104,12 +104,11 @@ class EvalPlusManifestAndScheduleTests(unittest.TestCase):
             baseline = runner.build_codex_command(self.manifest, run, task_root)
             router_run = dict(run, variant="router")
             routed = runner.build_codex_command(self.manifest, router_run, task_root)
-        for required in ("--strict-config", "--ignore-rules", "--json"):
+        for required in ("--ephemeral", "--strict-config", "--ignore-rules", "--json"):
             self.assertIn(required, baseline)
             self.assertIn(required, routed)
         for command in (baseline, routed):
             self.assertNotIn("--ignore-user-config", command)
-            self.assertNotIn("--ephemeral", command)
             self.assertNotIn("skip_host_skill_discovery", command)
             self.assertIn("memories.use_memories=false", command)
         self.assertEqual("gpt-6-astra", baseline[baseline.index("--model") + 1])

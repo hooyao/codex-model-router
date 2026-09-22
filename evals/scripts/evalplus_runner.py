@@ -276,7 +276,7 @@ def validate_manifest(path: Path = DEFAULT_MANIFEST) -> Dict[str, Any]:
         raise HarnessError("router_plugin name mismatch")
     _string(router_plugin["version"], "router_plugin version")
     required_flags = execution["required_flags"]
-    if required_flags != ["--ignore-rules", "--json", "--strict-config"]:
+    if required_flags != ["--ephemeral", "--ignore-rules", "--json", "--strict-config"]:
         raise HarnessError("required_flags changed from the clean CLI contract")
 
     grading = manifest["grading"]
@@ -536,6 +536,7 @@ def build_codex_command(
     command = [
         "codex",
         "exec",
+        "--ephemeral",
         "--ignore-rules",
         "--json",
         "--strict-config",
@@ -1199,6 +1200,14 @@ def command_run(args: argparse.Namespace) -> Dict[str, Any]:
     manifest, prepared = _load_prepared(args.campaign_root, args.manifest)
     if not args.live:
         return preflight_plan(manifest, prepared, args.campaign_root, args.run_limit)
+    if args.soft_budget_pricing is not None:
+        try:
+            from . import evalplus_live as live
+        except ImportError:
+            import evalplus_live as live
+        return live.execute_soft_campaign(args.manifest, args.campaign_root,
+                                          args.baseline_codex_home, args.router_codex_home,
+                                          args.soft_budget_pricing, args.run_limit, args.prior_usage)
     return execute_live(
         args.manifest,
         args.campaign_root,
@@ -1247,6 +1256,9 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--baseline-codex-home", type=Path)
     run.add_argument("--router-codex-home", type=Path)
     run.add_argument("--provider-guard-config", type=Path)
+    run.add_argument("--soft-budget-pricing", type=Path,
+                     help="Use the explicitly authorized USD 50 API-equivalent soft cap, without a provider guard")
+    run.add_argument("--prior-usage", type=Path, action="append", default=[])
     run.set_defaults(handler=command_run)
 
     collect = commands.add_parser("collect")
