@@ -81,6 +81,9 @@ copied.
 - Router home: exactly one enabled `codex-model-router` v0.1.3 installation,
   installed by CLI from a fresh local marketplace containing the candidate
   package. The source, snapshot, and installed file-tree hashes must match.
+  Its three candidate hook programs are also registered in the generated user
+  config; duplicate plugin hook entries are disabled. See the
+  [CLI delivery decision](EVALPLUS-ISOLATION.md#offline-cli-hook-delivery-repair).
 
 The harness loads only the new arm's config and ignores execpolicy rules. It
 checks installed CLI flags before probes, since current documentation can describe
@@ -93,13 +96,24 @@ python evals/scripts/evalplus_isolation.py prepare-homes `
   --state-root C:\absolute\new-eval-state `
   --candidate C:\checkout\plugins\codex-model-router `
   --transport C:\private\transport.json
+python evals/scripts/evalplus_hooks.py `
+  --campaign-root $campaign --state-root C:\absolute\new-eval-state
 python evals/scripts/evalplus_isolation.py check-grader `
   --campaign-root $campaign --image <image-containing-evalplus-0.3.1>
 python evals/scripts/evalplus_isolation.py preflight `
   --campaign-root $campaign --state-root C:\absolute\new-eval-state
 ```
 
-Preflight makes exactly one diagnostic request per arm, sequentially, and refuses
+`evalplus_hooks.py` is a zero-model delivery check. It clones the exact per-slot
+config/package without authentication, inspects the CLI `hooks/list` registry,
+then sends each arm's first outgoing request to a rejecting loopback HTTP sink.
+The sink implements no model and forwards nothing. It captures separate developer
+messages from SessionStart and UserPromptSubmit, the routing block, skill catalog,
+and native dispatch schema. A nonzero CLI exit is expected because the sink
+rejects the request. No generated code runs. Its receipt is mandatory before
+the paid treatment preflight and before either formal-run admission path.
+
+The `evalplus_isolation.py preflight` command makes exactly one diagnostic request per arm, sequentially, and refuses
 to overwrite or repeat its evidence. These requests can incur cost and are not
 benchmark slots. It saves raw CLI events, stderr, exact commands, timings, and
 model reports. Baseline must report no skills or hook context. Router must report
@@ -109,11 +123,12 @@ proof that instructions mechanically enforce policy. Offline `debug prompt-input
 can show the skill catalog but is not proof of lifecycle hook delivery. Failed
 or missing probes prohibit formal generation. Receipts bind candidate/config,
 runner code, and raw evidence; changing these requires a new authorized preflight.
+The offline receipt additionally binds the CLI and Python executable hashes.
 
 The grader gate imports EvalPlus 0.3.1 in an immutable Docker image with networking
 off, a read-only filesystem, dropped capabilities, and resource limits. It does
-not run generated samples. Formal generation requires both successful treatment
-and grader receipts. WSL remains an accepted grading-result backend, but automated
+not run generated samples. Formal generation requires successful offline hook,
+paid treatment, and grader receipts. WSL remains an accepted grading-result backend, but automated
 grader admission currently implements Docker only.
 
 ## Authorized USD 50 soft-cap mode
