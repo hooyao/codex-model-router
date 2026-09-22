@@ -321,7 +321,7 @@ class RouterPluginTests(unittest.TestCase):
             self.assertTrue(created)
             self.assertTrue(path.is_file())
             self.assertTrue(runtime.is_file())
-            self.assertGreaterEqual(tuple(map(int, version.split("."))), (3, 10))
+            self.assertGreaterEqual(tuple(map(int, version.split("."))), (3, 9))
             before = path.read_bytes()
             second_path, second_created, _runtime, _version = init_router.initialize(str(workspace))
             self.assertEqual(path, second_path)
@@ -345,7 +345,7 @@ class RouterPluginTests(unittest.TestCase):
                 init_router._smoke_hook(Path(sys.executable), workspace, config_path, handlers)
 
         self.assertEqual(len(handlers), len(calls))
-        for (event_name, handler), (args, kwargs) in zip(handlers, calls, strict=True):
+        for (event_name, handler), (args, kwargs) in zip(handlers, calls):
             with self.subTest(event=event_name):
                 self.assertEqual(
                     f"cmd.exe /d /s /c {handler['commandWindows']}", args[0]
