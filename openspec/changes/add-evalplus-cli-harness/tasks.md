@@ -25,4 +25,4 @@
 
 ## 4. Publication
 
-- [ ] 4.1 Commit, push the branch, open the pull request, and record its URL.
+- [x] 4.1 Commit, push the branch, open the pull request, and record its URL.

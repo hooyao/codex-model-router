@@ -41,5 +41,5 @@ provider's internal billing system or compensate for child-session usage that
 the supplied raw streams do not expose. Such accounting remains explicitly
 incomplete.
 
-Publication remains the final checklist item until the branch is pushed and the
-pull request URL is available.
+Published as [pull request #5](https://github.com/hooyao/codex-model-router/pull/5)
+from `codex/evalplus-clean-cli-harness`.
