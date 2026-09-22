@@ -108,8 +108,8 @@ Python executable and version used for the smoke test, and the resolved config
 path. It verifies Python 3.9+, standard-library runtime imports, the template,
 workspace discovery, and config creation/loading. On Windows it runs every
 configured `commandWindows` lifecycle command through `cmd.exe /d /s /c`, with
-the installed plugin root supplied as `CLAUDE_PLUGIN_ROOT` (the lifecycle-hook
-runtime variable), and validates each event's
+the installed plugin root supplied as `PLUGIN_ROOT` (the Codex-specific
+lifecycle-hook runtime variable), and validates each event's
 JSON output. This catches command parsing, variable expansion, quoting, PATH,
 and interpreter failures. On POSIX it runs every event through the resolved
 `python3` hook path. A script cannot diagnose a missing interpreter before it
@@ -186,11 +186,17 @@ handlers. The hooks add developer context for `SessionStart`,
 `UserPromptSubmit`, and `SubagentStart` only. Every handler invokes the bundled
 `hooks/router_hook.py` program.
 
+The manifest intentionally relies on Codex's documented default discovery of
+`hooks/hooks.json`. If a future manifest adds an explicit `hooks` entry, that
+entry replaces default-file discovery rather than extending it.
+
 The non-Windows hook command requires `python3`. The Windows override requires
 `python` on `PATH` and Python 3.9 or newer. Hook commands resolve the installed
-root through the runtime-provided `CLAUDE_PLUGIN_ROOT`; using an ad hoc
-`PLUGIN_ROOT` variable produces a misleading synthetic success and a live hook
-failure. Ask Codex to initialize the router
+root through the Codex-specific runtime-provided `PLUGIN_ROOT`. Codex also sets
+`CLAUDE_PLUGIN_ROOT` for compatibility, but this plugin uses the native Codex
+contract documented in the official
+[hook documentation](https://learn.chatgpt.com/docs/hooks#plugin-bundled-hooks).
+Ask Codex to initialize the router
 in the project before trusting hooks when you want post-launch runtime,
 template, workspace, config, and hook-smoke assumptions checked immediately.
 

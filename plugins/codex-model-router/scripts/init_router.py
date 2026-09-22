@@ -28,8 +28,8 @@ from routing_config import (  # noqa: E402
 
 
 SUPPORTED_EVENTS = ("SessionStart", "UserPromptSubmit", "SubagentStart")
-WINDOWS_HOOK_COMMAND = 'python "%CLAUDE_PLUGIN_ROOT%\\hooks\\router_hook.py"'
-POSIX_HOOK_COMMAND = 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/router_hook.py"'
+WINDOWS_HOOK_COMMAND = 'python "%PLUGIN_ROOT%\\hooks\\router_hook.py"'
+POSIX_HOOK_COMMAND = 'python3 "$PLUGIN_ROOT/hooks/router_hook.py"'
 MINIMUM_PYTHON = (3, 9)
 
 
@@ -160,7 +160,7 @@ def _smoke_hook(
             # _configured_handlers restricts this to the bundled literal command,
             # so cmd receives no user-controlled shell content.
             environment = os.environ.copy()
-            environment["CLAUDE_PLUGIN_ROOT"] = str(PLUGIN_ROOT)
+            environment["PLUGIN_ROOT"] = str(PLUGIN_ROOT)
             label = f"Windows lifecycle smoke command for {event_name} ({command!r})"
             # Passing a sequence would make subprocess escape the hook path's
             # quotes while building the Windows command line. This raw command

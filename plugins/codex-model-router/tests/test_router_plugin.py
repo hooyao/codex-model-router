@@ -176,6 +176,11 @@ class RouterPluginTests(unittest.TestCase):
             )
 
     def test_windows_hooks_use_python_and_coherent_limits(self) -> None:
+        manifest = json.loads(
+            (PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
+        )
+        self.assertNotIn("hooks", manifest)
+        self.assertTrue((PLUGIN_ROOT / "hooks" / "hooks.json").is_file())
         hooks = json.loads((PLUGIN_ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
         self.assertNotIn("matcher", hooks["SessionStart"][0])
         for event_name in validator.REQUIRED_HOOK_EVENTS:
@@ -183,15 +188,15 @@ class RouterPluginTests(unittest.TestCase):
                 for handler in group["hooks"]:
                     with self.subTest(event=event_name):
                         self.assertEqual(
-                            'python "%CLAUDE_PLUGIN_ROOT%\\hooks\\router_hook.py"',
+                            'python "%PLUGIN_ROOT%\\hooks\\router_hook.py"',
                             handler["commandWindows"],
                         )
                         self.assertEqual(
-                            'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/router_hook.py"',
+                            'python3 "$PLUGIN_ROOT/hooks/router_hook.py"',
                             handler["command"],
                         )
-                        self.assertNotIn("$PLUGIN_ROOT", handler["command"])
-                        self.assertNotIn("%PLUGIN_ROOT%", handler["commandWindows"])
+                        self.assertNotIn("CLAUDE_PLUGIN_ROOT", handler["command"])
+                        self.assertNotIn("CLAUDE_PLUGIN_ROOT", handler["commandWindows"])
                         self.assertNotIn("py -3", handler["commandWindows"])
                         self.assertGreater(
                             handler["additionalContextLimit"],
@@ -447,7 +452,7 @@ class RouterPluginTests(unittest.TestCase):
                 self.assertEqual(
                     f"cmd.exe /d /s /c {handler['commandWindows']}", args[0]
                 )
-                self.assertEqual(str(PLUGIN_ROOT), kwargs["env"]["CLAUDE_PLUGIN_ROOT"])
+                self.assertEqual(str(PLUGIN_ROOT), kwargs["env"]["PLUGIN_ROOT"])
                 self.assertEqual(event_name, json.loads(kwargs["input"])["hook_event_name"])
                 self.assertFalse(kwargs.get("shell", False))
 

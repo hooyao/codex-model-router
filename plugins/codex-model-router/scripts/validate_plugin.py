@@ -44,8 +44,8 @@ SEMVER_PATTERN = re.compile(
     r"(?:-(?P<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?"
     r"(?:\+(?P<build>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$"
 )
-WINDOWS_HOOK_COMMAND = 'python "%CLAUDE_PLUGIN_ROOT%\\hooks\\router_hook.py"'
-POSIX_HOOK_COMMAND = 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/router_hook.py"'
+WINDOWS_HOOK_COMMAND = 'python "%PLUGIN_ROOT%\\hooks\\router_hook.py"'
+POSIX_HOOK_COMMAND = 'python3 "$PLUGIN_ROOT/hooks/router_hook.py"'
 MINIMUM_CONTEXT_LIMIT = MAX_SERIALIZED_CONFIG_BYTES + 8_192
 VERSION_BUMP_IGNORED_PATH_PARTS = {"__pycache__", ".pytest_cache"}
 VERSION_BUMP_IGNORED_SUFFIXES = {".pyc", ".pyo"}
