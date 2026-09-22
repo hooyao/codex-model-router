@@ -1,21 +1,30 @@
 # Codex Model Router
 
 Codex Model Router is a local Codex plugin that instructs the primary agent to
-act as a pure orchestrator. It does not spawn agents itself; the primary agent
-discovers capabilities, creates task DAGs, dispatches and waits for workers,
-validates worker packets, coordinates conflicts, and synthesizes the final
-response. Workers own all business analysis, repository inspection, file edits,
-commands, tests, integration, and business-result validation.
+decide execution ownership before its first business action. Qualifying local,
+bounded work may run directly. Nontrivial work is delegated, and only then does
+the router select a suitable worker model and reasoning effort. The plugin
+injects policy; it does not spawn agents itself.
 
 ## Controller/Worker Contract
 
-Every business task, including a trivial edit or read-only question, must go
-to a bounded native worker. If native spawn or wait/collect is unavailable,
-the controller reports BLOCKED with the observed limitation. It must not fall
-back to doing the work itself or create user-facing tasks as substitute workers.
-Discovery uses exposed tool metadata; it does not authorize controller shell
-commands or business-file inspection. Repository research needed to build a
-plan is also assigned to a worker.
+Before inspecting business files, researching, running commands, editing,
+testing, invoking a task Skill, or making a network call, the controller emits
+`ROUTE: DIRECT — <rule/reason>` or
+`ROUTE: DELEGATE — <rule/model/effort/reason>`. Skills define HOW, not WHO.
+
+DIRECT requires one local scope, one bounded known outcome, and no network or
+synchronization, long-running work or monitoring, failure/recovery workflow,
+substantive research/investigation, or independent review/validation. DELEGATE
+is required when any such nontrivial signal exists, including multiple
+repositories, systems, or sources and named multi-step runbooks. A direct task
+that reveals a delegation signal must be rerouted before its next business
+action.
+
+Only a DELEGATE route triggers worker capability discovery and model/effort
+selection. If native spawn or wait/collect is unavailable, the controller
+reports BLOCKED with the observed limitation. It must not fall back to doing
+delegated work itself or create user-facing tasks as substitute workers.
 
 Controller packet validation checks identity, fields, completeness, consistency,
 evidence references, and reported acceptance/validation status. It does not
@@ -26,12 +35,14 @@ resolve file conflicts, and workers validate the integrated result.
 Every dispatch also receives a deterministic user-visible name in the form
 `<purpose>-<model>-<effort>`. The controller normalizes and validates the name
 from the frozen task purpose and resolved routing inputs, passes it through a
-native `name` field when available, and writes the exact same value as both
-`Worker name` and `Task ID` in every worker packet. The worker echoes both
-fields in its result. Invalid, oversized, or duplicate planned names are
-rejected. If native dispatch has no naming field or rejects the value, the
-packet Task ID and result remain the portable fallback; the native worker-card
-title may still be platform-generated.
+native hyphen-capable `name` field when available, and writes the exact same
+value as both `Worker name` and `Task ID` in every worker packet. An
+underscore-only `task_name` receives a deterministic hyphen-to-underscore
+transport adaptation, recorded separately as `Native task name`; it does not
+replace the canonical Task ID. Invalid, oversized, or duplicate canonical and
+adapted names are rejected. If native dispatch has neither supported naming
+field, the packet Task ID and result remain the portable fallback; the native
+worker-card title may still be platform-generated.
 
 Router self-improvement, routing-policy review, evaluation design, and benchmark
 selection require an independent reviewer separate from the author/implementer,
@@ -51,7 +62,8 @@ the controller's capability-discovery or missing-delegation rules and must not
 dispatch subworkers. Lack of native multi-agent tools is not a reason for a
 worker to refuse its assignment; actual task/tool/permission blockers must still
 be reported. User scope, read-only assignments, and permissions remain binding.
-The primary agent must not relabel itself as a worker to avoid delegation.
+The primary agent must not relabel itself as a worker to avoid a required
+delegation.
 
 ## Workspace Routing Configuration
 
@@ -84,37 +96,59 @@ claiming `/codex-model-router-init` exists. The equivalent portable program is
 `<installed-plugin-root>/scripts/init_router.py --workspace .`; it is intended
 for the Skill or automation, not for users to locate by hand.
 
-No manual setup is required for ordinary use. The first `SessionStart`,
+When the host supports plugin lifecycle hooks, the first `SessionStart`,
 `UserPromptSubmit`, or `SubagentStart` event automatically creates the missing
 file at the discovered project root, then parses and injects it. Use explicit
-init when you want an immediate preflight before trusting hooks.
+init and the live CLI activation gate when you want to establish that the
+installed host actually executed the hook; synthetic smoke success alone is
+not that evidence.
 
 On success, init prints whether it created or validated the config, the actual
 Python executable and version used for the smoke test, and the resolved config
 path. It verifies Python 3.9+, standard-library runtime imports, the template,
 workspace discovery, and config creation/loading. On Windows it runs every
 configured `commandWindows` lifecycle command through `cmd.exe /d /s /c`, with
-the installed plugin root supplied as `PLUGIN_ROOT`, and validates each event's
+the installed plugin root supplied as `PLUGIN_ROOT` (the Codex-specific
+lifecycle-hook runtime variable), and validates each event's
 JSON output. This catches command parsing, variable expansion, quoting, PATH,
 and interpreter failures. On POSIX it runs every event through the resolved
 `python3` hook path. A script cannot diagnose a missing interpreter before it
 launches, so `hooks.json` and the package validator also require the literal
 `python` command on Windows.
 
-Schema version 1 is a JSON object with exactly these fields:
+Schema version 2 is a JSON object with exactly these fields:
 
-- `schema_version`: integer `1`.
+- `schema_version`: integer `2`.
 - `selection_principle` and `runtime_resolution`: non-empty strings.
+- `execution_policy`: `default_mode` (`direct`, `delegate`, or `evaluate`),
+  non-empty `direct_requires_all` and `delegate_if_any` arrays of supported
+  machine-readable signals, and `reroute_on_escalation: true`. The two signal
+  arrays must contain every required direct/delegate signal exactly once.
 - `effort_guidance`: non-empty string guidance for `low`, `medium`, `high`, and
   `xhigh`.
 - `official_sources`: a non-empty array of HTTPS URLs.
 - `examples`: one to 64 objects with a unique lower-case hyphenated `id`, a
-  non-empty `task_signals` string array, `preferred_model_class` set to `Astra`,
-  `Sol`, `Terra`, or `Luna`, a supported `reasoning_effort`, and a non-empty
-  `rationale`.
+  non-empty `task_signals` string array, `execution_mode` set to `direct`,
+  `delegate`, or `evaluate`, `preferred_model_class` set to `Astra`, `Sol`,
+  `Terra`, or `Luna`, a supported `reasoning_effort`, and a non-empty `rationale`.
+
+Valid schema v1 files remain supported and are injected without rewriting or
+expanding their JSON. The hook applies the built-in v2 execution policy and
+treats each legacy example as `execution_mode: evaluate`; the compatibility
+notice is included next to the injected v1 JSON. New files use v2. `direct` is an
+eligibility hint subject to every direct criterion, `delegate` is mandatory,
+and `evaluate` asks the agent to apply the full semantic gate. These fields are
+machine-readable policy inputs, not a claim that static config can completely
+classify arbitrary natural-language tasks.
+
+Precedence is: hard delegation signals first; one matching example overrides
+`execution_policy.default_mode`; no match uses the global default; disagreeing
+matches fail closed to delegation. A `direct` result from either level remains
+subject to every direct criterion.
 
 Model classes are preferences, not assumed runtime identifiers. The controller
-must resolve them against the current runtime catalog. The defaults include
+resolves them against the current runtime catalog only after choosing DELEGATE.
+The defaults include
 architecture, security, complex tool workflows, 3D modeling, image analysis,
 code analysis, debugging, open-ended and everyday implementation, discovery,
 documentation, test triage, detailed manual procedures, extraction,
@@ -152,8 +186,17 @@ handlers. The hooks add developer context for `SessionStart`,
 `UserPromptSubmit`, and `SubagentStart` only. Every handler invokes the bundled
 `hooks/router_hook.py` program.
 
+The manifest intentionally relies on Codex's documented default discovery of
+`hooks/hooks.json`. If a future manifest adds an explicit `hooks` entry, that
+entry replaces default-file discovery rather than extending it.
+
 The non-Windows hook command requires `python3`. The Windows override requires
-`python` on `PATH` and Python 3.9 or newer. Ask Codex to initialize the router
+`python` on `PATH` and Python 3.9 or newer. Hook commands resolve the installed
+root through the Codex-specific runtime-provided `PLUGIN_ROOT`. Codex also sets
+`CLAUDE_PLUGIN_ROOT` for compatibility, but this plugin uses the native Codex
+contract documented in the official
+[hook documentation](https://learn.chatgpt.com/docs/hooks#plugin-bundled-hooks).
+Ask Codex to initialize the router
 in the project before trusting hooks when you want post-launch runtime,
 template, workspace, config, and hook-smoke assumptions checked immediately.
 
@@ -167,12 +210,26 @@ python scripts/validate_plugin.py
 python -m unittest discover -s tests -v
 ```
 
-The validation command checks package structure and representative lifecycle
-outputs without a network connection or a live Codex session. Regression tests
-check required/forbidden contract language, simple-task and meta-task routing
-instructions, deterministic worker naming, worker responsibilities, and
-configured context size. These are instruction-contract checks, not evidence
-of live-model compliance or savings.
+The validation command checks package structure and synthetic lifecycle outputs
+without a network connection or a live Codex session. Regression tests check
+the v1/v2 schemas, route gate, escalation rule, meta-task routing, deterministic
+worker naming, worker responsibilities, and context size. These are
+instruction-contract checks, not evidence of live-model compliance or savings.
+
+For live behavioral validation, follow
+[`docs/live-cli-validation.md`](docs/live-cli-validation.md). It specifies clean
+workspaces and retained evidence for a trivial DIRECT task, a two-repository
+DELEGATE task, and a DIRECT-to-DELEGATE escalation. The repository does not
+claim those experiments have passed until their transcripts and artifacts are
+captured from an installed plugin in clean Codex CLI sessions.
+
+Observed Codex CLI `0.155.0-alpha.9.2` `codex exec` sessions did not execute
+installed plugin lifecycle hooks even when the plugin was enabled and trust was
+bypassed for diagnosis. The live procedure therefore contains a fail-closed
+activation gate. Explicit invocation of `$codex-model-router:model-router` in a
+non-ephemeral session did successfully dispatch underscore-adapted native
+`task_name` workers, but that is separate evidence and does not establish
+automatic hook support or controller compliance.
 
 ## MVP Boundaries
 

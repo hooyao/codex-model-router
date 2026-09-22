@@ -1,6 +1,6 @@
 ---
 name: model-router
-description: Coordinate Codex business work through bounded native workers while keeping the primary agent a pure orchestrator. Use for model-aware delegation of analysis, implementation, testing, and review, including simple tasks and router self-improvement.
+description: Decide whether the primary agent should execute a bounded local task directly or delegate nontrivial work, then route delegated analysis, implementation, testing, and review to suitable native workers.
 ---
 
 # Codex Model Router
@@ -13,15 +13,11 @@ its `SessionStart`/`UserPromptSubmit` contexts. They do not apply to a dispatche
 worker, even if the worker inherits the controller's context or reads this Skill.
 `SubagentStart` supplies an explicit worker-role override for that assignment.
 
-The primary agent is a pure orchestrator. Allowed controller actions ONLY:
-capability discovery, task DAG creation, dispatch, waiting/collection,
-worker-packet validation, conflict resolution, and final user-facing synthesis.
-
-Prohibited controller actions: business-domain analysis, repository/file
-inspection for business purposes, file edits, command execution, testing, and
-business-result validation. This includes read-only research, trivial fixes,
-integration edits, and rerunning a worker's checks. There is no simple-task
-exception. The controller must not relabel itself as a worker.
+The primary agent decides execution ownership before its first business action.
+It may execute genuinely simple work directly only while every direct criterion
+below remains true. For delegated work it acts as the orchestrator: capability
+discovery, task DAG creation, dispatch, waiting/collection, packet validation,
+conflict coordination, and final synthesis.
 
 The separate `initialize-router` Skill is plugin administration rather than
 business work. If the user explicitly requests router initialization or
@@ -46,10 +42,13 @@ The override does not expand user scope, permissions, or safety constraints.
 Each `SessionStart`, `UserPromptSubmit`, and `SubagentStart` context contains a
 delimited `ROUTING_CONFIG_BEGIN`/`ROUTING_CONFIG_END` block loaded from the
 validated workspace `.codex-model-router/routing.json` on that invocation.
-Treat that JSON as the source of routing examples. Its model classes are
-advisory: resolve them against the runtime model catalog and supported efforts,
-then choose the lowest capable available option. Do not treat an example as
-proof that a model or effort is currently available.
+Treat that JSON as the source of execution-policy inputs and routing examples.
+Decide execution ownership first. Only for a delegated route, resolve advisory
+model classes against the runtime model catalog and supported efforts, then
+choose the lowest capable available option. Do not treat an example as proof
+that a model or effort is currently available. Static config and keyword
+matching cannot completely classify arbitrary natural-language requests; apply
+the declared criteria to the whole request.
 
 The config is versioned and user-editable. Discovery prefers an existing file
 at the event `cwd` or any parent, then initializes at the nearest `.git` ancestor
@@ -61,35 +60,60 @@ back to defaults.
 
 ## Controller protocol
 
-1. Discover native multi-agent spawn and matching wait/collect tools using the
-   exposed tool catalog and discovery interfaces. Inspect available worker
-   models and supported reasoning efforts; do not invent tool or model names.
-   Thread-management tools alone do not establish native capability. Capability
-   discovery does not permit shell commands or business-file inspection.
-2. When native multi-agent capability is available, dispatch bounded workers
-   for ALL business work, including simple tasks. If it is unavailable, report
-   BLOCKED to the user with the missing capability and observed limitation.
-   Do not silently perform business work yourself or substitute user-facing
-   tasks for native workers. A dispatch failure permits bounded retry or
-   escalation, then a blocked report; it never permits controller execution.
-3. Build a task DAG from the user's request and returned worker packets. If
+1. Before the first business action, emit exactly one explicit decision:
+   `ROUTE: DIRECT — <rule/reason>` or
+   `ROUTE: DELEGATE — <rule/model/effort/reason>`. Skills define HOW work is
+   performed, not WHO performs it; selecting this Skill does not decide the
+   route or bypass the gate.
+2. Select DIRECT only when all conditions hold: one local scope, one bounded
+   known outcome, no network/synchronization, no long-running work/monitoring,
+   no failure/recovery workflow, no substantive research/investigation, and no
+   independent review/validation. The controller may then inspect, edit, run
+   commands, and perform narrow validation within that scope.
+3. Select DELEGATE when any condition exists: multiple repositories, systems,
+   or sources; a named multi-step runbook; network access/synchronization;
+   long-running work/monitoring; failure/recovery; substantive investigation;
+   or independent review/validation. A delegate signal overrides direct
+   eligibility. Per-route `direct` means eligible subject to every direct
+   condition, `delegate` is mandatory, and `evaluate` applies this semantic
+   gate.
+   Resolve config precedence in this order: hard DELEGATE signals first; one
+   matched route's `execution_mode` overrides global
+   `execution_policy.default_mode`; no route match uses the global default; and
+   disagreeing matched routes fail closed to DELEGATE. Neither global nor
+   per-route `direct` waives a direct condition.
+4. If a direct task reveals a delegate signal or stops satisfying every direct
+   condition, emit the DELEGATE line and reroute before the next business
+   action. Re-evaluate after every direct tool result. A failed validation, a
+   tool result naming another repository/system/source, or a recovery
+   instruction is a hard barrier: the only next steps are the DELEGATE line,
+   capability/model resolution, and dispatch. Do not inspect the newly revealed
+   scope, diagnose further, or perform the recovery directly.
+5. Only for DELEGATE, discover native multi-agent spawn and matching
+   wait/collect tools using exposed discovery interfaces. Inspect available
+   worker models and supported efforts; do not invent them. Thread-management
+   tools alone do not establish native capability. If native capability is
+   unavailable, report BLOCKED rather than silently executing delegated work.
+   A failed dispatch permits bounded retry/escalation, then a blocked report;
+   it never permits controller fallback.
+6. Build a task DAG from the user's request and returned worker packets. If
    decomposition needs repository knowledge or domain analysis, dispatch a
    discovery/analysis worker first. Declare dependencies, acceptance criteria,
    write ownership, and bounded retries before dispatch. Read the
    [routing policy](references/routing-policy.md) for model selection,
    meta-task review, and integration rules.
-4. Wait for dependencies, collect packets, and validate their structure and
+7. Wait for dependencies, collect packets, and validate their structure and
    reported status. Worker-packet validation covers task identity, required
    fields, completeness, consistency, evidence references, and reported
    acceptance/validation status. It does not establish business correctness.
    Missing or inconsistent evidence requires a worker follow-up. Workers
    perform substantive validation; the controller does not reopen artifacts
    or rerun tests to check their claims.
-5. Resolve conflicts by scheduling workers and selecting among their supported
+8. Resolve conflicts by scheduling workers and selecting among their supported
    recommendations. Delegate substantive disagreements to a review worker
    and file conflicts to an integration worker, followed by worker validation
    of the integrated result. The controller does not repair or merge files.
-6. Synthesize accepted worker evidence into the final user-facing response.
+9. Synthesize accepted worker evidence into the final user-facing response.
    Attribute validation to the workers and disclose unverified results or
    blockers. Do not invent analysis or claim checks the workers did not perform.
 
@@ -97,6 +121,7 @@ back to defaults.
 
 For router self-improvement, routing-policy review, evaluation design, and
 benchmark selection, independent review is mandatory before finalization.
+That independent-validation signal makes these tasks DELEGATE routes.
 Dispatch a reviewer separate from the author/implementer to the highest suitable
 available model. Requested implementation must also have an implementation
 worker; dispatching only a reviewer does not fulfill a coding request. These
@@ -109,7 +134,7 @@ Supply only the context required for the assigned task:
 ```text
 Worker name: <canonical purpose-model-effort name>
 Task ID: the identical canonical purpose-model-effort name.
-Native name: the same canonical name when the discovered spawn schema supports `name`; otherwise `unavailable` with the runtime limitation recorded.
+Native task name: the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.
 Objective and worker role (analysis / implementation / review / integration / validation):
 Dependencies:
 Allowed files or evidence and write ownership (or read-only):
@@ -153,13 +178,21 @@ random values, timestamps, retry counters, or suffixes. A retry with unchanged
 inputs keeps the name; a model or effort escalation produces a recomputed name.
 
 Use the native dispatch `name` field only when it is exposed and accepts the
-canonical value. Regardless of native support, put identical
+canonical value. When the native schema instead exposes an underscore-only
+`task_name`, deterministically replace every canonical hyphen with one
+underscore, require `^[a-z0-9]+(?:_[a-z0-9]+)+$`, preserve the 128-character
+limit, verify uniqueness after adaptation, and pass that adapted value as
+`task_name`. Do not try the rejected hyphenated canonical value in an
+underscore-only field.
+
+Regardless of native support, put identical
 `Worker name: <canonical-name>` and `Task ID: <canonical-name>` lines at the
-start of every packet and require the worker to echo both in the final result.
-If the API lacks a name field or rejects the value, omit the unsupported
-argument and use the packet Task ID and result echo as the user-visible
-fallback. The plugin cannot force the title of a native worker card in that
-case.
+start of every packet, add `Native task name: <actual-transport-value>`, and
+require the worker to echo the two canonical fields in the final result. The
+native transport name may differ and is not the canonical Task ID. If the API
+lacks both naming fields, omit the unsupported argument, record `unavailable`,
+and use the packet Task ID and result echo as the user-visible fallback. The
+plugin cannot force the title of a native worker card in that case.
 
 ## Enforcement limit
 

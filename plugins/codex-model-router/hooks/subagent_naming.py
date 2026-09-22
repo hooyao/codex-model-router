@@ -12,6 +12,7 @@ MAX_MODEL_LENGTH = 48
 MAX_EFFORT_LENGTH = 24
 MAX_NAME_LENGTH = 128
 CANONICAL_NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){2,}$")
+NATIVE_TASK_NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)+$")
 
 
 def normalize_component(value: str, field: str, max_length: int | None = None) -> str:
@@ -79,3 +80,23 @@ def validate_unique_subagent_names(names: Iterable[str]) -> None:
             "subagent names must be unique within a dispatch DAG: "
             + ", ".join(sorted(duplicates))
         )
+
+
+def native_task_name(canonical_name: str) -> str:
+    """Adapt a canonical human task ID to an underscore-only native task_name."""
+
+    validate_subagent_name(canonical_name)
+    adapted = canonical_name.replace("-", "_")
+    if len(adapted) > MAX_NAME_LENGTH:
+        raise ValueError(f"native task_name must be at most {MAX_NAME_LENGTH} characters")
+    if not NATIVE_TASK_NAME_PATTERN.fullmatch(adapted):
+        raise ValueError("native task_name must use lowercase ASCII underscore-delimited segments")
+    return adapted
+
+
+def validate_unique_native_task_names(canonical_names: Iterable[str]) -> None:
+    """Reject native task_name collisions after deterministic adaptation."""
+
+    adapted_names = [native_task_name(name) for name in canonical_names]
+    if len(adapted_names) != len(set(adapted_names)):
+        raise ValueError("native task_name values must be unique within a dispatch DAG")

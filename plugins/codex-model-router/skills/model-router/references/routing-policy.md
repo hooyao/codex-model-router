@@ -11,16 +11,55 @@ Verification workers execute their assigned checks directly. Worker execution
 does not require native multi-agent tools; workers must not dispatch subworkers
 or start subagents. Report actual task/tool/permission blockers to the controller.
 
-## Mandatory worker routing
+## Execution ownership gate
 
-The controller's role is orchestration only. After discovering native spawn,
-wait/collect, and supported model/effort options, dispatch bounded workers for
-all business work, including simple tasks. Repository discovery and domain
-analysis needed for planning are themselves worker tasks. Do not execute
-business work in the controller to save delegation overhead.
+Before its first business action, the controller records one explicit line:
+`ROUTE: DIRECT — <rule/reason>` or
+`ROUTE: DELEGATE — <rule/model/effort/reason>`. Skills define HOW work is
+performed, not WHO performs it, so loading or selecting a Skill cannot replace
+this decision. Static config and keyword matching cannot fully classify an
+arbitrary natural-language request; the controller applies the complete
+request to the policy signals.
 
-If native multi-agent capability is unavailable, report BLOCKED with the
-observed missing capability. Do not silently execute the task or create
+DIRECT is eligible only when every condition is true:
+
+- one local scope;
+- one bounded, known outcome;
+- no network access or synchronization;
+- no long-running work or monitoring;
+- no failure or recovery workflow;
+- no substantive research or investigation; and
+- no independent review or validation.
+
+DELEGATE is required when any signal exists: multiple repositories, systems,
+or sources; a named multi-step runbook; network access or synchronization;
+long-running work or monitoring; failure handling or recovery; substantive
+research or investigation; or independent review or validation. Delegate
+signals override direct eligibility. A config example's `execution_mode` is
+interpreted as follows: `direct` marks eligibility but does not waive any
+criterion, `delegate` mandates delegation, and `evaluate` requires this semantic
+gate.
+
+Precedence is deterministic. Hard DELEGATE signals win first. With exactly one
+matching config route, its `execution_mode` overrides the global
+`execution_policy.default_mode`; with no route match, use the global default.
+If multiple matching routes disagree, fail closed to DELEGATE. A `direct`
+result from either level is only eligibility and never waives a direct
+criterion.
+
+If direct work reveals a delegate signal or otherwise ceases to meet every
+direct criterion, the controller emits the DELEGATE line and must reroute before
+the next business action. It does not continue directly through the escalation.
+Re-evaluate after every direct tool result. Failed validation, a tool result
+naming another repository/system/source, or a recovery instruction is a hard
+barrier: before any inspection or repair, emit DELEGATE, resolve capability and
+model, and dispatch. The controller does not diagnose the expanded scope or
+perform recovery itself.
+
+Only after choosing DELEGATE does the controller discover native spawn,
+wait/collect, and supported model/effort options and apply model routing. If
+native multi-agent capability is unavailable, report BLOCKED with the observed
+missing capability. Do not silently execute delegated work or create
 user-facing threads to simulate workers. If dispatch fails, use the declared
 retry/escalation limit and then report the blocker; controller execution is
 never the fallback. Model preferences below do not establish availability.
@@ -32,6 +71,7 @@ selection, and auditing routing decisions require an independent review
 worker separate from the author/implementer before finalization. Use the
 highest suitable available model for that review, such as Astra/high when
 supported. Resolve the actual model and effort from the runtime catalog.
+The independent-review signal makes these DELEGATE routes.
 
 Assign requested business analysis and implementation to workers as well.
 A review-only worker does not fulfill an implementation request. The controller
@@ -57,9 +97,11 @@ suitable available worker can complete a required task, report a blocker.
 
 Use the validated JSON inside the injected
 `ROUTING_CONFIG_BEGIN`/`ROUTING_CONFIG_END` block as the canonical source of
-task examples, preferred model classes, efforts, and rationales. Resolve every
-preference against the current runtime capability catalog. The stable fallback
-when no example matches is capability-based: Luna for clear repeatable work,
+execution-policy inputs, task examples, preferred model classes, efforts, and
+rationales. Execution ownership is decided before model selection. Resolve a
+model preference against the current runtime capability catalog only for a
+DELEGATE route. The stable delegated fallback when no example matches is
+capability-based: Luna for clear repeatable work,
 Terra for everyday work, Sol for complex or open-ended work, and Astra for work
 requiring the strongest sustained judgment. Choose the lowest sufficient
 supported effort, using medium when more planning is needed and high or xhigh
@@ -117,12 +159,19 @@ Retries with unchanged inputs retain the name. Never add generic fallbacks,
 random values, timestamps, retry counters, or suffixes.
 
 Pass the canonical value through a native dispatch `name` field when supported.
-The first packet lines are always `Worker name: <canonical-name>` and
-`Task ID: <canonical-name>`, and the worker echoes both in the final result.
-If the API has no naming field or rejects the canonical value, do not invent an
-unsupported argument. Use the packet Task ID and result echo as the user-visible
-fallback. The native worker card may retain a platform-generated title;
-instruction-layer policy cannot change that UI.
+For a schema with underscore-only `task_name`, replace every canonical hyphen
+with one underscore, require
+`^[a-z0-9]+(?:_[a-z0-9]+)+$`, preserve the 128-character limit, check adapted
+uniqueness, and pass that deterministic transport value. Do not try a
+hyphenated value in an underscore-only field.
+
+The first packet lines always include `Worker name: <canonical-name>`,
+`Task ID: <canonical-name>`, and `Native task name: <actual-transport-value>`.
+The first two stay identical; the native transport value may differ and is not
+the canonical Task ID. If the API has neither supported naming field, omit the
+argument, record `unavailable`, and use the packet Task ID and result echo as
+the user-visible fallback. The native worker card may retain a
+platform-generated title; instruction-layer policy cannot change that UI.
 
 ## Platform boundary
 

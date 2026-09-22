@@ -1,9 +1,8 @@
 {
-  "description": "Inject a pure-orchestrator controller policy and bounded business-worker contract.",
+  "description": "Inject execution-ownership routing and a bounded business-worker contract.",
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
