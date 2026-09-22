@@ -103,10 +103,9 @@
       "version": "0.1.3"
     },
     "required_flags": [
-      "--ephemeral",
-      "--ignore-user-config",
       "--ignore-rules",
-      "--json"
+      "--json",
+      "--strict-config"
     ]
   },
   "grading": {

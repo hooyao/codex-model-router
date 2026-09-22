@@ -8,9 +8,12 @@ top-level runs. The checked-in [manifest](evalplus/manifest.json) pins release
 URLs, archive sizes and SHA-256 values, decompressed record and prompt hashes,
 the exact schedule controls, and the router plugin version.
 
-This is campaign preparation, not a benchmark result. No paid model was called
-while building or validating it. The conditional maximum campaign cost is USD
-44.24; the harness cannot establish account billing truth by itself.
+[Treatment isolation decision and repair result](EVALPLUS-ISOLATION.md) records
+the current preflight limitation and the absence of formal benchmark results.
+
+This is campaign preparation, not a benchmark result. The recorded repair
+attempt started no formal slots. The original guarded runner's conditional
+maximum is USD 44.24; the harness cannot establish account billing truth itself.
 
 ## Arms and schedule
 
@@ -24,7 +27,7 @@ Runs are serial to avoid cross-run write or budget races.
 Each command is built with:
 
 ```text
-codex exec --ephemeral --ignore-user-config --ignore-rules --json
+codex exec --ignore-rules --json --strict-config
 ```
 
 It also supplies the model, reasoning effort, sandbox, approval policy, current
@@ -32,6 +35,13 @@ task directory, feature isolation, and prompt on stdin. This follows the
 [official Codex non-interactive mode documentation](https://learn.chatgpt.com/docs/non-interactive-mode),
 including the documented terminal `turn.completed.usage` event. Raw JSONL and
 stderr are written beside, never inside, the task worktree.
+
+`--ignore-user-config` must not be used: installed plugin enablement lives in the
+isolated arm's config, and ignoring it previously removed the treatment. Session
+files are retained in fresh arm homes for context and descendant-usage evidence;
+`--ephemeral` would discard that evidence. Memory injection and generation are
+disabled in both arms. Task instructions prohibit executing generated code on
+the host.
 
 ## Safe preparation and dry run
 
@@ -57,19 +67,56 @@ output shows exact commands and reservations but never invokes `codex exec`.
 
 ## Live prerequisites and refusal rules
 
-Live mode does not require this repository or harness to receive an API key.
-The operator must configure two separate authenticated Codex homes, normally
-using saved ChatGPT-managed CLI authentication:
+The isolation helper creates two new homes and separate user profiles. It strips
+inherited desktop task, pipe, SQLite, and Python context from child environments.
+It disables bundled skills and remote plugins, and imports no user instructions,
+memory, hooks, skills, or behavioral config. An explicit transport JSON contains
+only `provider_id` and a `provider` object (connection/auth settings). Credentials
+are never printed by the helper. Keep transport and home files private and out of
+Git. An optional `--auth` points to an authentication file; no whole user home is
+copied.
 
-- Baseline home: no `codex-model-router` installation.
-- Router home: exactly one enabled `codex-model-router` v0.1.3 installation.
+- Baseline home: no installed plugin.
+- Router home: exactly one enabled `codex-model-router` v0.1.3 installation,
+  installed by CLI from a fresh local marketplace containing the candidate
+  package. The source, snapshot, and installed file-tree hashes must match.
 
-The harness checks both plugin inventories and `codex login status` before the
-first call. The baseline command disables all plugins; the router command enables
-plugins, hooks, and multi-agent support. User `config.toml` and execpolicy rules
-are ignored in both arms.
+The harness loads only the new arm's config and ignores execpolicy rules. It
+checks installed CLI flags before probes, since current documentation can describe
+flags that CLI 0.144.1 does not support. The same command constructor and isolated
+environment are used for probes and formal runs. Provider request and stream
+retries are zero; maximum worker depth is one and concurrent workers are bounded.
 
-A dedicated provider-side hard budget guard is mandatory. A local warning,
+```powershell
+python evals/scripts/evalplus_isolation.py prepare-homes `
+  --state-root C:\absolute\new-eval-state `
+  --candidate C:\checkout\plugins\codex-model-router `
+  --transport C:\private\transport.json
+python evals/scripts/evalplus_isolation.py check-grader `
+  --campaign-root $campaign --image <image-containing-evalplus-0.3.1>
+python evals/scripts/evalplus_isolation.py preflight `
+  --campaign-root $campaign --state-root C:\absolute\new-eval-state
+```
+
+Preflight makes exactly one diagnostic request per arm, sequentially, and refuses
+to overwrite or repeat its evidence. These requests can incur cost and are not
+benchmark slots. It saves raw CLI events, stderr, exact commands, timings, and
+model reports. Baseline must report no skills or hook context. Router must report
+its skill, excerpts of both SessionStart and UserPromptSubmit, routing config,
+and native model/effort-selectable dispatch. Reports are model observations, not
+proof that instructions mechanically enforce policy. Offline `debug prompt-input`
+can show the skill catalog but is not proof of lifecycle hook delivery. Failed
+or missing probes prohibit formal generation. Receipts bind candidate/config,
+runner code, and raw evidence; changing these requires a new authorized preflight.
+
+The grader gate imports EvalPlus 0.3.1 in an immutable Docker image with networking
+off, a read-only filesystem, dropped capabilities, and resource limits. It does
+not run generated samples. Formal generation requires both successful treatment
+and grader receipts. WSL remains an accepted grading-result backend, but automated
+grader admission currently implements Docker only.
+
+A dedicated provider-side hard budget guard remains mandatory for the original
+`run --live` entry point. A local warning,
 self-managed spreadsheet, or missing adapter is not a guard. The adapter config
 contains a hash-pinned absolute executable, argv, and expected provider:
 
@@ -111,7 +158,7 @@ with ceilings of 24 attempts and 4,800,000 reserved tokens. It marks a slot
 attempted before invoking Codex. A failed attempt is retained and cannot be
 retried; the campaign stops.
 
-Only after those prerequisites are independently configured should an operator
+Only after those prerequisites and both receipts are present should an operator
 use the explicit live form:
 
 ```powershell
