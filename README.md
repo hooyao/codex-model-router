@@ -5,17 +5,16 @@ orchestration. It gives a primary agent concise routing guidance at session and
 prompt boundaries, then gives each worker a bounded execution and reporting
 contract.
 
-The plugin is designed for a Terra Medium primary agent that coordinates the
-workflow as a pure orchestrator. It discovers capabilities, creates task DAGs,
-dispatches all business work to bounded native workers, selects suitable
-available worker models, collects and validates worker packets, coordinates
-conflicts, and synthesizes the final response. Workers perform business
-analysis, repository inspection, edits, commands, tests, and result validation.
+The plugin separates execution ownership from model routing. Before the first
+business action, the primary agent chooses DIRECT for genuinely local, bounded
+work or DELEGATE for nontrivial work. Only delegated work is matched to an
+available worker model and effort. A direct task that reveals complexity must
+be rerouted before the next business action.
 
 ## What It Does
 
-- Repeats a strict pure-orchestrator contract on `SessionStart` and
-  `UserPromptSubmit`, including for simple tasks.
+- Repeats an explicit pre-business-action DIRECT/DELEGATE gate on
+  `SessionStart` and `UserPromptSubmit`.
 - Injects a bounded worker contract on `SubagentStart`.
 - Loads, validates, and injects editable repo-local routing examples on every
   supported lifecycle event.
@@ -31,8 +30,14 @@ analysis, repository inspection, edits, commands, tests, and result validation.
   workers own substantive review, testing, and integration.
 - Requires an independent high-capability reviewer for router meta-tasks and
   an implementation worker for requested changes.
-- Reports a blocked limitation when native multi-agent capability is unavailable;
-  it does not permit the controller to execute the business task as a fallback.
+- Permits direct execution only for one local scope and one bounded known
+  outcome without network, monitoring, recovery, substantive investigation, or
+  independent-validation signals.
+- Requires delegation for multi-repository/system/source work, named multi-step
+  runbooks, network synchronization, monitoring, failure/recovery, substantive
+  investigation, and independent review or validation.
+- Reports a blocked limitation when delegation is required but native
+  multi-agent capability is unavailable; it does not convert that task to direct.
 
 ## MVP Boundaries
 
@@ -41,12 +46,15 @@ cancel subagents. It does not switch the primary thread's model, enforce
 dispatch through `PreToolUse`, connect to an MCP server, call a network service,
 or store credentials.
 
-The pure-orchestrator contract is policy enforcement at the agent-instruction
+The execution-ownership contract is policy enforcement at the agent-instruction
 layer. Context injection cannot intercept tool calls and is not an OS/tool
-permission barrier. Offline tests check the emitted policy, not live compliance.
+permission barrier. Offline tests check emitted instructions and schema behavior,
+not live compliance.
 When a native dispatch API has no supported name field, the canonical worker
 name remains the worker packet Task ID and appears in the result, but the
-platform-generated worker-card title cannot be changed by this plugin.
+platform-generated worker-card title cannot be changed by this plugin. A
+native underscore-only `task_name` uses a deterministic hyphen-to-underscore
+transport adaptation while the human-facing Task ID stays canonical.
 
 ## Repository Layout
 
@@ -84,8 +92,9 @@ Init validates the actual runtime and lifecycle hook command path and creates
 `.codex-model-router/routing.json` only when absent. It never overwrites edits.
 Hooks also initialize a missing file, discover existing config upward from a
 nested `cwd`, and fail clearly rather than falling back on invalid config. See
-the plugin README for the versioned schema, discovery precedence, size budgets,
-and failure behavior. The default policy follows official
+the plugin README for the versioned schema, v1 compatibility, execution modes,
+discovery precedence, size budgets, and failure behavior. The default model
+routing policy follows official
 [Codex model guidance](https://learn.chatgpt.com/docs/models) and the
 [OpenAI model catalog](https://developers.openai.com/api/docs/models), consulted
 on 2026-09-21.
@@ -99,8 +108,16 @@ python plugins/codex-model-router/scripts/validate_plugin.py
 python -m unittest discover -s plugins/codex-model-router/tests -v
 ```
 
-The first command validates package structure and representative hook outputs
-without requiring a network connection or a live Codex session. After source
+The first command validates package structure and synthetic hook outputs
+without requiring a network connection or a live Codex session. Neither this
+smoke test nor the unit suite demonstrates live agent routing behavior. The
+documented clean CLI experiment is
+[`plugins/codex-model-router/docs/live-cli-validation.md`](plugins/codex-model-router/docs/live-cli-validation.md).
+Its activation gate currently records `codex exec` plugin-hook support as a
+prerequisite: CLI `0.155.0-alpha.9.2` did not execute installed lifecycle hooks,
+while explicit non-ephemeral Skill dispatch did work. Automatic routing remains
+unverified on that CLI rather than being inferred from synthetic output.
+After source
 changes, bump the plugin's SemVer release version and reinstall from the confirmed local
 marketplace, then use a new task so Codex reloads the plugin. Reinstalling never
 clobbers an existing workspace routing file. The validator enforces this for
@@ -145,10 +162,12 @@ failure precedence. Exactly one fixture-backed task (`small-edit`) has an
 exact-tree grader; eight other scenarios remain draft. Validate the matrix with:
 
 ```powershell
-python evals/scripts/evaluate.py validate --cases evals/cases.json
+python evals/scripts/evaluate.py validate-cases --cases evals/cases.json
 ```
 
-The router variant delegates even small edits; direct baseline work is allowed.
+The existing strict v2 synthetic campaign predates execution-ownership routing
+and still models the earlier pure-orchestrator policy; it is retained as an
+integrity fixture, not evidence for current DIRECT/DELEGATE behavior.
 Ten reproducible synthetic campaigns test integrity and decision behavior without
 live models. Reports include pass rates, exploratory paired quality differences,
 ratios of mean cost/latency, and safety/policy counts. They do not establish router
@@ -162,8 +181,8 @@ The completed MVP change is documented under
 `openspec validate add-router-mvp --strict` to verify the planning artifacts.
 The deterministic worker-name requirement is documented under
 [`openspec/changes/add-subagent-naming`](openspec/changes/add-subagent-naming).
-The superseding evaluation and pure-orchestrator reconciliation is documented in
+The earlier evaluation and pure-orchestrator reconciliation is documented in
 [`openspec/changes/add-evaluation-integrity-fixture`](openspec/changes/add-evaluation-integrity-fixture).
-Its policy requirements take precedence over the original MVP's direct-work
-and recursive-delegation exceptions. Run `openspec validate --all --strict` to
-validate all changes.
+Those records describe completed historical changes and do not override the
+current execution-ownership policy. This implementation does not add or modify
+OpenSpec records.

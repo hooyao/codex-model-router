@@ -1,22 +1,22 @@
 {
   "name": "codex-model-router",
-  "version": "0.1.3",
-  "description": "Route bounded Codex subagent work by task complexity and risk.",
+  "version": "0.2.1",
+  "description": "Choose direct execution or route bounded Codex worker tasks by complexity and risk.",
   "author": {
     "name": "Codex Model Router contributors"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "Codex Model Router",
-    "shortDescription": "Route Codex tasks to the right subagent model.",
-    "longDescription": "Injects routing and worker-contract context so a primary Codex agent can delegate bounded work with an appropriate model and reasoning effort.",
+    "shortDescription": "Choose direct work or the right worker model.",
+    "longDescription": "Injects execution-ownership, model-routing, and worker-contract context so a primary Codex agent can execute simple local work directly and delegate nontrivial work appropriately.",
     "developerName": "Codex Model Router contributors",
     "category": "Productivity",
     "capabilities": [
       "Read"
     ],
     "defaultPrompt": [
-      "Break this request into bounded tasks and route suitable work to subagents."
+      "Choose direct or delegated execution before acting, then route delegated tasks to suitable workers."
     ]
   }
 }

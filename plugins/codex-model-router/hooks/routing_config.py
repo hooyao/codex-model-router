@@ -7,11 +7,14 @@ import json
 import os
 import re
 import stat
+from collections.abc import Iterable
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+LEGACY_SCHEMA_VERSIONS = {1}
 CONFIG_DIRECTORY = ".codex-model-router"
 CONFIG_FILENAME = "routing.json"
 MAX_CONFIG_FILE_BYTES = 32_768
@@ -20,13 +23,17 @@ MAX_EXAMPLES = 64
 MODEL_CLASSES = {"Astra", "Sol", "Terra", "Luna"}
 REASONING_EFFORTS = {"low", "medium", "high", "xhigh", "max", "ultra"}
 EXAMPLE_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-TOP_LEVEL_FIELDS = {
+COMMON_TOP_LEVEL_FIELDS = {
     "schema_version",
     "selection_principle",
     "runtime_resolution",
     "effort_guidance",
     "official_sources",
     "examples",
+}
+TOP_LEVEL_FIELDS_BY_VERSION = {
+    1: COMMON_TOP_LEVEL_FIELDS,
+    2: COMMON_TOP_LEVEL_FIELDS | {"execution_policy"},
 }
 EFFORT_FIELDS = {"low", "medium", "high", "xhigh"}
 EXAMPLE_FIELDS = {
@@ -35,6 +42,58 @@ EXAMPLE_FIELDS = {
     "preferred_model_class",
     "reasoning_effort",
     "rationale",
+}
+EXAMPLE_FIELDS_BY_VERSION = {
+    1: EXAMPLE_FIELDS,
+    2: EXAMPLE_FIELDS | {"execution_mode"},
+}
+EXECUTION_MODES = {"direct", "delegate", "evaluate"}
+EXECUTION_POLICY_FIELDS = {
+    "default_mode",
+    "direct_requires_all",
+    "delegate_if_any",
+    "reroute_on_escalation",
+}
+DIRECT_REQUIRED_SIGNALS = {
+    "one-local-scope",
+    "one-bounded-known-outcome",
+    "no-network-or-sync",
+    "no-long-running-or-monitoring",
+    "no-failure-or-recovery-workflow",
+    "no-substantive-research-or-investigation",
+    "no-independent-review-or-validation",
+}
+DELEGATE_SIGNALS = {
+    "multiple-repositories-systems-or-sources",
+    "named-multistep-runbook",
+    "network-or-sync",
+    "long-running-or-monitoring",
+    "failure-or-recovery-workflow",
+    "substantive-research-or-investigation",
+    "independent-review-or-validation",
+}
+EXECUTION_SIGNALS = DIRECT_REQUIRED_SIGNALS | DELEGATE_SIGNALS
+DEFAULT_EXECUTION_POLICY = {
+    "default_mode": "evaluate",
+    "direct_requires_all": [
+        "one-local-scope",
+        "one-bounded-known-outcome",
+        "no-network-or-sync",
+        "no-long-running-or-monitoring",
+        "no-failure-or-recovery-workflow",
+        "no-substantive-research-or-investigation",
+        "no-independent-review-or-validation",
+    ],
+    "delegate_if_any": [
+        "multiple-repositories-systems-or-sources",
+        "named-multistep-runbook",
+        "network-or-sync",
+        "long-running-or-monitoring",
+        "failure-or-recovery-workflow",
+        "substantive-research-or-investigation",
+        "independent-review-or-validation",
+    ],
+    "reroute_on_escalation": True,
 }
 
 
@@ -121,13 +180,100 @@ def _require_string(value: Any, label: str, maximum: int) -> str:
     return value
 
 
+def _require_execution_mode(value: Any, label: str) -> str:
+    if not isinstance(value, str) or value not in EXECUTION_MODES:
+        raise RoutingConfigError(
+            f"{label} must be a string set to one of: {', '.join(sorted(EXECUTION_MODES))}"
+        )
+    return value
+
+
+def _validate_execution_signals(value: Any, label: str) -> None:
+    if not isinstance(value, list) or not value:
+        raise RoutingConfigError(f"{label} must be a non-empty array")
+    seen: set[str] = set()
+    for index, signal in enumerate(value):
+        if not isinstance(signal, str) or signal not in EXECUTION_SIGNALS:
+            raise RoutingConfigError(
+                f"{label}[{index}] must be a string set to one of: "
+                f"{', '.join(sorted(EXECUTION_SIGNALS))}"
+            )
+        if signal in seen:
+            raise RoutingConfigError(f"{label} must not contain duplicates")
+        seen.add(signal)
+
+
+def _validate_execution_policy(value: Any, label: str) -> None:
+    policy = _require_object(value, label)
+    _require_exact_fields(policy, EXECUTION_POLICY_FIELDS, label)
+    _require_execution_mode(policy["default_mode"], f"{label}.default_mode")
+    _validate_execution_signals(policy["direct_requires_all"], f"{label}.direct_requires_all")
+    _validate_execution_signals(policy["delegate_if_any"], f"{label}.delegate_if_any")
+    if set(policy["direct_requires_all"]) != DIRECT_REQUIRED_SIGNALS:
+        raise RoutingConfigError(f"{label}.direct_requires_all must contain every direct requirement exactly once")
+    if set(policy["delegate_if_any"]) != DELEGATE_SIGNALS:
+        raise RoutingConfigError(f"{label}.delegate_if_any must contain every delegation signal exactly once")
+    if policy["reroute_on_escalation"] is not True:
+        raise RoutingConfigError(f"{label}.reroute_on_escalation must be true")
+
+
+def effective_execution_policy(config: dict[str, Any]) -> dict[str, Any]:
+    """Return execution policy for an already validated v1 or v2 config."""
+
+    if config["schema_version"] in LEGACY_SCHEMA_VERSIONS:
+        return deepcopy(DEFAULT_EXECUTION_POLICY)
+    return deepcopy(config["execution_policy"])
+
+
+def effective_execution_mode(config: dict[str, Any], example: dict[str, Any]) -> str:
+    """Return the route mode, using evaluate for a legacy v1 example."""
+
+    if config["schema_version"] in LEGACY_SCHEMA_VERSIONS:
+        return "evaluate"
+    return example["execution_mode"]
+
+
+def configured_execution_mode(
+    config: dict[str, Any], matched_example_ids: Iterable[str]
+) -> str:
+    """Resolve config precedence after semantic matching, before hard-signal gating.
+
+    One matching route overrides the global default. No match uses the global
+    default. Conflicting matching routes fail closed to delegation.
+    """
+
+    if isinstance(matched_example_ids, (str, bytes)):
+        raise RoutingConfigError("matched_example_ids must be an iterable of route IDs")
+    route_ids = list(matched_example_ids)
+    if any(not isinstance(route_id, str) for route_id in route_ids):
+        raise RoutingConfigError("matched_example_ids entries must be strings")
+    if len(route_ids) != len(set(route_ids)):
+        raise RoutingConfigError("matched_example_ids must not contain duplicates")
+
+    examples = {example["id"]: example for example in config["examples"]}
+    unknown = sorted(set(route_ids) - set(examples))
+    if unknown:
+        raise RoutingConfigError(f"matched_example_ids contains unknown routes: {', '.join(unknown)}")
+    if not route_ids:
+        return effective_execution_policy(config)["default_mode"]
+
+    modes = {effective_execution_mode(config, examples[route_id]) for route_id in route_ids}
+    return next(iter(modes)) if len(modes) == 1 else "delegate"
+
+
 def validate_config(config: Any, source: str = "routing config") -> dict[str, Any]:
     root = _require_object(config, source)
-    _require_exact_fields(root, TOP_LEVEL_FIELDS, source)
-    if type(root["schema_version"]) is not int or root["schema_version"] != SCHEMA_VERSION:
-        raise RoutingConfigError(f"{source}.schema_version must be integer {SCHEMA_VERSION}")
+    version = root.get("schema_version")
+    supported_versions = sorted(LEGACY_SCHEMA_VERSIONS | {SCHEMA_VERSION})
+    if type(version) is not int or version not in supported_versions:
+        choices = ", ".join(str(item) for item in supported_versions)
+        raise RoutingConfigError(f"{source}.schema_version must be an integer set to one of: {choices}")
+    _require_exact_fields(root, TOP_LEVEL_FIELDS_BY_VERSION[version], source)
     _require_string(root["selection_principle"], f"{source}.selection_principle", 1_000)
     _require_string(root["runtime_resolution"], f"{source}.runtime_resolution", 1_000)
+
+    if version == SCHEMA_VERSION:
+        _validate_execution_policy(root["execution_policy"], f"{source}.execution_policy")
 
     guidance = _require_object(root["effort_guidance"], f"{source}.effort_guidance")
     _require_exact_fields(guidance, EFFORT_FIELDS, f"{source}.effort_guidance")
@@ -153,7 +299,7 @@ def validate_config(config: Any, source: str = "routing config") -> dict[str, An
     for index, raw_example in enumerate(examples):
         label = f"{source}.examples[{index}]"
         example = _require_object(raw_example, label)
-        _require_exact_fields(example, EXAMPLE_FIELDS, label)
+        _require_exact_fields(example, EXAMPLE_FIELDS_BY_VERSION[version], label)
         example_id = _require_string(example["id"], f"{label}.id", 64)
         if not EXAMPLE_ID_PATTERN.fullmatch(example_id):
             raise RoutingConfigError(f"{label}.id must match {EXAMPLE_ID_PATTERN.pattern}")
@@ -183,7 +329,10 @@ def validate_config(config: Any, source: str = "routing config") -> dict[str, An
             )
         _require_string(example["rationale"], f"{label}.rationale", 500)
 
-    serialized_config(config, source)
+        if version == SCHEMA_VERSION:
+            _require_execution_mode(example["execution_mode"], f"{label}.execution_mode")
+
+    serialized_config(root, source)
     return root
 
 
@@ -286,10 +435,18 @@ def load_workspace_config(workspace_cwd: Path) -> tuple[Path, dict[str, Any], bo
 
 def routing_context_block(path: Path, config: dict[str, Any]) -> str:
     serialized = serialized_config(config, str(path))
+    compatibility = ""
+    if config["schema_version"] in LEGACY_SCHEMA_VERSIONS:
+        compatibility = (
+            "Legacy schema v1 remains valid and unchanged: apply the built-in v2 execution policy "
+            "and treat every example execution_mode as evaluate.\n"
+        )
     return (
         "ROUTING_CONFIG_BEGIN\n"
         f"Workspace routing config: {path}\n"
-        "Treat preferred_model_class as advisory and resolve it against runtime model and effort availability.\n"
+        "Execution mode is evaluated before model selection. Treat execution_mode and preferred_model_class as "
+        "policy inputs, not a complete natural-language classifier; resolve model preferences only after delegation.\n"
+        f"{compatibility}"
         f"{serialized}\n"
         "ROUTING_CONFIG_END"
     )

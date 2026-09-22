@@ -5,6 +5,15 @@ It validates and compares supplied baseline/router campaigns offline. No model
 is called. All bundled campaigns are synthetic; their numbers are test inputs,
 not evidence of router quality, cost savings, or latency improvement.
 
+This strict v2 fixture freezes the earlier pure-orchestrator policy, under which
+even `small-edit` was delegated. It is retained to test evaluation-contract and
+artifact integrity; it does not validate the current execution-ownership gate.
+Current behavior (DIRECT for qualifying bounded local work, DELEGATE for
+nontrivial work, and rerouting on escalation) requires the clean live CLI
+procedure in
+[`../plugins/codex-model-router/docs/live-cli-validation.md`](../plugins/codex-model-router/docs/live-cli-validation.md).
+Synthetic lifecycle-hook smoke tests only prove what instructions were emitted.
+
 There is exactly one executable task: `small-edit`. Eight other entries in
 `cases.json` remain draft scenarios. The mixed suite and `experiment.json` remain
 draft. The `release` label on the small-edit case means its artifact can be
