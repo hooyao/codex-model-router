@@ -30,7 +30,8 @@ def command_overrides(workspace):
     filesystem = "{ " + ", ".join(json.dumps(k) + " = " + json.dumps(v) for k, v in policy.items()) + " }"
     server = ("{ command = " + json.dumps(sys.executable) + ", args = "
               + json.dumps(["-I", str(Path(__file__).resolve()), "--root", root])
-              + ", required = true, startup_timeout_sec = 20 }")
+              + ', required = true, startup_timeout_sec = 20, enabled_tools = ["read_file", "write_file"], '
+              + 'tools = { read_file = { approval_mode = "approve" }, write_file = { approval_mode = "approve" } } }')
     return ["--config", 'default_permissions="' + PROFILE_NAME + '"',
             "--config", "permissions." + PROFILE_NAME + ".filesystem=" + filesystem,
             "--config", "permissions." + PROFILE_NAME + ".network.enabled=false",

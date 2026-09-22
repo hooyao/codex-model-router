@@ -107,8 +107,23 @@ class WriteCapabilityTests(unittest.TestCase):
                 server = values["mcp_servers"][editor.SERVER_NAME]
                 self.assertEqual(str(task), server["args"][-1])
                 self.assertTrue(server["required"])
+                self.assertEqual(["read_file", "write_file"], server["enabled_tools"])
+                self.assertEqual({name: {"approval_mode": "approve"} for name in ("read_file", "write_file")},
+                                 server["tools"])
+                self.assertNotIn("default_tools_approval_mode", server)
+                self.assertEqual("never", base["approval_policy"])
                 configurations.append(server)
             self.assertEqual(configurations[0], configurations[1])
+
+    def test_editor_tool_schema_has_only_bounded_text_operations(self):
+        tools = editor.tools_schema()
+        self.assertEqual(["read_file", "write_file"], [t["name"] for t in tools])
+        for tool, required in zip(tools, (["path"], ["path", "content"])):
+            schema = tool["inputSchema"]
+            self.assertEqual(required, schema["required"])
+            self.assertEqual(set(required), set(schema["properties"]))
+            self.assertIs(False, schema["additionalProperties"])
+            self.assertTrue(all(p["type"] == "string" for p in schema["properties"].values()))
 
     def test_captured_capability_requires_editor_no_execution_and_confined_policy(self):
         with tempfile.TemporaryDirectory() as temp:

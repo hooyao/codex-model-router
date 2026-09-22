@@ -18,16 +18,76 @@ MARKER = "write-probe.txt"
 
 
 def tool_names(tools, prefix=""):
+    if not isinstance(tools, list) or any(not isinstance(tool, dict) for tool in tools):
+        raise runner.HarnessError("malformed structured tool declaration")
     for tool in tools:
-        name = prefix + tool.get("name", tool.get("type", ""))
+        identifier = tool.get("name", tool.get("type", ""))
+        if not isinstance(identifier, str) or not identifier:
+            raise runner.HarnessError("malformed structured tool name")
+        name = prefix + identifier
         yield name
         yield from tool_names(tool.get("tools", []), name + ".")
 
 
-def validate_capability(body, workspace):
+def canonical_tool_name(name):
+    prefix = "mcp__evalplus_workspace__"
+    return "mcp__evalplus_workspace." + name[len(prefix):] if name.startswith(prefix) else name
+
+
+def request_tool_evidence(body):
+    """Read structured tool declarations, never infer tools from user prose.
+
+    Native workers can carry a restricted code-mode dispatcher in additional_tools.
+    Its MCP tools may be deferred until ALL_TOOLS discovery; the paid write marker
+    remains mandatory when that catalog is not yet visible in a request.
+    """
     names = set(tool_names(body.get("tools", [])))
+    code_mode = False
+    for item in body.get("input", []):
+        if item.get("type") != "additional_tools":
+            continue
+        if item.get("role") not in ("developer", "system"):
+            raise runner.HarnessError("untrusted additional_tools declaration")
+        # Validate the complete schema before treating the dispatcher specially.
+        list(tool_names(item.get("tools", [])))
+        for tool in item.get("tools", []):
+            if tool.get("name") == "exec":
+                description = tool.get("description", "")
+                if (tool.get("type") != "custom" or not isinstance(description, str)
+                        or "Runs raw JavaScript -- no Node, no file system, no network access" not in description
+                        or "ALL_TOOLS" not in description):
+                    raise runner.HarnessError("unrestricted or unknown exec dispatcher")
+                code_mode = True
+                names.update(re.findall(r"declare const tools:\s*\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(", description))
+            else:
+                names.update(tool_names([tool]))
+    if code_mode:
+        discoveries = {item.get("call_id") for item in body.get("input", [])
+                       if item.get("type") == "custom_tool_call" and item.get("name") == "exec"
+                       and "ALL_TOOLS" in item.get("input", "")}
+        for item in body.get("input", []):
+            if item.get("type") != "custom_tool_call_output" or item.get("call_id") not in discoveries:
+                continue
+            output = item.get("output", [])
+            if not isinstance(output, list):
+                raise runner.HarnessError("malformed tool discovery output")
+            for block in output:
+                if not isinstance(block, dict) or block.get("type") not in ("input_text", "text"):
+                    continue
+                try:
+                    catalog = json.loads(block.get("text", ""))
+                except (ValueError, TypeError):
+                    continue
+                if isinstance(catalog, list) and all(isinstance(t, dict) and isinstance(t.get("name"), str) for t in catalog):
+                    names.update(t["name"] for t in catalog)
+    return {canonical_tool_name(name) for name in names}, code_mode
+
+
+def validate_capability(body, workspace):
+    names, code_mode = request_tool_evidence(body)
     required = {"mcp__evalplus_workspace.read_file", "mcp__evalplus_workspace.write_file"}
-    if not required.issubset(names):
+    deferred = code_mode and not required.issubset(names)
+    if not required.issubset(names) and not deferred:
         raise runner.HarnessError("bounded workspace editor is absent from the request")
     if any(name.startswith("mcp__") and name not in required | {"mcp__evalplus_workspace"} for name in names):
         raise runner.HarnessError("unrelated MCP capability exposed")
@@ -63,7 +123,9 @@ def validate_capability(body, workspace):
             raise runner.HarnessError("unknown filesystem policy entry")
     if writes != [root]:
         raise runner.HarnessError("writes are not limited to the fresh task workspace")
-    return {"workspace": str(root), "write_roots": [str(root)], "editor_tools": sorted(required),
+    return {"workspace": str(root), "write_roots": [str(root)], "editor_tools": sorted(required & names),
+            "code_mode_dispatcher": code_mode, "deferred_editor_catalog": deferred,
+            "requires_write_artifact": True,
             "shell_enabled": False, "network_enabled": False}
 
 
