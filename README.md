@@ -155,6 +155,11 @@ ratios of mean cost/latency, and safety/policy counts. They do not establish rou
 savings or authorize a release pass. The `ccusage` importer always produces
 unverified observations. See the evaluation README for commands and limitations.
 
+The no-paid-call [EvalPlus campaign preparation layer](evals/EVALPLUS.md) adds a
+pinned six-task HumanEval+/MBPP+ schedule, clean Codex CLI arm isolation, a
+provider-budget refusal gate, terminal-usage accounting, and a Docker/WSL-only
+grader adapter contract. It remains dry-run unless `--live` is explicit.
+
 ## OpenSpec
 
 The completed MVP change is documented under
@@ -167,3 +172,5 @@ The superseding evaluation and pure-orchestrator reconciliation is documented in
 Its policy requirements take precedence over the original MVP's direct-work
 and recursive-delegation exceptions. Run `openspec validate --all --strict` to
 validate all changes.
+The clean EvalPlus CLI campaign is specified under
+[`openspec/changes/add-evalplus-cli-harness`](openspec/changes/add-evalplus-cli-harness).

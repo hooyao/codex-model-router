@@ -1,5 +1,10 @@
 # Offline evaluation integrity
 
+The separate [clean Codex CLI EvalPlus campaign](EVALPLUS.md) prepares the
+reviewed HumanEval+/MBPP+ subset, guarded baseline/router commands, offline usage
+ledger, and isolated grader adapter contract. It defaults to dry-run and makes no
+model call without an explicit `--live` plus provider-side budget guard.
+
 This is the first fixture and integrity slice for a future release benchmark.
 It validates and compares supplied baseline/router campaigns offline. No model
 is called. All bundled campaigns are synthetic; their numbers are test inputs,

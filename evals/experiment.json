@@ -3,7 +3,7 @@
   "experiment_id": "codex-model-router-v2-draft",
   "data_origin": "synthetic",
   "cases_file": "cases.json",
-  "cases_sha256": "8cfb0ce94c538838e8234408ce5c798dbb02aeca8c71d3442ae41a8483dfe83d",
+  "cases_sha256": "4f8f9e2cfd79beff9bc6a316089e681606965f24c508e8564e94b05078ce5e91",
   "variants": ["baseline", "router"],
   "repetitions_per_case": 20,
   "status": "draft",
