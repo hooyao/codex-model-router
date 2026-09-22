@@ -24,12 +24,16 @@ except ImportError:
     import evalplus_profile as profile
 
 
-def offline_overrides(port):
+def offline_overrides(port, provider_id="copilot-bridge"):
+    # Keep the campaign provider identity/protocol while replacing its transport
+    # with a credential-free sink. No request is forwarded to the real bridge.
+    if not re.fullmatch(r"[a-z0-9-]+", provider_id):
+        raise runner.HarnessError("invalid offline provider ID")
     provider = {"name": "Rejecting offline hook probe", "base_url": "http://127.0.0.1:%d" % port,
                 "wire_api": "responses", "requires_openai_auth": False,
                 "supports_websockets": False, "request_max_retries": 0, "stream_max_retries": 0}
-    return ["--config", 'model_provider="hook-probe"', "--config",
-            "model_providers.hook-probe=" + isolation._toml_value(provider),
+    return ["--config", 'model_provider=' + json.dumps(provider_id), "--config",
+            "model_providers." + provider_id + "=" + isolation._toml_value(provider),
             "--disable", "remote_models", "--disable", "enable_request_compression"]
 
 
@@ -112,6 +116,14 @@ def capture_request(manifest, home, workspace, arm, evidence, variant=None):
     return status, requests
 
 
+def validate_primary_request(body):
+    """Configuration intent is insufficient: check the actual Responses body."""
+    reasoning = body.get("reasoning")
+    if body.get("model") != "gpt-6-astra" or not isinstance(reasoning, dict) or reasoning.get("effort") != "xhigh":
+        raise runner.HarnessError("primary request must explicitly carry gpt-6-astra and reasoning.effort=xhigh")
+    return {"model": body["model"], "reasoning_effort": reasoning["effort"]}
+
+
 def validate_delivery(arm, registered, requests, status, home, identity):
     """Require runtime registration, explicit trust activation, and two messages."""
     if len(requests) != 1 or requests[0].get("path") != "/responses" or status.get("exit_code") != 1:
@@ -122,6 +134,7 @@ def validate_delivery(arm, registered, requests, status, home, identity):
     hooks = entries[0]["hooks"]
     active = [h for h in hooks if h["enabled"] and not h["isManaged"]]
     body = requests[0]["body"]
+    primary_request = validate_primary_request(body)
     developer = ["\n".join(c.get("text", "") for c in m.get("content", []))
                  for m in body.get("input", []) if m.get("role") == "developer"]
     contexts = [text for text in developer if "CONTROLLER ROLE ONLY:" in text]
@@ -130,7 +143,7 @@ def validate_delivery(arm, registered, requests, status, home, identity):
         if (active or skills or contexts or any(h.get("source") == "plugin" for h in hooks)
                 or any("ROUTING_CONFIG_" in text or "WORKER ROLE OVERRIDE" in text for text in developer)):
             raise runner.HarnessError("baseline has candidate or ambient hook/skill context")
-        return {"events": [], "skills": [], "registered_hooks": []}
+        return {"events": [], "skills": [], "registered_hooks": [], "primary_request": primary_request}
     expected = {"sessionStart", "userPromptSubmit", "subagentStart"}
     if len(active) != 3 or {h["eventName"] for h in active} != expected:
         raise runner.HarnessError("candidate hooks are not explicitly registered")
@@ -169,6 +182,7 @@ def validate_delivery(arm, registered, requests, status, home, identity):
         if match is None or not re.search(r"\b" + re.escape(route["effort"]) + r"\b", match[1]):
             raise runner.HarnessError("resolved route unavailable in the captured native spawn schema")
     return {"events": ["SessionStart", "UserPromptSubmit"], "skills": skills,
+            "primary_request": primary_request,
             "registered_hooks": [{key: h[key] for key in ("key", "eventName", "currentHash", "trustStatus")}
                                  for h in active],
             "trust_activation": "--dangerously-bypass-hook-trust",

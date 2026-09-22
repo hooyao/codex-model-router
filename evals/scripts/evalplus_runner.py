@@ -545,6 +545,8 @@ def build_codex_command(
         "--config",
         'model_reasoning_effort="%s"' % execution["reasoning_effort"],
         "--config",
+        "model_supports_reasoning_summaries=true",
+        "--config",
         'approval_policy="never"',
         "--sandbox",
         execution["sandbox"],

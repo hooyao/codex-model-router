@@ -1,6 +1,8 @@
 import copy
 import json
+import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -32,6 +34,9 @@ class HookConfigurationTests(unittest.TestCase):
                 "name": "offline", "wire_api": "responses", "base_url": "http://127.0.0.1:1"}})
             config += isolation.candidate_hooks_config(home, installed)
             parsed = tomllib.loads(config)
+            self.assertEqual("gpt-6-astra", parsed["model"])
+            self.assertEqual("xhigh", parsed["model_reasoning_effort"])
+            self.assertIs(True, parsed["model_supports_reasoning_summaries"])
             source = runner.read_json(installed / "hooks/hooks.json")["hooks"]
             for event in ("SessionStart", "UserPromptSubmit", "SubagentStart"):
                 group = parsed["hooks"][event][0]
@@ -61,13 +66,15 @@ class HookConfigurationTests(unittest.TestCase):
 
     def test_offline_provider_has_no_credentials_or_retries(self):
         args = hooks.offline_overrides(12345)
-        self.assertIn('model_provider="hook-probe"', args)
+        self.assertIn('model_provider="copilot-bridge"', args)
         provider = args[3]
         self.assertIn('http://127.0.0.1:12345', provider)
         for field in ('"request_max_retries" = 0', '"stream_max_retries" = 0',
                       '"requires_openai_auth" = false', '"supports_websockets" = false'):
             self.assertIn(field, provider)
         self.assertNotIn("auth =", provider)
+        self.assertTrue(provider.startswith("model_providers.copilot-bridge="))
+        self.assertIn('"wire_api" = "responses"', provider)
 
 
 class HookDeliveryEvidenceTests(unittest.TestCase):
@@ -86,6 +93,7 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         messages += [profile.build_output(self.home / profile.PROFILE_DIRECTORY, {"hook_event_name": event})[
             "hookSpecificOutput"]["additionalContext"] for event in ("SessionStart", "UserPromptSubmit")]
         self.requests = [{"path": "/responses", "body": {
+            "model": "gpt-6-astra", "reasoning": {"effort": "xhigh", "summary": "auto"},
             "input": [{"role": "developer", "content": [{"text": text}]} for text in messages],
             "tools": [{"name": "multi_agent_v1", "tools": [{"name": "spawn_agent", "description": "\n".join(
                 "- `" + m["slug"] + "`: Test. Reasoning efforts: low, medium, high, xhigh." for m in CATALOG["models"]), "parameters": {
@@ -125,6 +133,27 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         empty = {"hooks": {"data": [{"hooks": [], "errors": [], "warnings": []}]}}
         with self.assertRaisesRegex(runner.HarnessError, "baseline"):
             hooks.validate_delivery("baseline", empty, self.requests, self.status, self.home, self.identity)
+
+    def test_both_arms_refuse_missing_or_substituted_raw_primary_model_effort(self):
+        empty = {"hooks": {"data": [{"hooks": [], "errors": [], "warnings": []}]}}
+        for arm in ("baseline", "router"):
+            for replacement in ({"reasoning": None}, {"reasoning": {}}, {"reasoning": "xhigh"},
+                                {"reasoning": {"effort": "high"}}, {"reasoning": {"effort": "XHIGH"}},
+                                {"model": "gpt-5.6-sol"}, {"model": "gpt-6-astra-latest"}):
+                invalid = copy.deepcopy(self.requests)
+                invalid[0]["body"].update(replacement)
+                with self.subTest(arm=arm, replacement=replacement), self.assertRaisesRegex(
+                        runner.HarnessError, "must explicitly carry gpt-6-astra"):
+                    hooks.validate_delivery(arm, empty if arm == "baseline" else self.registered,
+                                             invalid, self.status, self.home, self.identity)
+        self.assertEqual({"model": "gpt-6-astra", "reasoning_effort": "xhigh"}, self.validate()["primary_request"])
+
+    def test_baseline_receipt_records_actual_request_model_and_effort(self):
+        empty = {"hooks": {"data": [{"hooks": [], "errors": [], "warnings": []}]}}
+        requests = [{"path": "/responses", "body": {
+            "model": "gpt-6-astra", "reasoning": {"effort": "xhigh"}, "input": []}}]
+        report = hooks.validate_delivery("baseline", empty, requests, self.status, self.home, self.identity)
+        self.assertEqual({"model": "gpt-6-astra", "reasoning_effort": "xhigh"}, report["primary_request"])
 
     def test_captured_json_corruption_or_contract_weakening_blocks_receipt(self):
         for before, after in (('"schema_version":1', '"schema_version":'),
@@ -226,6 +255,54 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
             (evidence / "router.request.json").write_text('{"changed":true}')
             with self.assertRaisesRegex(runner.HarnessError, "evidence changed"):
                 hooks.require_hook_receipt(root, homes)
+
+
+@unittest.skipUnless(os.environ.get("EVALPLUS_OFFLINE_CLI_TEST") == "1", "opt-in local CLI test; no model runs")
+class PrimaryRequestIntegrationTests(unittest.TestCase):
+    def test_cli_emits_astra_xhigh_and_support_override_controls_serialization(self):
+        # Run the real CLI only against the rejecting sink. A deliberately false
+        # metadata override reproduces the original omission without a paid call.
+        # On Windows a CLI/background scanner can briefly retain a log handle.
+        # Preserve that temporary evidence if cleanup fails, not a false failure
+        # of the request assertions. Python 3.9 lacks this cleanup option.
+        cleanup_options = {"ignore_cleanup_errors": True} if sys.version_info >= (3, 10) else {}
+        with tempfile.TemporaryDirectory(**cleanup_options) as temp:
+            root = Path(temp)
+            for arm in ("baseline", "router"):
+                home = root / arm
+                if arm == "router":
+                    identity = provision(home)
+                else:
+                    home.mkdir()
+                config = isolation.clean_config({"provider_id": "copilot-bridge", "provider": {
+                    "name": "Offline", "wire_api": "responses", "base_url": "http://127.0.0.1:1",
+                    "requires_openai_auth": False}})
+                if arm == "router":
+                    config += isolation.candidate_hooks_config(home, Path(identity["installed_path"]))
+                (home / "config.toml").write_text(config, encoding="utf-8")
+                task = root / (arm + "-workspace")
+                task.mkdir()
+                subprocess.run(["git", "init", "--quiet"], cwd=task, check=True)
+                status, requests = hooks.capture_request(runner.validate_manifest(), home, task, arm, root / "positive")
+                self.assertEqual(1, status["exit_code"])
+                self.assertEqual(1, len(requests))
+                self.assertEqual({"model": "gpt-6-astra", "reasoning_effort": "xhigh"},
+                                 hooks.validate_primary_request(requests[0]["body"]))
+                original = runner.build_codex_command
+
+                def unsupported(*args):
+                    command = original(*args)
+                    command[-1:-1] = ["--config", "model_supports_reasoning_summaries=false"]
+                    return command
+
+                with mock.patch.object(runner, "build_codex_command", side_effect=unsupported):
+                    status, requests = hooks.capture_request(runner.validate_manifest(), home, task, arm, root / "negative")
+                self.assertEqual(1, status["exit_code"])
+                self.assertEqual(1, len(requests))
+                self.assertEqual("gpt-6-astra", requests[0]["body"]["model"])
+                self.assertIsNone(requests[0]["body"].get("reasoning"))
+                with self.assertRaises(runner.HarnessError):
+                    hooks.validate_primary_request(requests[0]["body"])
 
 
 if __name__ == "__main__":

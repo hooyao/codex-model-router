@@ -42,6 +42,8 @@ class ArmIsolationTests(unittest.TestCase):
         config = isolation.clean_config(self.transport)
         for line in ("use_memories = false", "generate_memories = false",
                      "request_max_retries = 0", "stream_max_retries = 0",
+                     'model = "gpt-6-astra"', 'model_reasoning_effort = "xhigh"',
+                     'model_supports_reasoning_summaries = true',
                      '[skills.bundled]\nenabled = false', 'max_threads = 2'):
             self.assertIn(line, config)
         self.assertNotIn("skip_host_skill_discovery", config)  # absent in CLI 0.144.1
