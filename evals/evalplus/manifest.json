@@ -103,6 +103,7 @@
       "version": "0.1.3"
     },
     "required_flags": [
+      "--ephemeral",
       "--ignore-rules",
       "--json",
       "--strict-config"

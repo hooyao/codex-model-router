@@ -27,7 +27,7 @@ Runs are serial to avoid cross-run write or budget races.
 Each command is built with:
 
 ```text
-codex exec --ignore-rules --json --strict-config
+codex exec --ephemeral --ignore-rules --json --strict-config
 ```
 
 It also supplies the model, reasoning effort, sandbox, approval policy, current
@@ -37,11 +37,12 @@ including the documented terminal `turn.completed.usage` event. Raw JSONL and
 stderr are written beside, never inside, the task worktree.
 
 `--ignore-user-config` must not be used: installed plugin enablement lives in the
-isolated arm's config, and ignoring it previously removed the treatment. Session
-files are retained in fresh arm homes for context and descendant-usage evidence;
-`--ephemeral` would discard that evidence. Memory injection and generation are
-disabled in both arms. Task instructions prohibit executing generated code on
-the host.
+isolated arm's config, and ignoring it previously removed the treatment. The
+authorized continuation uses `--ephemeral` and fresh per-slot homes, profiles,
+and workspaces. CLI JSON streams retain observable parent/child evidence;
+missing descendant usage is explicitly incomplete rather than inferred. Memory
+injection/generation is disabled. Task instructions prohibit executing generated
+code on the host.
 
 ## Safe preparation and dry run
 
@@ -114,6 +115,38 @@ off, a read-only filesystem, dropped capabilities, and resource limits. It does
 not run generated samples. Formal generation requires both successful treatment
 and grader receipts. WSL remains an accepted grading-result backend, but automated
 grader admission currently implements Docker only.
+
+## Authorized USD 50 soft-cap mode
+
+For copilot-bridge, use the explicitly authorized soft path instead of a provider
+budget guard. Both admission receipts are still required. No billing API or
+ccusage process is called:
+
+```powershell
+python evals/scripts/evalplus_runner.py run --live --run-limit 24 `
+  --campaign-root $campaign `
+  --baseline-codex-home C:\absolute\new-eval-state\baseline `
+  --router-codex-home C:\absolute\new-eval-state\router `
+  --soft-budget-pricing evals/evalplus/astra-soft-pricing.json
+```
+
+The frozen Astra Standard short-context card (10/1/50 USD per million uncached
+input/cached input/output tokens) applies to every distinct observed thread,
+including router-selected models. `--prior-usage <jsonl>` can include earlier
+diagnostic streams in admission. Current preflight usage is always included.
+Before each serial slot, the runner stops if observed cumulative cost is at
+least USD 50; an in-flight slot can exceed the soft cap. Legacy monetary
+reservations remain schedule metadata and do not control this mode's admission.
+
+Identical mirrored final usage is counted once per thread; conflicting totals
+stop admission. Missing child totals remain in the inventory and set
+`cost_complete: false`, with a lower-bound observed subtotal and no complete
+cost estimate. An ephemeral CLI may not expose descendant usage, so this limit
+cannot guarantee complete spend coverage. No paid slot is retried. Fresh slot
+homes copy only isolated config/auth and the exact candidate package. A router
+slot must show a separate worker thread; baseline must not show one.
+
+## Legacy provider guard mode
 
 A dedicated provider-side hard budget guard remains mandatory for the original
 `run --live` entry point. A local warning,
