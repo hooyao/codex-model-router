@@ -280,7 +280,8 @@ def bindings(homes, identity):
             "python_sha256": runner.sha256_file(Path(sys.executable)),
             "code_sha256": {Path(m.__file__).name: runner.sha256_file(Path(m.__file__))
                             for m in (isolation, runner, live, profile, write_gate, workspace_editor)},
-            "probe_sha256": runner.sha256_file(Path(__file__))}
+            "probe_sha256": runner.sha256_file(Path(__file__)),
+            "mcp_fixture_sha256": runner.sha256_file(Path(__file__).with_name("evalplus_mcp_probe.py"))}
 
 
 def run_probe(campaign, homes):
@@ -308,6 +309,20 @@ def run_probe(campaign, homes):
             result["reports"]["worker-simulation"] = simulate_worker(manifest, homes["router"], identity, evidence)
         except (runner.HarnessError, ValueError, KeyError, TypeError) as error:
             result["errors"].append("worker-simulation: " + str(error))
+    if not result["errors"]:
+        try:
+            try:
+                from . import evalplus_mcp_probe as mcp_probe
+            except ImportError:
+                import evalplus_mcp_probe as mcp_probe
+            for name, code_mode in (("direct", False), ("code-mode", True)):
+                path = campaign / "mcp-cli-proof" / name
+                proof = mcp_probe.run_fixture(path, code_mode=code_mode)
+                if not proof["passed"]:
+                    raise runner.HarnessError("CLI-mediated editor invocation failed: " + name)
+                result.setdefault("mcp_cli_proofs", {})[name] = runner.sha256_file(path / "result.json")
+        except (runner.HarnessError, ValueError, OSError) as error:
+            result["errors"].append(str(error))
     result["passed"] = not result["errors"]
     result["evidence_sha256"] = {p.name: runner.sha256_file(p) for p in evidence.iterdir() if p.is_file()}
     runner.write_json(campaign / "hook-delivery.json", result)
@@ -321,6 +336,8 @@ def require_hook_receipt(campaign, homes):
         raise runner.HarnessError("offline hook delivery preflight did not pass")
     if receipt.get("bindings") != bindings(homes, identity):
         raise runner.HarnessError("hook delivery receipt binding changed")
+    if set(receipt.get("mcp_cli_proofs", {})) != {"direct", "code-mode"}:
+        raise runner.HarnessError("CLI-mediated editor receipt inventory incomplete")
     evidence = campaign / "hook-delivery"
     required = {arm + suffix for arm in (*homes, "worker-simulation") for suffix in
                 (".registry.json", ".request.json", ".command.json", ".status.json", ".jsonl", ".stderr.txt")}
@@ -342,6 +359,15 @@ def require_hook_receipt(campaign, homes):
         write_gate.require_editor_proof(evidence / (arm + ".editor.json"), evidence / (arm + "-workspace"))
     if validate_worker_simulation(evidence, identity) != receipt["reports"]["worker-simulation"]:
         raise runner.HarnessError("worker delivery report changed")
+    try:
+        from . import evalplus_mcp_probe as mcp_probe
+    except ImportError:
+        import evalplus_mcp_probe as mcp_probe
+    for name, code_mode in (("direct", False), ("code-mode", True)):
+        path = campaign / "mcp-cli-proof" / name
+        if runner.sha256_file(path / "result.json") != receipt.get("mcp_cli_proofs", {}).get(name):
+            raise runner.HarnessError("CLI-mediated editor receipt missing or changed")
+        mcp_probe.require_fixture(path, code_mode)
     return receipt
 
 

@@ -14,6 +14,7 @@ from evals.scripts import evalplus_isolation as isolation
 from evals.scripts import evalplus_live as live
 from evals.scripts import evalplus_runner as runner
 from evals.scripts import evalplus_profile as profile
+from evals.scripts import evalplus_mcp_probe as mcp_probe
 from evals.tests.profile_fixture import CATALOG, provision, add_write_capability
 
 try:
@@ -238,15 +239,26 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
         receipt = {"passed": True, "model_invocations": 0, "bindings": {"candidate": "old"},
                    "reports": {"baseline": {}, "router": {}, "worker-simulation": {}},
                    "evidence_sha256": {name: runner.sha256_file(evidence / name) for name in names}}
+        receipt["mcp_cli_proofs"] = {}
+        for name in ("direct", "code-mode"):
+            path = root / "mcp-cli-proof" / name / "result.json"
+            runner.write_json(path, {"fixture": name})
+            receipt["mcp_cli_proofs"][name] = runner.sha256_file(path)
         with mock.patch.object(isolation, "validate_homes", return_value={}), \
                 mock.patch.object(hooks, "bindings", return_value={"candidate": "current"}), \
                 mock.patch.object(hooks, "validate_worker_simulation", return_value={}), \
                 mock.patch.object(hooks.write_gate, "require_editor_proof"), \
+                mock.patch.object(mcp_probe, "require_fixture") as require_fixture, \
                 mock.patch.object(hooks, "validate_delivery", return_value={}) as validate:
             runner.write_json(root / "hook-delivery.json", receipt)
             with self.assertRaisesRegex(runner.HarnessError, "binding changed"):
                 hooks.require_hook_receipt(root, homes)
             receipt["bindings"] = {"candidate": "current"}
+            missing_mcp = copy.deepcopy(receipt)
+            del missing_mcp["mcp_cli_proofs"]["code-mode"]
+            runner.write_json(root / "hook-delivery.json", missing_mcp)
+            with self.assertRaisesRegex(runner.HarnessError, "editor receipt inventory incomplete"):
+                hooks.require_hook_receipt(root, homes)
             missing = copy.deepcopy(receipt)
             del missing["evidence_sha256"]["router.request.json"]
             runner.write_json(root / "hook-delivery.json", missing)
@@ -260,6 +272,14 @@ class HookDeliveryEvidenceTests(unittest.TestCase):
             runner.write_json(root / "hook-delivery.json", receipt)
             hooks.require_hook_receipt(root, homes)
             self.assertEqual(2, validate.call_count)
+            self.assertEqual([mock.call(root / "mcp-cli-proof/direct", False),
+                              mock.call(root / "mcp-cli-proof/code-mode", True)], require_fixture.call_args_list)
+            mcp_result = root / "mcp-cli-proof/code-mode/result.json"
+            original = mcp_result.read_bytes()
+            mcp_result.write_text('{"tampered":true}', encoding="utf-8")
+            with self.assertRaisesRegex(runner.HarnessError, "editor receipt missing or changed"):
+                hooks.require_hook_receipt(root, homes)
+            mcp_result.write_bytes(original)
             (evidence / "router.request.json").write_text('{"changed":true}')
             with self.assertRaisesRegex(runner.HarnessError, "evidence changed"):
                 hooks.require_hook_receipt(root, homes)
