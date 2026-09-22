@@ -23,6 +23,12 @@ business-result validation. This includes read-only research, trivial fixes,
 integration edits, and rerunning a worker's checks. There is no simple-task
 exception. The controller must not relabel itself as a worker.
 
+The separate `initialize-router` Skill is plugin administration rather than
+business work. If the user explicitly requests router initialization or
+preflight for the current project, the controller may run that Skill's bundled
+init program exactly as directed. This narrow exception does not allow direct
+repository work, routing-policy edits, or any other business execution.
+
 A dispatched worker is authorized and required to perform assigned business
 analysis, repository/file inspection, file edits, commands, tests, and task
 validation within its bounded packet. Verification workers must inspect the
@@ -34,6 +40,24 @@ native multi-agent tooling does not prevent execution of their assignment.
 Workers must not dispatch subworkers or start subagents. Send needs outside the
 packet and actual task/tool/permission blockers to the controller for routing.
 The override does not expand user scope, permissions, or safety constraints.
+
+## Workspace routing config
+
+Each `SessionStart`, `UserPromptSubmit`, and `SubagentStart` context contains a
+delimited `ROUTING_CONFIG_BEGIN`/`ROUTING_CONFIG_END` block loaded from the
+validated workspace `.codex-model-router/routing.json` on that invocation.
+Treat that JSON as the source of routing examples. Its model classes are
+advisory: resolve them against the runtime model catalog and supported efforts,
+then choose the lowest capable available option. Do not treat an example as
+proof that a model or effort is currently available.
+
+The config is versioned and user-editable. Discovery prefers an existing file
+at the event `cwd` or any parent, then initializes at the nearest `.git` ancestor
+(file or directory), then at the event `cwd`. Initialization uses the bundled
+template only when the file is absent and never overwrites an existing file.
+Malformed, schema-invalid, oversized, unreadable, or uncreatable config is a
+hard hook error; do not reconstruct examples from this Skill or silently fall
+back to defaults.
 
 ## Controller protocol
 

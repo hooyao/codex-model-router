@@ -1,0 +1,42 @@
+name: Plugin validation
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Determine target merge-base
+        id: baseline
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$BASE_REF"
+          baseline="$(git merge-base HEAD "origin/$BASE_REF")"
+          test -n "$baseline"
+          echo "ref=$baseline" >> "$GITHUB_OUTPUT"
+
+      - name: Validate plugin package and release policy
+        run: python plugins/codex-model-router/scripts/validate_plugin.py --baseline "${{ steps.baseline.outputs.ref }}"
+
+      - name: Run plugin tests
+        run: python -m unittest discover -s plugins/codex-model-router/tests -v
+
+# Repository evaluation-integrity checks have separate data and release gates.
+# They intentionally do not run in this plugin-version enforcement workflow.

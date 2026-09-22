@@ -17,6 +17,8 @@ analysis, repository inspection, edits, commands, tests, and result validation.
 - Repeats a strict pure-orchestrator contract on `SessionStart` and
   `UserPromptSubmit`, including for simple tasks.
 - Injects a bounded worker contract on `SubagentStart`.
+- Loads, validates, and injects editable repo-local routing examples on every
+  supported lifecycle event.
 - Gives every dispatch a deterministic user-visible
   `<purpose>-<model>-<effort>` name, with a packet/result fallback when native
   dispatch cannot name the worker card.
@@ -50,6 +52,7 @@ platform-generated worker-card title cannot be changed by this plugin.
 
 ```text
 plugins/codex-model-router/  # Installable Codex plugin
+.codex-model-router/         # Editable workspace routing policy and examples
 openspec/                    # Proposal, specifications, design, and tasks
 .agents/plugins/             # Repository-local marketplace entry
 ```
@@ -70,6 +73,23 @@ marketplace, then start a new session and use `/hooks` to review and trust the
 plugin's lifecycle hooks. See the plugin-specific
 [README](plugins/codex-model-router/README.md) for details.
 
+Windows hooks require Python 3.10+ through the `python` command. In any target
+project, ask Codex **“Initialize Codex Model Router in this project”**. The
+installed `initialize-router` Skill resolves its own installed files and runs
+the preflight for the active project; users do not need a path into this source
+repository. A first lifecycle hook also initializes automatically, so explicit
+init is primarily for an immediate diagnostic before trusting hooks.
+
+Init validates the actual runtime and lifecycle hook command path and creates
+`.codex-model-router/routing.json` only when absent. It never overwrites edits.
+Hooks also initialize a missing file, discover existing config upward from a
+nested `cwd`, and fail clearly rather than falling back on invalid config. See
+the plugin README for the versioned schema, discovery precedence, size budgets,
+and failure behavior. The default policy follows official
+[Codex model guidance](https://learn.chatgpt.com/docs/models) and the
+[OpenAI model catalog](https://developers.openai.com/api/docs/models), consulted
+on 2026-09-21.
+
 ## Validation
 
 The plugin uses only the Python standard library.
@@ -80,7 +100,42 @@ python -m unittest discover -s plugins/codex-model-router/tests -v
 ```
 
 The first command validates package structure and representative hook outputs
-without requiring a network connection or a live Codex session.
+without requiring a network connection or a live Codex session. After source
+changes, bump the plugin's SemVer release version and reinstall from the confirmed local
+marketplace, then use a new task so Codex reloads the plugin. Reinstalling never
+clobbers an existing workspace routing file. The validator enforces this for
+tracked and untracked plugin changes relative to `HEAD`: it fails if plugin
+implementation content changes without a strictly higher manifest SemVer version.
+In CI, compare against the target merge-base explicitly with `--baseline <git-ref>`.
+
+## Plugin Update Policy
+
+Every change to content under `plugins/codex-model-router/`, including a new
+untracked skill, hook, script, default, configuration, or documentation file,
+must receive a strictly higher release version before validation, review, or reinstall. Do not edit
+the marketplace entry for an update. Plugin release identity is its SemVer
+version, not a Codex build/cachebuster token. From the repository root, run the
+dedicated bump command and reinstall through the confirmed personal marketplace:
+
+```powershell
+python plugins/codex-model-router/scripts/bump_version.py patch
+codex plugin add codex-model-router@personal
+```
+
+Use `patch` for bug fixes and small compatible changes, `minor` for
+backward-compatible functionality, and `major` for breaking changes. The bump
+script writes only the manifest version after validating the manifest name and
+current SemVer. Pre-release identifiers are allowed by SemVer and compare below
+the corresponding stable release; build metadata is valid syntax but never
+changes release precedence and cannot satisfy the bump requirement.
+Pull requests run this validator against the target merge-base, plus the plugin
+and evaluation test suites. The workflow is read-only and uses no repository
+secrets, so it is safe for fork pull requests.
+The validation policy examines changed tracked files and relevant untracked
+files. It ignores only cache artifacts (`__pycache__`, `.pytest_cache`, `.pyc`,
+and `.pyo`). Relevant ignored files are reported as an error so an ignore rule
+cannot hide a plugin change. It cannot compare an extracted source archive with
+no Git history; run it from a checkout, or pass `--baseline <git-ref>` in CI.
 
 ## Evaluation
 

@@ -53,6 +53,30 @@ acceptance criteria, subject to the meta-task review rule. Escalate when
 worker-reported ambiguity, risk, or failed validation justifies it. If no
 suitable available worker can complete a required task, report a blocker.
 
+## Config-driven examples
+
+Use the validated JSON inside the injected
+`ROUTING_CONFIG_BEGIN`/`ROUTING_CONFIG_END` block as the canonical source of
+task examples, preferred model classes, efforts, and rationales. Resolve every
+preference against the current runtime capability catalog. The stable fallback
+when no example matches is capability-based: Luna for clear repeatable work,
+Terra for everyday work, Sol for complex or open-ended work, and Astra for work
+requiring the strongest sustained judgment. Choose the lowest sufficient
+supported effort, using medium when more planning is needed and high or xhigh
+for hard multi-step work, multiple sources, risk, or consequential tradeoffs.
+
+The default examples are grounded in the official
+[Codex model guidance](https://learn.chatgpt.com/docs/models) and
+[OpenAI model catalog](https://developers.openai.com/api/docs/models), consulted
+on 2026-09-21. The workspace file is editable and can replace those examples;
+hard-coded prose in this policy must not override valid workspace values.
+
+Every hook reloads and validates the workspace file. Existing config is found
+upward before choosing the nearest `.git` ancestor or the event `cwd` for
+exclusive first-time initialization. Invalid, malformed, oversized, unreadable,
+or uncreatable config stops routing context generation with a clear error. Do
+not truncate it or silently use bundled defaults.
+
 ## Dependencies, conflicts, and validation
 
 Use stable task IDs and a directed acyclic graph. Wait for dependencies before

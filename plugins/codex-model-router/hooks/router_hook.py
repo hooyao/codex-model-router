@@ -5,7 +5,20 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 from typing import Any
+
+
+HOOK_DIRECTORY = Path(__file__).resolve().parent
+if str(HOOK_DIRECTORY) not in sys.path:
+    sys.path.insert(0, str(HOOK_DIRECTORY))
+
+from routing_config import (  # noqa: E402
+    RoutingConfigError,
+    load_workspace_config,
+    resolve_workspace_cwd,
+    routing_context_block,
+)
 
 
 SUPPORTED_EVENTS = {"SessionStart", "UserPromptSubmit", "SubagentStart"}
@@ -14,6 +27,8 @@ This controller contract does not apply to dispatched workers, including verific
 As the primary/controller agent, you are a pure orchestrator.
 Allowed controller actions ONLY: capability discovery, task DAG creation, dispatch, waiting/collection, worker-packet validation, conflict resolution, and final user-facing synthesis.
 Prohibited controller actions: business-domain analysis, repository/file inspection for business purposes, file edits, command execution, testing, and business-result validation. These prohibitions include read-only research, small fixes, and checking worker claims yourself. Do not relabel yourself as a worker.
+
+The bundled `initialize-router` Skill is plugin administration, not business work. When the user explicitly asks to initialize or preflight Codex Model Router for the current project, the controller may run the bundled init program exactly as that Skill specifies. Do not use this narrow exception for repository work, routing-policy edits, or other user requests.
 
 Run a capability preflight using the exposed tool catalog and discovery interfaces: identify native multi-agent spawn (such as spawn_agent), matching wait/collect tools, and available worker models/reasoning efforts. Thread-management tools alone do not establish native availability. Discovery is not permission to run shell commands or inspect business files.
 When native multi-agent capability is available, dispatch bounded workers for ALL business work, including simple tasks. If it is unavailable, report BLOCKED to the user with the missing capability and observed limitation; do not silently perform the business work yourself or create user-facing threads as substitute workers. A dispatch failure requires bounded retry/escalation or a blocked report, never controller execution.
@@ -27,17 +42,17 @@ Route against observed availability: Luna for clear repeatable work, Terra for e
 This is policy enforcement at the agent-instruction layer. Context injection cannot intercept tool calls and is not an OS/tool permission barrier."""
 
 
-def controller_session_context(model: str) -> str:
-    return f"Codex Model Router\nActive controller model: {model}.\n\n{CONTROLLER_CONTRACT}"
+def controller_session_context(model: str, routing_context: str) -> str:
+    return f"Codex Model Router\nActive controller model: {model}.\n\n{CONTROLLER_CONTRACT}\n\n{routing_context}"
 
 
-def user_prompt_context(event: dict[str, Any]) -> str:
+def user_prompt_context(event: dict[str, Any], routing_context: str) -> str:
     # Repeat the semantic meta-task rule even for follow-ups without keywords.
-    return CONTROLLER_CONTRACT
+    return f"{CONTROLLER_CONTRACT}\n\n{routing_context}"
 
 
-def worker_context() -> str:
-    return """WORKER ROLE OVERRIDE (SubagentStart)
+def worker_context(routing_context: str) -> str:
+    contract = """WORKER ROLE OVERRIDE (SubagentStart)
 You are a bounded worker, not the controller. This worker role supersedes inherited Codex Model Router controller-only restrictions for your assignment. Controller-only prohibitions do not apply to your assigned worker duties, including verification work.
 You are authorized and required to perform the assigned business-domain analysis, repository/file inspection, file edits, command execution, testing, and task validation (business-result validation) within your bounded packet. Perform the assigned work yourself using the available task tools. A verification worker must inspect the relevant repository/files and run the assigned checks/tests. This work does not depend on native multi-agent tooling being available to you.
 Do not dispatch subworkers. Do not start subagents. Return needs outside your packet to the controller for routing; do not take over the controller role.
@@ -50,16 +65,17 @@ Your final response MUST include:
 - Evidence: files, symbols, sources, or commands relevant to the result.
 - Validation: acceptance criteria checked, commands/checks run and their results, or explicitly not run with a reason.
 - Risks or blockers: unresolved issues and the smallest next decision needed from the parent."""
+    return f"{contract}\n\n{routing_context}"
 
 
-def additional_context(event_name: str, event: dict[str, Any]) -> str:
+def additional_context(event_name: str, event: dict[str, Any], routing_context: str) -> str:
     if event_name == "SessionStart":
         model = str(event.get("model") or "unknown")
-        return controller_session_context(model)
+        return controller_session_context(model, routing_context)
     if event_name == "UserPromptSubmit":
-        return user_prompt_context(event)
+        return user_prompt_context(event, routing_context)
     if event_name == "SubagentStart":
-        return worker_context()
+        return worker_context(routing_context)
     raise ValueError(f"Unsupported hook event: {event_name}")
 
 
@@ -68,10 +84,14 @@ def build_hook_output(event: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(event_name, str) or event_name not in SUPPORTED_EVENTS:
         raise ValueError("hook_event_name must be a supported lifecycle event")
 
+    workspace_cwd = resolve_workspace_cwd(event.get("cwd"))
+    config_path, config, _created = load_workspace_config(workspace_cwd)
+    routing_context = routing_context_block(config_path, config)
+
     return {
         "hookSpecificOutput": {
             "hookEventName": event_name,
-            "additionalContext": additional_context(event_name, event),
+            "additionalContext": additional_context(event_name, event, routing_context),
         }
     }
 
@@ -82,7 +102,7 @@ def main() -> int:
         if not isinstance(payload, dict):
             raise ValueError("hook input must be a JSON object")
         print(json.dumps(build_hook_output(payload), separators=(",", ":")))
-    except (json.JSONDecodeError, ValueError) as error:
+    except (json.JSONDecodeError, RoutingConfigError, ValueError) as error:
         print(f"codex-model-router hook error: {error}", file=sys.stderr)
         return 2
     return 0

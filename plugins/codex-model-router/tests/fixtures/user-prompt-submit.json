@@ -2,7 +2,7 @@
   "hook_event_name": "UserPromptSubmit",
   "session_id": "session-fixture",
   "turn_id": "turn-fixture",
-  "cwd": "C:/workspace",
+  "cwd": ".",
   "model": "gpt-5.6-terra",
   "prompt": "Review this feature request."
 }

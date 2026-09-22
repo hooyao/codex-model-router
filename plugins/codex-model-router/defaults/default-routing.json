@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "selection_principle": "Choose the least expensive available model class and lowest supported reasoning effort that can reliably satisfy the task. Escalate for ambiguity, risk, multi-step tool use, multiple sources, or important tradeoffs.",
+  "runtime_resolution": "Model classes are advisory preferences. Resolve them against the models and reasoning efforts exposed by the current runtime; never invent an unavailable model or effort.",
+  "effort_guidance": {
+    "low": "Use for clear, short, repeatable work with little ambiguity.",
+    "medium": "Use when the task needs some planning, tool coordination, or careful procedure following.",
+    "high": "Use for hard multi-step work, difficult debugging, multiple sources, security concerns, or consequential tradeoffs.",
+    "xhigh": "Reserve for the hardest supported tasks when high effort is insufficient and the runtime offers xhigh."
+  },
+  "official_sources": [
+    "https://learn.chatgpt.com/docs/models",
+    "https://developers.openai.com/api/docs/models"
+  ],
+  "examples": [
+    {
+      "id": "astra-architecture",
+      "task_signals": ["system architecture", "cross-component design", "consequential tradeoffs"],
+      "preferred_model_class": "Astra",
+      "reasoning_effort": "high",
+      "rationale": "Architecture needs sustained judgment across constraints and downstream effects."
+    },
+    {
+      "id": "astra-security",
+      "task_signals": ["security review", "threat modeling", "high-risk change"],
+      "preferred_model_class": "Astra",
+      "reasoning_effort": "high",
+      "rationale": "Security work benefits from the strongest reasoning and careful adversarial analysis."
+    },
+    {
+      "id": "astra-complex-tools",
+      "task_signals": ["multi-application workflow", "complex tool orchestration", "end-to-end research and action"],
+      "preferred_model_class": "Astra",
+      "reasoning_effort": "high",
+      "rationale": "Long, multi-step tool workflows require robust planning and recovery."
+    },
+    {
+      "id": "astra-3d-modeling",
+      "task_signals": ["3D modeling", "spatial scene construction", "multi-step CAD or DCC workflow"],
+      "preferred_model_class": "Astra",
+      "reasoning_effort": "high",
+      "rationale": "Spatial construction and complex creative tooling require strong end-to-end reasoning."
+    },
+    {
+      "id": "astra-image-analysis",
+      "task_signals": ["image analysis", "visual evidence synthesis", "ambiguous visual inspection"],
+      "preferred_model_class": "Astra",
+      "reasoning_effort": "high",
+      "rationale": "Detailed visual interpretation benefits from strong multimodal judgment."
+    },
+    {
+      "id": "astra-research-synthesis",
+      "task_signals": ["many sources", "conflicting evidence", "high-stakes recommendation"],
+      "preferred_model_class": "Astra",
+      "reasoning_effort": "high",
+      "rationale": "Complex research synthesis requires reconciling evidence and tradeoffs."
+    },
+    {
+      "id": "sol-code-reading-analysis",
+      "task_signals": ["code reading", "repository-wide analysis", "trace unfamiliar control flow"],
+      "preferred_model_class": "Sol",
+      "reasoning_effort": "high",
+      "rationale": "Deep code comprehension is complex professional work with open-ended evidence gathering."
+    },
+    {
+      "id": "sol-open-ended-implementation",
+      "task_signals": ["open-ended implementation", "uncertain solution shape", "complex feature"],
+      "preferred_model_class": "Sol",
+      "reasoning_effort": "high",
+      "rationale": "Complex implementation benefits from strong coding judgment without requiring Astra by default."
+    },
+    {
+      "id": "sol-debugging",
+      "task_signals": ["difficult debugging", "intermittent failure", "root-cause analysis"],
+      "preferred_model_class": "Sol",
+      "reasoning_effort": "high",
+      "rationale": "Open-ended debugging requires forming and testing multiple hypotheses."
+    },
+    {
+      "id": "sol-integration",
+      "task_signals": ["cross-module integration", "migration", "complex merge resolution"],
+      "preferred_model_class": "Sol",
+      "reasoning_effort": "high",
+      "rationale": "Integration work must reason across interfaces, compatibility, and failure modes."
+    },
+    {
+      "id": "terra-repository-discovery",
+      "task_signals": ["repository discovery", "locate relevant files", "summarize existing implementation"],
+      "preferred_model_class": "Terra",
+      "reasoning_effort": "medium",
+      "rationale": "Everyday discovery needs reliable tool use and balanced reasoning."
+    },
+    {
+      "id": "terra-everyday-implementation",
+      "task_signals": ["bounded implementation", "routine feature", "well-scoped refactor"],
+      "preferred_model_class": "Terra",
+      "reasoning_effort": "medium",
+      "rationale": "Well-scoped engineering work fits a balanced general-purpose model."
+    },
+    {
+      "id": "terra-documentation",
+      "task_signals": ["technical documentation", "README update", "explain a known workflow"],
+      "preferred_model_class": "Terra",
+      "reasoning_effort": "medium",
+      "rationale": "Documentation usually needs everyday reasoning and accurate use of local context."
+    },
+    {
+      "id": "terra-test-triage",
+      "task_signals": ["test triage", "classify routine failures", "select narrow validation"],
+      "preferred_model_class": "Terra",
+      "reasoning_effort": "medium",
+      "rationale": "Routine test diagnosis benefits from balanced reasoning and tool use."
+    },
+    {
+      "id": "terra-routine-review",
+      "task_signals": ["bounded code review", "check acceptance criteria", "routine validation"],
+      "preferred_model_class": "Terra",
+      "reasoning_effort": "medium",
+      "rationale": "A scoped review is an everyday reasoning task unless risk or ambiguity warrants escalation."
+    },
+    {
+      "id": "luna-detailed-manual-procedure",
+      "task_signals": ["follow a detailed manual procedure", "repeatable checklist", "prescribed sequence"],
+      "preferred_model_class": "Luna",
+      "reasoning_effort": "medium",
+      "rationale": "A clear procedure is repeatable, while medium effort supports careful sequencing."
+    },
+    {
+      "id": "luna-extraction",
+      "task_signals": ["field extraction", "copy facts into a schema", "high-volume parsing"],
+      "preferred_model_class": "Luna",
+      "reasoning_effort": "low",
+      "rationale": "Clear structured extraction is a cost-sensitive repeatable workload."
+    },
+    {
+      "id": "luna-classification",
+      "task_signals": ["classification", "label records", "apply a fixed rubric"],
+      "preferred_model_class": "Luna",
+      "reasoning_effort": "low",
+      "rationale": "Fixed-label classification is clear and repeatable."
+    },
+    {
+      "id": "luna-normalization",
+      "task_signals": ["normalize values", "canonicalize formatting", "deterministic transformation"],
+      "preferred_model_class": "Luna",
+      "reasoning_effort": "low",
+      "rationale": "Rule-driven transformations need consistency more than open-ended judgment."
+    },
+    {
+      "id": "luna-structured-summary",
+      "task_signals": ["structured summary", "fixed output template", "compress known material"],
+      "preferred_model_class": "Luna",
+      "reasoning_effort": "low",
+      "rationale": "Template-bound summarization is a clear high-volume workload."
+    }
+  ]
+}
