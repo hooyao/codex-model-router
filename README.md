@@ -81,7 +81,7 @@ marketplace, then start a new session and use `/hooks` to review and trust the
 plugin's lifecycle hooks. See the plugin-specific
 [README](plugins/codex-model-router/README.md) for details.
 
-Windows hooks require Python 3.10+ through the `python` command. In any target
+Windows hooks require Python 3.9+ through the `python` command. In any target
 project, ask Codex **“Initialize Codex Model Router in this project”**. The
 installed `initialize-router` Skill resolves its own installed files and runs
 the preflight for the active project; users do not need a path into this source

@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Tuple
 
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
@@ -30,7 +30,7 @@ from routing_config import (  # noqa: E402
 SUPPORTED_EVENTS = ("SessionStart", "UserPromptSubmit", "SubagentStart")
 WINDOWS_HOOK_COMMAND = 'python "%CLAUDE_PLUGIN_ROOT%\\hooks\\router_hook.py"'
 POSIX_HOOK_COMMAND = 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/router_hook.py"'
-MINIMUM_PYTHON = (3, 10)
+MINIMUM_PYTHON = (3, 9)
 
 
 class PreflightError(RuntimeError):
@@ -85,7 +85,7 @@ def _python_runtime() -> tuple[Path, str]:
     runtime = shutil.which(command)
     if not runtime:
         raise PreflightError(
-            f"the required {command!r} command is not available on PATH; install Python 3.10+ "
+            f"the required {command!r} command is not available on PATH; install Python 3.9+ "
             "or add it to PATH before Codex starts"
         )
     try:
@@ -109,7 +109,7 @@ def _python_runtime() -> tuple[Path, str]:
         raise PreflightError(f"configured Python runtime returned an invalid version: {version!r}") from error
     if parts < MINIMUM_PYTHON:
         raise PreflightError(
-            f"configured Python runtime {runtime} is {version}; Python 3.10 or newer is required"
+            f"configured Python runtime {runtime} is {version}; Python 3.9 or newer is required"
         )
     return Path(runtime).resolve(), version
 
@@ -195,10 +195,10 @@ def _smoke_hook(
         _validate_smoke_output(event_name, result, config_path, label)
 
 
-def initialize(workspace_value: str | None) -> tuple[Path, bool, Path, str]:
+def initialize(workspace_value: Optional[str]) -> Tuple[Path, bool, Path, str]:
     if sys.version_info < MINIMUM_PYTHON:
         raise PreflightError(
-            f"init is running on Python {sys.version.split()[0]}; Python 3.10 or newer is required"
+            f"init is running on Python {sys.version.split()[0]}; Python 3.9 or newer is required"
         )
     handlers = _configured_handlers()
     runtime, version = _python_runtime()

@@ -105,7 +105,7 @@ not that evidence.
 
 On success, init prints whether it created or validated the config, the actual
 Python executable and version used for the smoke test, and the resolved config
-path. It verifies Python 3.10+, standard-library runtime imports, the template,
+path. It verifies Python 3.9+, standard-library runtime imports, the template,
 workspace discovery, and config creation/loading. On Windows it runs every
 configured `commandWindows` lifecycle command through `cmd.exe /d /s /c`, with
 the installed plugin root supplied as `CLAUDE_PLUGIN_ROOT` (the lifecycle-hook
@@ -187,7 +187,7 @@ handlers. The hooks add developer context for `SessionStart`,
 `hooks/router_hook.py` program.
 
 The non-Windows hook command requires `python3`. The Windows override requires
-`python` on `PATH` and Python 3.10 or newer. Hook commands resolve the installed
+`python` on `PATH` and Python 3.9 or newer. Hook commands resolve the installed
 root through the runtime-provided `CLAUDE_PLUGIN_ROOT`; using an ad hoc
 `PLUGIN_ROOT` variable produces a misleading synthetic success and a live hook
 failure. Ask Codex to initialize the router
