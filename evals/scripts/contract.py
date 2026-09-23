@@ -304,6 +304,18 @@ def _validate_spans(spans: Any, execution: dict, context: dict, route: dict,
         require(all(span["end_ms"] <= trace["first_delegation_ms"]
                     for span in validated if span["role"] == "controller"),
                 "controller business span occurs after delegation")
+    events = trace["route_events"]
+    for span in validated:
+        prior_events = [event for event in events if event["at_ms"] <= span["start_ms"]]
+        require(bool(prior_events), f"business span starts before ownership decision: {span['id']}")
+        state = prior_events[-1]["ownership"]
+        required_state = "DIRECT" if span["role"] == "controller" else "DELEGATE"
+        require(state == required_state,
+                f"business span role is not covered by recorded ownership: {span['id']}")
+        later_events = [event for event in events if event["at_ms"] > span["start_ms"]]
+        if later_events:
+            require(span["end_ms"] <= later_events[0]["at_ms"],
+                    f"business span crosses route transition: {span['id']}")
     require(execution["controller_business_actions"] == sum(span["role"] == "controller" for span in validated),
             "controller business actions do not match controller spans")
     require(execution["worker_business_actions"] == sum(span["role"] == "worker" for span in validated),
@@ -312,11 +324,15 @@ def _validate_spans(spans: Any, execution: dict, context: dict, route: dict,
         require(not active, "DIRECT cannot contain worker or reviewer spans")
     if outcome == "completed" and route["final_ownership"] == "DELEGATE":
         require(any(span["role"] == "worker" for span in active), "completed delegation requires worker execution")
-    if route["delegate_topology"] == "PARALLEL" and outcome == "completed":
+    if route["delegate_topology"] == "PARALLEL":
         workers = [span for span in active if span["role"] == "worker"]
-        overlap = any(left["start_ms"] < right["end_ms"] and right["start_ms"] < left["end_ms"]
-                      for index, left in enumerate(workers) for right in workers[index + 1:])
-        require(len(workers) >= 2 and overlap, "PARALLEL requires overlapping worker spans")
+        overlapping_pairs = [(left, right) for index, left in enumerate(workers)
+                             for right in workers[index + 1:]
+                             if left["start_ms"] < right["end_ms"] and right["start_ms"] < left["end_ms"]]
+        require(all(left["session_id"] != right["session_id"] for left, right in overlapping_pairs),
+                "PARALLEL overlap requires distinct worker sessions")
+        if outcome == "completed":
+            require(len(workers) >= 2 and overlapping_pairs, "PARALLEL requires overlapping worker spans")
     if route["delegate_topology"] == "ISOLATED_SERIAL":
         ordered = sorted(active, key=lambda span: (span["start_ms"], span["end_ms"]))
         require(all(left["end_ms"] <= right["start_ms"] for left, right in zip(ordered, ordered[1:])),
@@ -398,8 +414,12 @@ def validate_record(record: Any) -> dict:
         number(event["at_ms"], "route event.at_ms")
         enum(event["ownership"], OWNERSHIPS, "route event.ownership")
         enum(event["topology"], TOPOLOGIES, "route event.topology")
+        require((event["ownership"] == "DIRECT") == (event["topology"] == "NONE"),
+                "route event ownership/topology mismatch")
         require(event["trigger"] is None or (type(event["trigger"]) is str and bool(event["trigger"])),
                 "route event trigger is invalid")
+    require(all(left["at_ms"] < right["at_ms"] for left, right in zip(events, events[1:])),
+            "route event timestamps must be strictly increasing")
     require(events[0]["ownership"] == route["initial_ownership"] and
             events[-1]["ownership"] == route["final_ownership"] and
             events[-1]["topology"] == route["delegate_topology"], "route events do not match route summary")

@@ -136,6 +136,12 @@ class ScenarioBenchmarkTests(unittest.TestCase):
         self.assertLess(selective["execution"]["critical_path_ms"],
                         mandatory["execution"]["critical_path_ms"])
 
+    def test_parallel_overlap_requires_distinct_worker_sessions(self) -> None:
+        record = copy.deepcopy(self.record("parallel-disjoint", "selective"))
+        record["execution"]["spans"][1]["session_id"] = record["execution"]["spans"][0]["session_id"]
+        with self.assertRaisesRegex(c.ContractError, "requires distinct worker sessions"):
+            c.validate_record(record)
+
     def test_architecture_requires_distinct_review_without_polluting_artifact_quality(self) -> None:
         direct = self.record("architecture-review", "direct")
         selective = self.record("architecture-review", "selective")
@@ -288,7 +294,7 @@ class ScenarioBenchmarkTests(unittest.TestCase):
         direct["receipts"].append({"id": "injected-receipt", "producer_span_id": "injected-worker",
                                    "consumer_span_ids": [], "token_count": injected["receipt_tokens"],
                                    "content": injected_content, "sha256": c.receipt_sha256(injected_content)})
-        with self.assertRaisesRegex(c.ContractError, "DIRECT cannot contain worker or reviewer spans"):
+        with self.assertRaisesRegex(c.ContractError, "not covered by recorded ownership"):
             c.validate_record(direct)
 
         moved = copy.deepcopy(self.record("serial-escalation", "selective"))
@@ -296,6 +302,35 @@ class ScenarioBenchmarkTests(unittest.TestCase):
         discovery["start_ms"], discovery["end_ms"] = 40, 70
         with self.assertRaisesRegex(c.ContractError, "controller business span occurs after delegation"):
             c.validate_record(moved)
+
+    def test_route_decisions_precede_and_cover_business_spans(self) -> None:
+        worker_early = copy.deepcopy(self.record("serial-escalation", "selective"))
+        plan = next(span for span in worker_early["execution"]["spans"] if span["id"] == "plan")
+        plan["start_ms"] = 20
+        with self.assertRaisesRegex(c.ContractError, "not covered by recorded ownership"):
+            c.validate_record(worker_early)
+
+        late_direct = copy.deepcopy(self.record("direct-small-control", "direct"))
+        late_direct["route_trace"]["route_events"][0]["at_ms"] = 100
+        with self.assertRaisesRegex(c.ContractError, "starts before ownership decision"):
+            c.validate_record(late_direct)
+
+    def test_scaled_elapsed_time_preserves_semantic_route_adherence(self) -> None:
+        record = self.record("serial-escalation", "selective")
+        factor = 10
+        for span in record["execution"]["spans"]:
+            span["start_ms"] *= factor
+            span["end_ms"] *= factor
+        for event in record["route_trace"]["route_events"]:
+            event["at_ms"] *= factor
+        record["route_trace"]["first_delegation_ms"] *= factor
+        record["execution"]["critical_path_ms"] *= factor
+        record["execution"]["wall_time_ms"] *= factor
+        c.validate_record(record)
+        self.write_records()
+        report = evaluate.compare(self.records_path, self.manifest_path)
+        self.assertNotIn(record["run_id"], report["route_failures"])
+        self.assertEqual(1.0, report["cases"]["serial-escalation"]["treatments"]["selective"]["route_adherence_rate"])
 
     def test_quality_is_recomputed_from_frozen_requirements(self) -> None:
         architecture = self.record("architecture-review", "direct")

@@ -45,6 +45,16 @@ artifact ownership, context and receipt volume, and critical-path time.
 - **WHEN** a controller business span crosses or follows the first delegation timestamp
 - **THEN** contract validation rejects the run
 
+#### Scenario: Business before decision
+
+- **WHEN** a controller or worker span starts before a matching ownership decision
+- **THEN** contract validation rejects the run
+
+#### Scenario: Faux parallel session
+
+- **WHEN** overlapping parallel worker spans share one session ID
+- **THEN** contract validation rejects the run
+
 ### Requirement: Review and failure integrity
 
 Completed independent-review work SHALL name a passing reviewer distinct from
@@ -82,6 +92,12 @@ come from hash-bound producer/consumer links containing the required facts.
 - **WHEN** forced DIRECT produces the exact required artifacts
 - **THEN** artifact quality passes without requiring delegate-only receipt, review, or worker spans
 - **AND** route/process compliance is reported separately
+
+#### Scenario: Scaled elapsed time
+
+- **WHEN** route events and spans preserve semantic ownership and ordering at a different time scale
+- **THEN** semantic route adherence still passes
+- **AND** timestamp chronology remains independently validated
 
 #### Scenario: Forged receipt
 

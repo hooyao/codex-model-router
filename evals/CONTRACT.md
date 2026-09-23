@@ -42,7 +42,7 @@ bounded work before a recorded direct-to-delegate escalation, but zero controlle
 business spans may cross or follow the first-delegation timestamp. This is
 derived from span timing rather than a submitted counter. Completed delegation requires a
 worker span. Parallel topology requires overlapping worker spans with disjoint
-artifact ownership. Serial topology forbids overlap. Completed independent
+artifact ownership and distinct worker session IDs. Serial topology forbids overlap. Completed independent
 review requires a passing reviewer session distinct from controller and author.
 Failed terminal runs may end before review and remain in the denominator.
 Each case freezes dependency and receipt-consumer edges per treatment; records
@@ -57,6 +57,11 @@ downward-closed executed prefix: supplied spans and edges must be frozen-valid,
 every executed downstream stage must include its prerequisite and receipt edge,
 and impossible later stages are rejected. These failures retain zero artifact
 quality and remain scheduled.
+Route events are strictly chronological. Each business span must start after an
+ownership decision, match the active ownership state for its role, and finish
+before the next transition. Semantic route adherence compares ownership,
+topology, verification, and trigger—not absolute timestamps; elapsed timing is
+validated independently.
 
 ## Reporting boundary
 

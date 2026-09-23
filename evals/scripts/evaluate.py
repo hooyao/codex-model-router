@@ -17,6 +17,19 @@ except ImportError:
     from fixture import fixture_for_case, grade, load_fixture
 
 
+SEMANTIC_ROUTE_FIELDS = (
+    "initial_ownership",
+    "final_ownership",
+    "delegate_topology",
+    "verification_requirement",
+    "escalation_trigger",
+)
+
+
+def semantic_route(value: dict) -> dict:
+    return {field: value[field] for field in SEMANTIC_ROUTE_FIELDS}
+
+
 def validate_campaign(records_path: Path, manifest_path: Path) -> tuple[dict, list[dict], dict]:
     manifest, cases = c.load_manifest(manifest_path)
     records = c.load_records(records_path)
@@ -77,8 +90,7 @@ def validate_campaign(records_path: Path, manifest_path: Path) -> tuple[dict, li
                     c.require(producer in actual_span_ids and edge in actual_receipt_edges,
                               "failed run span prefix omits required receipt consumption")
         expected_route = case["route_expectations"][record["treatment"]]
-        actual_route = {field: record["route_trace"][field] for field in expected_route}
-        record["_route_adherent"] = actual_route == expected_route
+        record["_route_adherent"] = semantic_route(record["route_trace"]) == semantic_route(expected_route)
         if record["result_tree"] is not None:
             candidate = c.safe_path(manifest_path.parent, record["result_tree"]["path"])
             fixture_path = fixture_for_case(manifest_path.parent, case)
@@ -108,11 +120,10 @@ def derive_results(case: dict, record: dict, grading: Optional[dict]) -> tuple[d
     linked_consumer_tokens = sum(by_id[consumer]["input_tokens"] for receipt in linked_receipts
                                  for consumer in receipt["consumer_span_ids"])
     expected_route = case["route_expectations"][record["treatment"]]
-    actual_route = {field: record["route_trace"][field] for field in expected_route}
     review = record["review"]
     quality_values = {"artifact-exact": grading is not None and grading["passed"]}
     process_values = {
-        "route-adherent": actual_route == expected_route,
+        "route-adherent": semantic_route(record["route_trace"]) == semantic_route(expected_route),
         "receipt-preserved-facts": set(case["required_receipt_facts"]).issubset(preserved_facts)
                                    and bool(linked_receipts) and linked_consumer_tokens > 0,
         "scope-transition-safe": record["route_trace"]["initial_ownership"] == "DELEGATE"

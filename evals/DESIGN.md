@@ -54,3 +54,7 @@ Completed observations prove the entire frozen graph. Failed observations may
 stop at a valid executed prefix so an early planning blocker remains observable;
 prefix validation prevents a downstream stage from appearing without its frozen
 prerequisites or consumed receipt.
+Route decisions form a time-indexed ownership state machine over business spans.
+Parallel overlap must represent distinct worker sessions, not multiple spans in
+one session. Route adherence intentionally excludes absolute elapsed values so a
+scaled but correctly ordered execution remains semantically compliant.

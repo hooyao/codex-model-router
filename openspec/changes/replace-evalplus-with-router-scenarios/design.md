@@ -30,6 +30,9 @@ controller spans may not cross it.
 Completed runs match the entire frozen graph. Failed terminal records may carry
 a downward-closed executed prefix, preserving early blockers without permitting
 impossible downstream stages or invented edges.
+Route events form a chronological ownership state machine over every business
+span. Parallel overlap requires distinct worker sessions. Semantic adherence
+excludes absolute elapsed timestamps, which remain contract-validated.
 
 The bundled runner is deterministic and makes no model call. Its observations
 exercise contract and report semantics only. A future live collector may emit
