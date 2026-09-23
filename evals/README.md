@@ -81,5 +81,12 @@ the report against raw sources, and atomically publishes or rolls back.
 Validation reparses every hash-bound reference, including the frozen oracle;
 authored status and acceptance fields have no authority.
 
+The live oracle is selected by the validator's repository-pinned case manifest,
+not by report-controlled paths. Activation additionally requires the exact
+neutral user prompt, a matching completed session/result, and a successful
+`activation_preflight.py` capture of the configured hook Python command in the
+CLI launch environment. Historical failed captures remain immutable; the
+offline regression suite does not establish a new live pass.
+
 See [CONTRACT.md](CONTRACT.md) for exact invariants and [DESIGN.md](DESIGN.md)
 for the measurement rationale.

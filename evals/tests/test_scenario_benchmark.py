@@ -514,7 +514,8 @@ class ScenarioBenchmarkTests(unittest.TestCase):
         ]
         routes = live_evidence.route_events_from_items(items)
         self.assertEqual([3], [item["line"] for item in routes])
-        self.assertTrue(live_evidence.routes_precede_spawns(routes, [{"line": 5}], 4))
+        self.assertTrue(live_evidence.routes_precede_spawns(routes, [], 4))
+        self.assertFalse(live_evidence.routes_precede_spawns(routes, [{"line": 5}], 4))
         self.assertFalse(live_evidence.routes_precede_spawns(routes, [{"line": 5}], 2))
 
     def test_live_identity_rejects_cross_dimension_contradictions_and_accepts_verified_inheritance(self) -> None:

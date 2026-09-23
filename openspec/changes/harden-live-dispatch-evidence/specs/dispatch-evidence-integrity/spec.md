@@ -88,3 +88,61 @@ root cause unknown.
 - **WHEN** corrected analysis still contains failed or unknown required checks
 - **THEN** the campaign remains failed
 - **AND** the original result remains unchanged
+
+### Requirement: Repository-controlled oracle authority
+
+The live validator SHALL derive each case oracle from its own pinned benchmark,
+case, fixture descriptor, and frozen snapshot. It SHALL require canonical case
+artifact/index paths and MUST reject report-selected substitute oracles.
+
+#### Scenario: Report substitutes a hash-consistent fixture
+
+- **WHEN** a report swaps artifact or oracle references to arbitrary or cross-case content, even with matching hashes and authored pass flags
+- **THEN** validation rejects the reference before acceptance
+
+### Requirement: Transcript and native ancestry binding
+
+Every parent SHALL match the transcript's unique thread ID. Every indexed source
+SHALL have matching path, hash, thread, parent, and native-path metadata. Every
+child SHALL match that parent and one unique native dispatch call/result pair.
+
+#### Scenario: Valid sessions belong to another transcript
+
+- **WHEN** a report pairs one transcript with another valid parent and child session set
+- **THEN** validation rejects the ancestry mismatch
+
+### Requirement: Active route and strict review verdict
+
+Every worker dispatch SHALL follow an active DELEGATE decision with the required
+topology. Controller business actions SHALL have an active DIRECT decision.
+Review acceptance SHALL require one exact `Verdict: PASS` line with no competing
+PASS or FAIL token.
+
+#### Scenario: Delegation is declared after workers start
+
+- **WHEN** workers are spawned under DIRECT and DELEGATE appears later
+- **THEN** process acceptance fails
+
+#### Scenario: Failing review mentions passing
+
+- **WHEN** reviewer text is `FAIL: This must not PASS` or has missing, duplicate, or contradictory verdicts
+- **THEN** review acceptance fails
+
+### Requirement: Completed neutral activation and actual hook interpreter
+
+Activation SHALL use the unchanged repository probe and its exact actual neutral
+prompt, matching session/index/transcript identity, complete injected controller
+and config content, successful read output, unchanged business state, and a
+completed matching final result. The Python preflight SHALL run the configured
+hook command in the launch environment and SHALL retain failed captures.
+
+#### Scenario: Probe prompt or result does not establish activation
+
+- **WHEN** a prompt contains a routing hint, session metadata disagrees, hook content is unbound, or the probe lacks a successful completed result
+- **THEN** activation fails
+
+#### Scenario: Collector Python works but hook Python is broken
+
+- **WHEN** the configured hook command fails its import probe despite a working collector interpreter
+- **THEN** the preflight preserves the failure and blocks formal activation
+- **AND** reports the requirement to repair PATH before restarting Codex

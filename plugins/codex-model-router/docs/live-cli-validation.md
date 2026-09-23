@@ -105,7 +105,7 @@ function Capture-PersistedSessionTree(
         [pscustomobject]@{
             relation = $record.Relation
             thread_id = $record.Meta.id
-            parent_thread_id = $parentThreadId
+            parent_thread_id = $record.Meta.parent_thread_id
             agent_path = $record.Meta.agent_path
             source_path = $record.File.FullName
             source_sha256 = $sourceHash
@@ -138,6 +138,31 @@ an `import encodings` probe exit code, requested sandbox mode, a sandbox command
 probe exit code, Codex version, and plugin-manifest SHA-256. A missing value is
 `unknown`; do not infer a root cause from a later symptom.
 
+The formal gate compares the spec byte-for-byte to the repository version. It
+also reads the actual user-message event and user-role prompt in the persisted
+session; editing the spec or adding a Skill/route hint invalidates activation.
+The session metadata ID, index metadata, CLI thread ID, workspace config source,
+and full injected controller/config content must agree. An injected marker and
+a matching path alone do not establish activation.
+
+Run `evals/scripts/activation_preflight.py` from the same environment and working
+directory that will launch the CLI. It invokes the configured hook interpreter
+command (`python` through `cmd.exe` on Windows, `python3` on POSIX), imports
+`encodings`, and captures the actual executable, version, exit code, stdout,
+stderr, and executable/config hashes. Launching the collector with an absolute
+working interpreter does not substitute for a working hook command on PATH.
+The preflight writes a fresh capture even on failure and exits 2; preserve that
+file, repair PATH, restart Codex from the repaired environment, and use a new
+capture directory for the next formal attempt. Do not silently select another
+interpreter or replace a failed record with a successful one.
+
+On the reviewed Windows environment, `C:\Python\Python39\python.exe` failed
+startup with `ModuleNotFoundError: No module named 'encodings'`. This is an
+observed interpreter failure, not proof about historical hook activation. A
+complete Python 3.9+ installation must precede that executable on the PATH
+inherited by Codex. Unit suites run with an explicitly repaired process PATH
+are offline verification only and do not establish automatic activation.
+
 Capture native spawn-tool schema and runtime model-catalog evidence before any
 delegated case as `raw/spawn-schema.json` and `raw/model-catalog.json`. These
 are source exports, not operator-authored summaries: the preflight opens them,
@@ -150,11 +175,15 @@ turn context, or successful spawn does not prove inheritance.
 ```powershell
 $probeRepo = Join-Path $runRoot "activation-probe"
 Initialize-TestRepository $probeRepo
-Set-Content -LiteralPath (Join-Path $probeRepo "note.txt") -Value "unchanged"
+[IO.File]::WriteAllText((Join-Path $probeRepo "note.txt"), "unchanged`n", [Text.UTF8Encoding]::new($false))
 Commit-TestBaseline $probeRepo
 $probeSpecPath = "Q:\codex-model-router\evals\live\fresh-activation-probe-v3.json"
 Copy-Item -LiteralPath $probeSpecPath -Destination (Join-Path $rawRoot "activation-spec.json")
 $probeSpec = Get-Content -Raw $probeSpecPath | ConvertFrom-Json
+Copy-Item -LiteralPath (Join-Path $probeRepo "note.txt") -Destination (Join-Path $rawRoot "activation-note-before.txt")
+# The launcher may be an absolute working Python, but the script probes the hook's PATH command.
+python "Q:\codex-model-router\evals\scripts\activation_preflight.py" --workspace $probeRepo --output (Join-Path $rawRoot "activation-python-preflight.json")
+if ($LASTEXITCODE -ne 0) { throw "BLOCKED: configured hook Python preflight failed; preserve its capture" }
 codex exec --json -C $probeRepo -s workspace-write -o (Join-Path $rawRoot "activation-final.txt") $probeSpec.prompt 2>&1 | Tee-Object -FilePath (Join-Path $rawRoot "activation.jsonl")
 Capture-PersistedSessionTree (Join-Path $rawRoot "activation.jsonl") "activation" $false
 $probeConfig = Join-Path $probeRepo ".codex-model-router\routing.json"
@@ -173,6 +202,16 @@ all fields listed in the v3 spec. Its manifest hash must match
 `raw/plugin-manifest.json`; its Codex version must match `raw/codex-version.txt`.
 The route must be the first text in its own controller message and precede the
 first command, file, MCP, web, or image business action.
+
+Copy the interpreter/version/import facts from the successful
+`raw/activation-python-preflight.json` into the environment record below. Its
+workspace must match the activation session and its timestamp must precede the
+session. The gate rejects a capture of an arbitrary absolute interpreter.
+Completion requires a successful `note.txt` read with the expected captured
+output, an unchanged business tree, one completed CLI turn, and matching final
+text in the CLI stream, final file, and persisted task-complete event. The final
+text may contain only `unchanged`, either bare or in a plain/text code fence.
+Missing results, failure events, or extra Skill/user messages fail the gate.
 
 The two activation records have these exact shapes (replace values with captured
 facts; never use these strings as evidence):
@@ -350,3 +389,18 @@ session index, every session source, captured artifact tree, and frozen oracle;
 then it rebuilds every leaf check and overall acceptance. Submitted statuses,
 acceptance flags, quoted `ROUTE:` examples, and prose-only receipts are not
 trusted.
+
+The validator resolves each oracle from its own repository's pinned benchmark,
+case, fixture descriptor, and frozen snapshot. A report cannot choose another
+oracle repository or arbitrary result directory: artifacts are always
+`results/<case>`, and indexes are always `session-evidence/<case>/session-index.json`.
+Every source must agree with index metadata and the transcript parent ID; each
+child must have that parent and match a unique native spawn call/result pair.
+The latest route before each spawn must be DELEGATE with the case's topology.
+A late DELEGATE line cannot authorize an earlier spawn, and controller business
+actions require an active DIRECT decision.
+
+For the architecture scenario, instruct the reviewer to include exactly one
+`Verdict: PASS` or `Verdict: FAIL` line in its final receipt. No other PASS/FAIL
+token may occur in that receipt. Missing, duplicate, qualified, contradictory,
+or failing verdicts fail closed, including `FAIL: This must not PASS`.

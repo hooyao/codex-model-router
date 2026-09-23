@@ -592,6 +592,17 @@ class RouterPluginTests(unittest.TestCase):
             self.assertFalse(second_created)
             self.assertEqual(before, path.read_bytes())
 
+    def test_broken_configured_python_requires_path_repair_not_collector_fallback(self) -> None:
+        broken = subprocess.CompletedProcess([], 1, "", "No module named 'encodings'")
+        with (
+            mock.patch.object(init_router.shutil, "which", return_value="C:/broken/python.exe"),
+            mock.patch.object(init_router.subprocess, "run", return_value=broken) as run,
+            self.assertRaisesRegex(init_router.PreflightError, "encodings.*PATH before Codex starts.*another interpreter"),
+        ):
+            init_router._python_runtime()
+        self.assertEqual("C:/broken/python.exe", run.call_args.args[0][0])
+        self.assertIn("import encodings", run.call_args.args[0][2])
+
     @unittest.skipUnless(sys.platform == "win32", "Windows lifecycle command preflight")
     def test_windows_init_smoke_uses_each_configured_cmd_command(self) -> None:
         handlers = init_router._configured_handlers()

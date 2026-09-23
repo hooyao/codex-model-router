@@ -25,3 +25,13 @@
 - [x] 5.3 Require formal source-bound activation and one canonical capture layout.
 - [x] 5.4 Stage fresh collection and add overwrite/rollback adversarial tests.
 - [x] 5.5 Bind receipts, dependency spans, and route-before-business chronology.
+
+## 6. Adversarial v3 false-pass corrections
+
+- [x] 6.1 Bind case oracles to the repository-pinned fixture chain and canonical artifact paths.
+- [x] 6.2 Verify the exact neutral prompt, actual hook/config content, session identity, and completed activation result.
+- [x] 6.3 Enforce index metadata and transcript/native dispatch ancestry for every session.
+- [x] 6.4 Require an active DELEGATE/topology before each spawn and DIRECT before controller business.
+- [x] 6.5 Replace reviewer substring acceptance with a strict anchored verdict grammar.
+- [x] 6.6 Capture the actual hook Python command, preserve failures, and document PATH remediation.
+- [x] 6.7 Run all offline suites, official/plugin validators, strict OpenSpec, compilation, and diff checks.

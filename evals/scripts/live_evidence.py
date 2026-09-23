@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Collect, reprocess, and validate role-bounded Codex live evidence.
 
-Version 2 never searches aggregate transcript text. It preserves packet,
+Version 3 never searches aggregate transcript text. It preserves packet,
 native transport, selector, runtime, and final-echo identity as distinct
 dimensions, and reports assignment overlap separately from session lifetime.
 """
@@ -20,6 +20,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+try:
+    from . import contract, fixture
+except ImportError:
+    import contract
+    import fixture
+
 
 CASES = ("investigation-reuse", "serial-escalation", "parallel-disjoint", "architecture-review")
 IGNORED_WORKSPACE_NAMES = {".git", ".codex-model-router"}
@@ -27,6 +33,26 @@ PLACEHOLDER = re.compile(r"(?:^|[-_])(unknown|unavailable|unexposed|unresolved|p
 SHA256 = re.compile(r"\b[0-9a-f]{64}\b")
 ACTIVATION_SPEC = "raw/activation-spec.json"
 BUSINESS_ITEM_TYPES = {"command_execution", "file_change", "mcp_tool_call", "web_search", "image_generation"}
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "plugins" / "codex-model-router" / "hooks"))
+from routing_config import validate_config, serialized_config  # noqa: E402
+from router_hook import CONTROLLER_CONTRACT  # noqa: E402
+
+
+def frozen_case(case_id: str) -> tuple[dict[str, Any], Path, dict[str, Any]]:
+    """Only repository-pinned case/fixture data can define an oracle."""
+    _manifest, cases = contract.load_manifest(REPO_ROOT / "evals" / "benchmark.json")
+    matches = [case for case in cases if case["id"] == case_id]
+    require(len(matches) == 1 and case_id in CASES, "unknown frozen live case")
+    case = matches[0]
+    path = fixture.fixture_for_case(REPO_ROOT / "evals", case)
+    value = fixture.load_fixture(path)
+    return case, contract.safe_path(path.parent, value["reference"]["path"]), value["reference"]["tree"]
+
+
+def canonical_path(root: Path, value: str, expected: str) -> Path:
+    require(value == expected, f"reference must use canonical scenario path: {expected}")
+    return contract.safe_path(root, expected)
 
 
 class LiveEvidenceError(ValueError):
@@ -70,7 +96,7 @@ def evidence_ref(root: Path, path: Path) -> dict[str, str]:
     return {"path": name, "sha256": sha256(resolved)}
 
 
-def tree_sha256(files: dict[str, str]) -> str:
+def tree_sha256(files: dict[str, Any]) -> str:
     payload = json.dumps(files, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
@@ -92,14 +118,23 @@ def json_lines(path: Path) -> list[tuple[int, dict[str, Any]]]:
 
 
 def snapshot(root: Path) -> dict[str, str]:
+    require(root.is_dir(), f"missing business tree: {root}")
+    contract.check_node(root)
     result = {}
     for path in sorted(root.rglob("*")):
         relative = path.relative_to(root)
         if any(part in IGNORED_WORKSPACE_NAMES for part in relative.parts):
             continue
+        contract.check_node(path)
         if path.is_file():
             result[relative.as_posix()] = sha256(path)
     return result
+
+
+def business_directories(root: Path) -> list[str]:
+    return sorted(path.relative_to(root).as_posix() for path in root.rglob("*")
+                  if path.is_dir() and not any(part in IGNORED_WORKSPACE_NAMES
+                      for part in path.relative_to(root).parts))
 
 
 def copy_business_tree(source: Path, destination: Path) -> None:
@@ -125,7 +160,8 @@ def content_text(content: Any) -> str:
 
 def session_meta(path: Path) -> Optional[dict[str, Any]]:
     try:
-        value = json.loads(path.open("r", encoding="utf-8", errors="replace").readline())
+        with path.open("r", encoding="utf-8", errors="replace") as stream:
+            value = json.loads(stream.readline())
     except (OSError, json.JSONDecodeError):
         return None
     if value.get("type") != "session_meta" or not isinstance(value.get("payload"), dict):
@@ -147,10 +183,11 @@ def session_catalog(sessions_root: Path, parent_ids: set[str]) -> dict[str, list
 
 
 def extract_parent_id(transcript: Path) -> str:
-    for _line, value in json_lines(transcript):
-        if value.get("type") == "thread.started" and isinstance(value.get("thread_id"), str):
-            return value["thread_id"]
-    raise LiveEvidenceError(f"no thread.started event in {transcript}")
+    ids = [value.get("thread_id") for _line, value in json_lines(transcript)
+           if value.get("type") == "thread.started"]
+    require(len(ids) == 1 and isinstance(ids[0], str) and bool(ids[0]),
+            f"expected exactly one thread.started event in {transcript}")
+    return ids[0]
 
 
 def turn_context(items: list[tuple[int, dict[str, Any]]]) -> dict[str, Any]:
@@ -212,6 +249,7 @@ def spawn_events(items: list[tuple[int, dict[str, Any]]]) -> list[dict[str, Any]
         message = arguments.get("message")
         packet = identity_fields(message) if isinstance(message, str) and "Worker name:" in message else empty_identity()
         result.append({"line": line, "timestamp": value.get("timestamp"), "arguments": arguments,
+                       "call_id": payload.get("call_id"),
                        "packet_identity": packet,
                        "packet_visibility": "plaintext" if packet["worker_name"] else "encrypted-or-unavailable"})
     return result
@@ -231,13 +269,19 @@ def result_events(items: list[tuple[int, dict[str, Any]]]) -> list[dict[str, Any
 
 def first_parent_business_line(items: list[tuple[int, dict[str, Any]]]) -> Optional[int]:
     """Return the first controller tool action other than routing transport."""
+    lines = parent_business_lines(items)
+    return lines[0] if lines else None
+
+
+def parent_business_lines(items: list[tuple[int, dict[str, Any]]]) -> list[int]:
     transport = {"spawn_agent", "wait_agent", "wait_threads", "send_message", "send_message_to_thread"}
+    lines = []
     for line, value in items:
         payload = value.get("payload")
         if value.get("type") == "response_item" and isinstance(payload, dict) and \
                 payload.get("type") == "function_call" and payload.get("name") not in transport:
-            return line
-    return None
+            lines.append(line)
+    return lines
 
 
 def route_events_from_items(items: list[tuple[int, dict[str, Any]]]) -> list[dict[str, Any]]:
@@ -287,13 +331,22 @@ def transcript_observations(path: Path) -> dict[str, Any]:
 
 def session_record(path: Path, meta: dict[str, Any]) -> dict[str, Any]:
     items = json_lines(path)
+    require(sum(value.get("type") == "session_meta" for _line, value in items) == 1 and
+            isinstance(meta.get("id"), str) and bool(meta["id"]) and
+            meta.get("session_id", meta["id"]) == meta["id"], "missing or contradictory session metadata")
     context = turn_context(items)
     spans = assignment_spans(items)
     echo, echo_line, echo_text = final_echo(items)
     source = meta.get("source")
     agent_path = meta.get("agent_path")
-    if not agent_path and isinstance(source, dict):
-        agent_path = source.get("subagent", {}).get("thread_spawn", {}).get("agent_path")
+    if isinstance(source, dict):
+        ancestry = source.get("subagent", {}).get("thread_spawn", {})
+        nested_path = ancestry.get("agent_path")
+        require(not agent_path or not nested_path or agent_path == nested_path,
+                "contradictory native path metadata")
+        require("parent_thread_id" not in ancestry or ancestry["parent_thread_id"] == meta.get("parent_thread_id"),
+                "contradictory parent metadata")
+        agent_path = agent_path or nested_path
     return {
         "thread_id": meta.get("id"), "parent_thread_id": meta.get("parent_thread_id"),
         "agent_path": agent_path, "session_start_at": meta.get("timestamp"),
@@ -452,20 +505,52 @@ def linked_result(results: list[dict[str, Any]], producer: dict[str, Any], consu
 
 
 def routes_precede_spawns(routes: list[dict[str, Any]], spawns: list[dict[str, Any]],
-                          first_business_line: Optional[int] = None) -> bool:
-    if not routes or not all(any(route["line"] < spawn["line"] for route in routes) for spawn in spawns):
+                          first_business_line: Optional[int | list[int]] = None,
+                          topology: Optional[str] = None) -> bool:
+    if not routes:
         return False
-    return first_business_line is None or routes[0]["line"] < first_business_line
+    for spawn in spawns:
+        prior = [route for route in routes if route["line"] < spawn["line"]]
+        ownership, active_topology = route_decision(prior[-1]["text"]) if prior else (None, None)
+        if ownership != "DELEGATE" or active_topology is None or (topology and active_topology != topology):
+            return False
+    lines = first_business_line if isinstance(first_business_line, list) else (
+        [] if first_business_line is None else [first_business_line])
+    for line in lines:
+        prior = [route for route in routes if route["line"] < line]
+        if not prior or route_decision(prior[-1]["text"]) != ("DIRECT", None):
+            return False
+    return True
+
+
+def route_decision(text: str) -> tuple[Optional[str], Optional[str]]:
+    match = re.match(r"^ROUTE: (DIRECT|DELEGATE)(?:\s+[—-]\s+|$)", text)
+    if not match or len(re.findall(r"\b(?:DIRECT|DELEGATE)\b", text)) != 1:
+        return None, None
+    topology = re.findall(r"\b(?:ISOLATED_SERIAL|PARALLEL)\b", text)
+    if match[1] == "DIRECT":
+        return ("DIRECT", None) if not topology else (None, None)
+    return ("DELEGATE", topology[0]) if len(topology) == 1 else (None, None)
+
+
+def reviewer_verdict(text: str) -> str:
+    """An exact verdict line, with no competing status token, is authoritative."""
+    verdicts = re.findall(r"(?m)^Verdict: (PASS|FAIL)$", text)
+    tokens = re.findall(r"\b(?:PASS|FAIL)\b", text, flags=re.I)
+    if len(verdicts) != 1 or len(tokens) != 1:
+        return "fail"
+    return "pass" if verdicts == ["PASS"] else "fail"
 
 
 def process_checks(case_id: str, routes: list[dict[str, Any]], children: list[dict[str, Any]],
                    spawns: list[dict[str, Any]], results: list[dict[str, Any]],
-                   first_business_line: Optional[int] = None) -> list[dict[str, Any]]:
+                   first_business_line: Optional[int | list[int]] = None) -> list[dict[str, Any]]:
     route_refs = [f"transcript:{item['line']}" for item in routes]
     spawn_refs = [f"parent-session:{item['line']}" for item in spawns]
     names = [(item["arguments"].get("task_name") or item["arguments"].get("name") or "") for item in spawns]
     chronology = status("route-before-worker-business", "pass" if routes_precede_spawns(
-        routes, spawns, first_business_line) else "fail",
+        routes, spawns, first_business_line,
+        "PARALLEL" if case_id == "parallel-disjoint" else "ISOLATED_SERIAL") else "fail",
                         route_refs + spawn_refs, "a role-bounded route must precede every worker dispatch")
     if case_id == "investigation-reuse":
         producer = child_for_name(children, "investigat")
@@ -510,14 +595,15 @@ def process_checks(case_id: str, routes: list[dict[str, Any]], children: list[di
     distinct = bool(authors and reviewers and authors[0]["thread_id"] != reviewers[0]["thread_id"])
     ordered = distinct and authors[0]["assignment_spans"] and reviewers[0]["assignment_spans"] and \
         parse_iso(authors[0]["assignment_spans"][-1]["end_at"]) <= parse_iso(reviewers[0]["assignment_spans"][0]["start_at"])
-    review_pass = bool(reviewers and re.search(r"\bPASS\b", reviewers[0]["final_text"]))
+    review_pass = len(reviewers) == 1 and reviewer_verdict(reviewers[0]["final_text"]) == "pass"
     return [
         status("route", "pass" if route_contains(routes, "DELEGATE", "ISOLATED_SERIAL") else "fail", route_refs, "role-bounded route event"),
         chronology,
         status("independent-review-required", "pass" if route_contains(routes, "INDEPENDENT_REVIEW") else "unknown", route_refs, "route evidence only"),
         status("distinct-author-reviewer", "pass" if distinct else "fail", ["session-index:thread_ids"], "persisted child metadata"),
         status("review-after-author", "pass" if ordered else "fail", ["session-index:assignment_spans"], "assignment chronology"),
-        status("review-result", "pass" if review_pass else "unknown", ["worker-session:final_echo"], "reviewer's own final result"),
+        status("review-result", "pass" if review_pass else "fail", ["worker-session:final_echo"],
+               "exact Verdict: PASS line; missing, failing, or contradictory verdicts fail closed"),
     ]
 
 
@@ -529,14 +615,8 @@ def activation_diagnostics(root: Path) -> dict[str, Any]:
         return {"status": "fail", "checks": checks, "diagnostic_observations": [],
                 "root_cause": "unknown", "evidence": {}}
     spec = parse_json(spec_path)
-    required_spec = {"schema_version", "probe_id", "prompt", "prompt_must_not_contain", "expected_route",
-                     "paths", "required_environment_fields", "capability_kinds", "root_cause_policy"}
-    spec_ok = isinstance(spec, dict) and set(spec) == required_spec and spec.get("schema_version") == 3 and \
-        isinstance(spec.get("prompt"), str) and bool(spec["prompt"]) and \
-        isinstance(spec.get("prompt_must_not_contain"), list) and \
-        all(isinstance(item, str) and item not in spec["prompt"] for item in spec["prompt_must_not_contain"]) and \
-        spec.get("expected_route") == "DIRECT" and spec.get("root_cause_policy") == \
-        "Report unknown unless a captured source-specific observation establishes the cause."
+    canonical_spec = REPO_ROOT / "evals" / "live" / "fresh-activation-probe-v3.json"
+    spec_ok = spec == parse_json(canonical_spec) and sha256(spec_path) == sha256(canonical_spec)
     checks = [status("formal-probe-spec", "pass" if spec_ok else "fail", [ACTIVATION_SPEC],
                      "activation-probe-v3 exact schema")]
     if not spec_ok:
@@ -545,7 +625,7 @@ def activation_diagnostics(root: Path) -> dict[str, Any]:
     paths = spec["paths"]
     required_paths = {"transcript", "final_output", "routing_config", "environment", "hook_provenance",
                       "codex_version", "plugin_manifest", "spawn_schema", "model_catalog",
-                      "activation_session_index"}
+                      "activation_session_index", "python_preflight", "note_before"}
     paths_ok = isinstance(paths, dict) and set(paths) == required_paths and len(set(paths.values())) == len(paths) and all(
         isinstance(value, str) and ".." not in Path(value).parts and
         (value.startswith("raw/") if key != "activation_session_index" else
@@ -578,8 +658,11 @@ def activation_diagnostics(root: Path) -> dict[str, Any]:
                          "the controller message itself must begin with ROUTE: before business action"))
 
     config = parse_json(resolved["routing_config"])
-    config_ok = isinstance(config, dict) and config.get("schema_version") == 3 and \
-        isinstance(config.get("execution_policy"), dict)
+    try:
+        validate_config(config, str(resolved["routing_config"]))
+        config_ok = True
+    except ValueError:
+        config_ok = False
     checks.append(status("routing-config", "pass" if config_ok else "fail", [paths["routing_config"]],
                          "parsed routing schema, not file existence"))
 
@@ -607,6 +690,14 @@ def activation_diagnostics(root: Path) -> dict[str, Any]:
     checks.append(status("environment-preflight", "pass" if env_bound else "fail",
                          [paths["environment"], paths["codex_version"], paths["plugin_manifest"]],
                          "resolved Python, import, sandbox, CLI, and manifest facts are complete and hash-bound"))
+    try:
+        from .activation_preflight import validate_runtime_capture
+    except ImportError:
+        from activation_preflight import validate_runtime_capture
+    runtime_ok = validate_runtime_capture(parse_json(resolved["python_preflight"]), environment)
+    checks.append(status("configured-hook-python", "pass" if runtime_ok else "fail",
+                         [paths["python_preflight"], paths["environment"]],
+                         "the configured hook command resolves and imports encodings in its launch environment"))
 
     hook = parse_json(resolved["hook_provenance"])
     source = referenced_path(root, hook.get("source_config_path", "")) if isinstance(hook, dict) else Path()
@@ -621,36 +712,7 @@ def activation_diagnostics(root: Path) -> dict[str, Any]:
                          [paths["hook_provenance"], paths["routing_config"]],
                          "hook provenance binds the live thread and original workspace config"))
 
-    index_records = _index_records(parse_json(resolved["activation_session_index"]))
-    parent_records = [item for item in index_records if item.get("relation") == "parent" and
-                      item.get("thread_id") == thread_id]
-    hook_event_lines: list[int] = []
-    parent_route_lines: list[int] = []
-    session_bound = False
-    if len(parent_records) == 1:
-        record = parent_records[0]
-        session_path_value = record.get("copied_path") or record.get("source_path")
-        session_hash = record.get("copied_sha256") or record.get("source_sha256")
-        if isinstance(session_path_value, str):
-            session_path = referenced_path(root, session_path_value)
-            if session_path.is_file() and session_hash == sha256(session_path):
-                parent_items = json_lines(session_path)
-                parent_route_lines = [item["line"] for item in route_events_from_items(parent_items)]
-                for line, value in parent_items:
-                    payload = value.get("payload")
-                    if value.get("type") != "response_item" or not isinstance(payload, dict) or \
-                            payload.get("type") != "message" or payload.get("role") != "developer":
-                        continue
-                    text = content_text(payload.get("content"))
-                    if "CONTROLLER ROLE ONLY: SessionStart/UserPromptSubmit" in text and \
-                            "ROUTING_CONFIG_BEGIN" in text and str(source) in text:
-                        hook_event_lines.append(line)
-                session_bound = len(hook_event_lines) == 1 and bool(parent_route_lines) and \
-                    hook_event_lines[0] < parent_route_lines[0]
-    checks.append(status("actual-hook-context", "pass" if session_bound else "fail",
-                         [paths["activation_session_index"]] +
-                         [f"activation-parent-session:{line}" for line in hook_event_lines + parent_route_lines],
-                         "one developer-role hook context binds the config path before the route"))
+    checks.extend(activation_session_checks(root, spec, resolved, config, source, thread_id, observed))
 
     spawn_schema = parse_json(resolved["spawn_schema"])
     model_catalog = parse_json(resolved["model_catalog"])
@@ -675,10 +737,112 @@ def activation_diagnostics(root: Path) -> dict[str, Any]:
             "diagnostic_observations": observed["warnings"], "root_cause": "unknown", "evidence": evidence}
 
 
+def activation_session_checks(root: Path, spec: dict[str, Any], resolved: dict[str, Path],
+                              config: dict[str, Any], source: Path, thread_id: str,
+                              observed: dict[str, Any]) -> list[dict[str, Any]]:
+    """Bind the real user turn, hook content, and successful result to one session."""
+    checks = []
+    refs = [spec["paths"]["activation_session_index"], spec["paths"]["transcript"]]
+    try:
+        index = resolved["activation_session_index"]
+        records = _index_records(parse_json(index))
+        require(len(records) == 1 and records[0].get("relation") == "parent", "activation requires one parent only")
+        record = records[0]
+        path_value = record.get("copied_path") or record.get("source_path")
+        require(isinstance(path_value, str), "activation session path missing")
+        path = referenced_path(root, path_value)
+        digest = record.get("copied_sha256") or record.get("source_sha256")
+        require(path.is_file() and digest == sha256(path), "activation session hash mismatch")
+        _validate_session_index(index, [{"path": path_value, "sha256": digest}], root, thread_id)
+        meta = session_meta(path)
+        require(meta is not None and meta.get("id") == thread_id, "activation transcript/session ID mismatch")
+        require(isinstance(meta.get("cwd"), str) and
+                source.resolve() == (Path(meta["cwd"]) / ".codex-model-router" / "routing.json").resolve(),
+                "hook config is not from the activation workspace")
+        runtime_capture = parse_json(resolved["python_preflight"])
+        require(Path(runtime_capture["cwd"]).resolve() == Path(meta["cwd"]).resolve() and
+                parse_iso(runtime_capture["captured_at"]) <= parse_iso(meta["timestamp"]),
+                "Python preflight must precede activation in the same launch workspace")
+        items = json_lines(path)
+        routes = route_events_from_items(items)
+        require([route["text"] for route in routes] == [route["text"] for route in observed["route_events"]]
+                and bool(routes) and all(route_decision(route["text"]) == ("DIRECT", None) for route in routes),
+                "activation route/session mismatch")
+        require(not spawn_events(items), "activation must not delegate")
+        business = first_parent_business_line(items)
+        require(business is not None and routes[0]["line"] < business, "activation route must precede real business")
+        checks.append(status("activation-session-binding", "pass", refs, "transcript, index, metadata, workspace, and route agree"))
+
+        prompts = [(line, value["payload"].get("message")) for line, value in items if
+                   value.get("type") == "event_msg" and isinstance(value.get("payload"), dict) and
+                   value["payload"].get("type") == "user_message"]
+        prompt_ok = len(prompts) == 1 and prompts[0][1] == spec["prompt"] and prompts[0][0] < routes[0]["line"]
+        user_messages = [content_text(value["payload"].get("content")) for _line, value in items if
+                         value.get("type") == "response_item" and isinstance(value.get("payload"), dict) and
+                         value["payload"].get("type") == "message" and value["payload"].get("role") == "user"]
+        # The only permitted auxiliary user message is runtime environment metadata.
+        # Skill requests, AGENTS instructions, and additional prompts contaminate this probe.
+        user_messages = [text for text in user_messages if not (
+            text.startswith("<environment_context>") and text.endswith("</environment_context>") and
+            not any(token in text for token in ("ROUTE:", "<skill>", "$codex-model-router:model-router")))]
+        prompt_ok = prompt_ok and user_messages == [spec["prompt"]]
+        checks.append(status("neutral-user-prompt", "pass" if prompt_ok else "fail", refs,
+                             "exact repository-controlled neutral user message, once, before routing"))
+
+        hook_lines = []
+        config_json = serialized_config(config, str(source))
+        for line, value in items:
+            payload = value.get("payload")
+            if value.get("type") != "response_item" or not isinstance(payload, dict) or \
+                    payload.get("type") != "message" or payload.get("role") != "developer":
+                continue
+            text = content_text(payload.get("content"))
+            if CONTROLLER_CONTRACT in text and text.count("ROUTING_CONFIG_BEGIN") == 1 and \
+                    text.count("ROUTING_CONFIG_END") == 1:
+                block = text.split("ROUTING_CONFIG_BEGIN\n", 1)[-1].split("\nROUTING_CONFIG_END", 1)[0]
+                if block.startswith(f"Workspace routing config: {source}\n") and block.endswith("\n" + config_json):
+                    hook_lines.append(line)
+        hook_ok = len(hook_lines) == 1 and hook_lines[0] < routes[0]["line"]
+        checks.append(status("actual-hook-context", "pass" if hook_ok else "fail", refs,
+                             "complete controller contract and exact config content injected before routing"))
+
+        expected_note = spec["expected_note_contents"]
+        note_before = resolved["note_before"]
+        workspace = Path(meta["cwd"])
+        note_ok = note_before.read_bytes() == expected_note.encode("utf-8") and \
+            snapshot(workspace) == {"note.txt": sha256(note_before)} and not business_directories(workspace)
+        _identity, final_line, final_text = final_echo(items)
+        captured_final = resolved["final_output"].read_text(encoding="utf-8").strip()
+        compact = json_lines(resolved["transcript"])
+        terminal = [value for _line, value in compact if value.get("type") in ("turn.completed", "turn.failed", "error")]
+        messages = [value["item"].get("text") for _line, value in compact if
+                    value.get("type") == "item.completed" and isinstance(value.get("item"), dict) and
+                    value["item"].get("type") == "agent_message"]
+        reads = [value["item"] for _line, value in compact if value.get("type") == "item.completed" and
+                 isinstance(value.get("item"), dict) and value["item"].get("type") == "command_execution" and
+                 "note.txt" in value["item"].get("command", "") and value["item"].get("exit_code") == 0 and
+                 value["item"].get("status") == "completed" and
+                 value["item"].get("aggregated_output", "").strip() == expected_note.strip()]
+        edits = [value for _line, value in compact if isinstance(value.get("item"), dict) and
+                 value["item"].get("type") == "file_change"]
+        allowed_finals = {expected_note.strip(), "```\n" + expected_note.rstrip("\n") + "\n```",
+                          "```text\n" + expected_note.rstrip("\n") + "\n```"}
+        completed = bool(note_ok and len(terminal) == 1 and terminal[0].get("type") == "turn.completed" and
+                         final_line and final_line > business and messages and
+                         final_text.strip() == captured_final == messages[-1].strip() and
+                         captured_final in allowed_finals and reads and not edits and observed["failed_tool_events"] == 0)
+        checks.append(status("completed-probe-outcome", "pass" if completed else "fail", refs,
+                             "successful note read, unchanged tree, matching final outputs, and completed turn"))
+    except (LiveEvidenceError, OSError, ValueError, KeyError, TypeError) as error:
+        checks.append(status("activation-session-binding", "fail", refs, str(error)))
+    return checks
+
+
 def observation(case_id: str, root: Path, repo_root: Path, transcript_path: Path,
                 parent_pair: tuple[Path, dict[str, Any]], child_pairs: list[tuple[Path, dict[str, Any]]],
                 actual_root: Path, result_path: Path, index_path: Path, copy_results: bool,
                 artifact_publish_path: Optional[Path] = None) -> dict[str, Any]:
+    require(repo_root.resolve() == REPO_ROOT, "oracle repository must be the validator's own checkout")
     parent = session_record(*parent_pair)
     children = sorted((session_record(path, meta) for path, meta in child_pairs),
                       key=lambda item: item["session_start_at"] or "")
@@ -688,26 +852,32 @@ def observation(case_id: str, root: Path, repo_root: Path, transcript_path: Path
     compact = transcript_observations(transcript_path)
     routes = route_events_from_items(parent_items) or compact["route_events"]
     actual_tree = snapshot(actual_root)
-    expected_tree = snapshot(repo_root / "evals" / "fixtures" / case_id / "reference")
+    actual_directories = business_directories(actual_root)
+    _case, oracle_path, oracle_snapshot = frozen_case(case_id)
+    expected_tree = oracle_snapshot["files"]
+    artifact_matches = actual_tree == expected_tree and actual_directories == oracle_snapshot["directories"]
     if copy_results:
         copy_business_tree(actual_root, result_path)
-    checks = process_checks(case_id, routes, children, spawns, results, first_parent_business_line(parent_items))
+    checks = process_checks(case_id, routes, children, spawns, results, parent_business_lines(parent_items))
     identities = identity_checks(children, spawns)
     published = artifact_publish_path or result_path
     artifact_ref = {"path": published.relative_to(root).as_posix(), "files": actual_tree,
-                    "tree_sha256": tree_sha256(actual_tree)}
+                    "directories": actual_directories,
+                    "tree_sha256": tree_sha256({"files": actual_tree, "directories": actual_directories})}
     lifetime_sessions = [{"start_at": child["session_start_at"], "end_at": child["session_end_at"]}
                          for child in children]
     return {
-        "case_id": case_id, "outcome": "completed" if actual_tree == expected_tree else "failed",
+        "case_id": case_id, "outcome": "completed" if artifact_matches else "failed",
         "parent_session": parent, "worker_sessions": children, "route_events": routes,
         "timing": {
             "parent_session_lifetime_ms": round((parse_iso(parent["session_end_at"]) - parse_iso(parent["session_start_at"])).total_seconds() * 1000) if parent["session_end_at"] else None,
             "all_worker_assignment_overlap_ms": overlap_ms_from_spans([child["assignment_spans"][0] for child in children]) if len(children) > 1 and all(child["assignment_spans"] for child in children) else None,
             "session_lifetime_overlap_ms": overlap_ms(lifetime_sessions) if len(children) > 1 else 0,
         },
-        "artifact_validation": {"status": "pass" if actual_tree == expected_tree else "fail",
-                                "actual_tree": actual_tree, "expected_tree": expected_tree},
+        "artifact_validation": {"status": "pass" if artifact_matches else "fail",
+                                "actual_tree": actual_tree, "expected_tree": expected_tree,
+                                "actual_directories": actual_directories,
+                                "expected_directories": oracle_snapshot["directories"]},
         "process_validation": {"status": aggregate(checks), "checks": checks},
         "identity_contract_validation": {"status": aggregate(identities), "workers": identities},
         "usage": {"kind": "observed", "scope": "codex-exec-terminal-event", "tokens": compact["usage"]},
@@ -716,8 +886,9 @@ def observation(case_id: str, root: Path, repo_root: Path, transcript_path: Path
             "transcript": {"path": transcript_path.relative_to(root).as_posix(), "sha256": compact["sha256"]},
             "session_index": {"path": index_path.relative_to(root).as_posix(), "sha256": sha256(index_path)},
             "artifact_tree": artifact_ref,
-            "oracle_tree": {"path": str((repo_root / "evals" / "fixtures" / case_id / "reference").resolve()),
-                            "files": expected_tree, "tree_sha256": tree_sha256(expected_tree)},
+            "oracle_tree": {"path": str(oracle_path.resolve()),
+                            "files": expected_tree, "directories": oracle_snapshot["directories"],
+                            "tree_sha256": tree_sha256(oracle_snapshot)},
             "session_sources": [{"path": item["source_path"], "sha256": item["source_sha256"]}
                                 for item in [parent, *children]],
         },
@@ -811,33 +982,99 @@ def reprocess(root: Path, repo_root: Path, original: Path) -> dict[str, Any]:
 
 def _index_records(value: Any) -> list[dict[str, Any]]:
     if isinstance(value, list):
-        return [item for item in value if isinstance(item, dict)]
+        return value if all(isinstance(item, dict) for item in value) else []
     if isinstance(value, dict) and value.get("relation") in ("parent", "child"):
         return [value]
     if isinstance(value, dict) and isinstance(value.get("records"), list):
-        return [item for item in value["records"] if isinstance(item, dict)]
+        return _index_records(value["records"])
     if isinstance(value, dict) and isinstance(value.get("parent"), dict) and isinstance(value.get("children"), list):
-        return [value["parent"], *[item for item in value["children"] if isinstance(item, dict)]]
+        if not all(isinstance(item, dict) for item in value["children"]):
+            return []
+        return [{"relation": "parent", **value["parent"]},
+                *[{"relation": "child", **item} for item in value["children"]]]
     return []
 
 
-def _validate_session_index(index_path: Path, sources: list[dict[str, Any]]) -> None:
+def _validate_session_index(index_path: Path, sources: list[dict[str, Any]],
+                            root: Path, parent_id: str) -> None:
     records = _index_records(parse_json(index_path))
-    require(records, f"session index has no records: {index_path}")
-    by_hash = {item["sha256"]: item for item in sources}
-    for source_hash, source in by_hash.items():
+    require(records and len(records) == len(sources), f"session index/source cardinality mismatch: {index_path}")
+    require(len({item["sha256"] for item in sources}) == len(sources), "duplicate session sources")
+    require(len({item.get("thread_id") for item in records}) == len(records), "duplicate index thread IDs")
+    for source in sources:
+        source_hash = source["sha256"]
         matched = [item for item in records if item.get("source_sha256") == source_hash or
                    item.get("copied_sha256") == source_hash]
         require(len(matched) == 1, f"session index does not uniquely bind source: {source['path']}")
         item = matched[0]
-        require(item.get("thread_id") and isinstance(item.get("source_evidence_lines", [1]), list),
-                "session index record lacks thread/evidence-line provenance")
+        path = referenced_path(root, source["path"])
+        meta = session_meta(path)
+        require(meta is not None, "indexed session has no metadata")
+        relation = "parent" if meta.get("id") == parent_id else "child"
+        expected_path = session_record(path, meta)["agent_path"]
+        require(item.get("relation") == relation and item.get("thread_id") == meta.get("id") and
+                item.get("parent_thread_id") == meta.get("parent_thread_id") and
+                item.get("agent_path") == expected_path, "session index metadata/ancestry mismatch")
+        require(any(isinstance(item.get(prefix + "_path"), str) and
+                    referenced_path(root, item[prefix + "_path"]).resolve() == path.resolve() and
+                    item.get(prefix + "_sha256") == source_hash for prefix in ("source", "copied")),
+                "session index path is not bound to source")
+        for prefix in ("source", "copied"):
+            if prefix + "_path" in item or prefix + "_sha256" in item:
+                reference = item.get(prefix + "_path")
+                require(isinstance(reference, str) and item.get(prefix + "_sha256") == source_hash,
+                        "session index has contradictory source/copy references")
+                candidate = referenced_path(root, reference)
+                require(candidate.is_file() and sha256(candidate) == source_hash,
+                        "session index source/copy reference is unverified")
+        lines = item.get("source_evidence_lines")
+        line_count = len(path.read_text(encoding="utf-8").splitlines())
+        require(isinstance(lines, list) and bool(lines) and all(type(line) is int and
+                1 <= line <= line_count for line in lines), "invalid session index evidence lines")
+
+
+def validate_session_ancestry(parent: dict[str, Any], children: list[dict[str, Any]],
+                              items: list[tuple[int, dict[str, Any]]],
+                              spawns: list[dict[str, Any]]) -> None:
+    require(len({child["thread_id"] for child in children}) == len(children), "duplicate child sessions")
+    require(len(spawns) == len(children) and bool(children), "native dispatch/child cardinality mismatch")
+    native_paths = []
+    for spawn in spawns:
+        call_id = spawn.get("call_id")
+        require(isinstance(call_id, str) and bool(call_id) and
+                sum(other.get("call_id") == call_id for other in spawns) == 1,
+                "missing or duplicate native dispatch call ID")
+        outputs = [(line, value["payload"]) for line, value in items if
+                   value.get("type") == "response_item" and isinstance(value.get("payload"), dict) and
+                   value["payload"].get("type") == "function_call_output" and
+                   value["payload"].get("call_id") == call_id]
+        require(len(outputs) == 1 and outputs[0][0] > spawn["line"], "native dispatch result is not linked")
+        try:
+            output = json.loads(outputs[0][1].get("output", ""))
+        except (TypeError, json.JSONDecodeError) as error:
+            raise LiveEvidenceError("native dispatch result must be captured JSON") from error
+        native_path = output.get("task_name") if isinstance(output, dict) else None
+        native_name = spawn["arguments"].get("task_name") or spawn["arguments"].get("name")
+        require(isinstance(native_path, str) and isinstance(native_name, str) and
+                native_path == (parent.get("agent_path") or "/root") + "/" + native_name,
+                "native dispatch result/path mismatch")
+        native_paths.append(native_path)
+    require(len(set(native_paths)) == len(native_paths), "ambiguous repeated native dispatch name")
+    require(set(native_paths) == {child.get("agent_path") for child in children},
+            "child paths do not match native dispatch results")
+    require(all(child.get("parent_thread_id") == parent["thread_id"] for child in children),
+            "child ancestry does not match transcript parent")
 
 
 def _derived_observation(root: Path, authored: dict[str, Any]) -> dict[str, Any]:
     evidence = authored["evidence"]
+    case_id = authored["case_id"]
+    _case, frozen_oracle_path, frozen_snapshot = frozen_case(case_id)
+    require(evidence["transcript"]["path"] in (f"raw/{case_id}.jsonl", f"raw/{case_id}-rerun.jsonl"),
+            "transcript path does not belong to scenario")
     transcript_path = referenced_path(root, evidence["transcript"]["path"])
-    index_path = referenced_path(root, evidence["session_index"]["path"])
+    index_path = canonical_path(root, evidence["session_index"]["path"],
+                                f"session-evidence/{case_id}/session-index.json")
     for key in ("transcript", "session_index"):
         path = referenced_path(root, evidence[key]["path"])
         require(path.is_file() and sha256(path) == evidence[key]["sha256"], f"evidence mismatch: {path}")
@@ -850,12 +1087,9 @@ def _derived_observation(root: Path, authored: dict[str, Any]) -> dict[str, Any]
         meta = session_meta(path)
         require(meta is not None, f"missing session metadata: {path}")
         session_values.append(session_record(path, meta))
-    _validate_session_index(index_path, sources)
-    parents = [item for item in session_values if not item.get("parent_thread_id")]
-    if len(parents) != 1:
-        # Some hosts give the parent its own parent; bind it to the transcript thread instead.
-        parent_id = extract_parent_id(transcript_path)
-        parents = [item for item in session_values if item["thread_id"] == parent_id]
+    parent_id = extract_parent_id(transcript_path)
+    _validate_session_index(index_path, sources, root, parent_id)
+    parents = [item for item in session_values if item["thread_id"] == parent_id]
     require(len(parents) == 1, "session evidence must contain exactly one transcript parent")
     parent = parents[0]
     children = sorted([item for item in session_values if item["thread_id"] != parent["thread_id"]],
@@ -863,27 +1097,36 @@ def _derived_observation(root: Path, authored: dict[str, Any]) -> dict[str, Any]
     parent_path = Path(parent["source_path"])
     parent_items = json_lines(parent_path)
     spawns = spawn_events(parent_items)
+    validate_session_ancestry(parent, children, parent_items, spawns)
     results = result_events(parent_items)
     compact = transcript_observations(transcript_path)
-    routes = route_events_from_items(parent_items) or compact["route_events"]
+    routes = route_events_from_items(parent_items)
+    require([item["text"] for item in routes] == [item["text"] for item in compact["route_events"]],
+            "transcript routes disagree with parent session")
     checks = process_checks(authored["case_id"], routes, children, spawns, results,
-                            first_parent_business_line(parent_items))
+                            parent_business_lines(parent_items))
     identities = identity_checks(children, spawns)
 
     artifact = evidence["artifact_tree"]
-    artifact_path = referenced_path(root, artifact["path"])
+    artifact_path = canonical_path(root, artifact["path"], f"results/{case_id}")
     actual_tree = snapshot(artifact_path)
-    require(actual_tree == artifact["files"] and tree_sha256(actual_tree) == artifact["tree_sha256"],
+    actual_directories = business_directories(artifact_path)
+    require(actual_tree == artifact["files"] and actual_directories == artifact.get("directories") and
+            tree_sha256({"files": actual_tree, "directories": actual_directories}) == artifact["tree_sha256"],
             f"artifact reference mismatch: {artifact_path}")
     oracle = evidence["oracle_tree"]
     oracle_path = referenced_path(root, oracle["path"])
-    expected_tree = snapshot(oracle_path)
-    require(expected_tree == oracle["files"] and tree_sha256(expected_tree) == oracle["tree_sha256"],
+    require(oracle_path.resolve() == frozen_oracle_path.resolve(), "oracle path is not the frozen case oracle")
+    expected_tree = frozen_snapshot["files"]
+    require(snapshot(oracle_path) == expected_tree, "repository oracle differs from pinned fixture snapshot")
+    require(expected_tree == oracle["files"] and frozen_snapshot["directories"] == oracle.get("directories") and
+            tree_sha256(frozen_snapshot) == oracle["tree_sha256"],
             f"frozen oracle reference mismatch: {oracle_path}")
+    artifact_matches = actual_tree == expected_tree and actual_directories == frozen_snapshot["directories"]
     lifetime_sessions = [{"start_at": child["session_start_at"], "end_at": child["session_end_at"]}
                          for child in children]
     return {
-        "outcome": "completed" if actual_tree == expected_tree else "failed",
+        "outcome": "completed" if artifact_matches else "failed",
         "parent_session": parent,
         "worker_sessions": children,
         "route_events": routes,
@@ -895,8 +1138,10 @@ def _derived_observation(root: Path, authored: dict[str, Any]) -> dict[str, Any]
                 all(child["assignment_spans"] for child in children) else None,
             "session_lifetime_overlap_ms": overlap_ms(lifetime_sessions) if len(children) > 1 else 0,
         },
-        "artifact_validation": {"status": "pass" if actual_tree == expected_tree else "fail",
-                                "actual_tree": actual_tree, "expected_tree": expected_tree},
+        "artifact_validation": {"status": "pass" if artifact_matches else "fail",
+                                "actual_tree": actual_tree, "expected_tree": expected_tree,
+                                "actual_directories": actual_directories,
+                                "expected_directories": frozen_snapshot["directories"]},
         "process_validation": {"status": aggregate(checks), "checks": checks},
         "identity_contract_validation": {"status": aggregate(identities), "workers": identities},
         "usage": {"kind": "observed", "scope": "codex-exec-terminal-event", "tokens": compact["usage"]},

@@ -106,3 +106,33 @@ binds the copied config to its source and transcript thread; and requires a
 controller message whose first characters are `ROUTE:` before business action.
 Collection is fresh-only and staged; existing or partially published output is
 never reused.
+
+The validator's own `benchmark.json` pins `cases.json`, which pins each fixture
+descriptor and its initial/reference snapshots. That chain alone defines the
+case oracle. Report-authored oracle paths must resolve to that exact reference;
+artifact and index paths must be their canonical case paths. Matching arbitrary
+file hashes cannot substitute for case identity. Symlink/reparse-point trees,
+missing trees, cross-case references, and modified frozen snapshots are rejected.
+
+The transcript's unique `thread.started` ID always selects the parent, including
+when its own parent ID is absent. The index must bind every source path/hash to
+matching thread, parent, and native-path metadata. Each child must descend from
+that parent and correspond one-to-one to a unique spawn call ID and its native
+result path. Parent-session and CLI route sequences must agree. A worker spawn
+requires the latest preceding route to be DELEGATE with the case topology;
+controller business tools require an active DIRECT route. Later decisions have
+no retroactive authority.
+
+Reviewer output requires exactly one anchored `Verdict: PASS` line and no other
+case-insensitive PASS/FAIL token. `Verdict: FAIL`, missing/duplicate verdicts,
+and contradictory text such as `FAIL: This must not PASS` fail review.
+
+The activation spec is the unchanged repository file. Both actual prompt
+sources must contain its exact neutral prompt, with no extra Skill/user request.
+Session/index/transcript IDs, config workspace, full controller contract and
+serialized config, route order, successful read output, unchanged note/tree,
+terminal completion, and all final outputs must agree. The configured-hook
+Python capture must precede the session in the same workspace and use the
+literal hook interpreter command. A different working collector interpreter
+does not establish that command's availability. Failed preflights remain saved;
+PATH remediation and a fresh capture are required before another attempt.

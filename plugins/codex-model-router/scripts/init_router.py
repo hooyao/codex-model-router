@@ -90,7 +90,7 @@ def _python_runtime() -> tuple[Path, str]:
         )
     try:
         probe = subprocess.run(
-            [runtime, "-c", "import json, pathlib, sys; print('.'.join(map(str, sys.version_info[:3])))"],
+            [runtime, "-c", "import encodings, json, pathlib, sys; print('.'.join(map(str, sys.version_info[:3])))"],
             text=True,
             capture_output=True,
             timeout=10,
@@ -100,7 +100,9 @@ def _python_runtime() -> tuple[Path, str]:
         raise PreflightError(f"could not launch configured Python runtime {runtime}: {error}") from error
     if probe.returncode != 0:
         raise PreflightError(
-            f"configured Python runtime {runtime} exited {probe.returncode}: {probe.stderr.strip()}"
+            f"configured Python runtime {runtime} exited {probe.returncode}: {probe.stderr.strip()}. "
+            "Install a complete Python 3.9+ runtime, put it first on PATH before Codex starts, "
+            "and restart Codex. Running this script with another interpreter does not repair hook PATH."
         )
     version = probe.stdout.strip()
     try:

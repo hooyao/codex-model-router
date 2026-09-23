@@ -8,6 +8,7 @@
     "ROUTE:"
   ],
   "expected_route": "DIRECT",
+  "expected_note_contents": "unchanged\n",
   "paths": {
     "transcript": "raw/activation.jsonl",
     "final_output": "raw/activation-final.txt",
@@ -18,7 +19,9 @@
     "plugin_manifest": "raw/plugin-manifest.json",
     "spawn_schema": "raw/spawn-schema.json",
     "model_catalog": "raw/model-catalog.json",
-    "activation_session_index": "session-evidence/activation/session-index.json"
+    "activation_session_index": "session-evidence/activation/session-index.json",
+    "python_preflight": "raw/activation-python-preflight.json",
+    "note_before": "raw/activation-note-before.txt"
   },
   "required_environment_fields": [
     "resolved_python_executable",
