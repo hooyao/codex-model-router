@@ -350,7 +350,7 @@ class RouterPluginTests(unittest.TestCase):
                 for handler in group["hooks"]:
                     with self.subTest(event=event_name):
                         self.assertEqual(
-                            'python "%PLUGIN_ROOT%\\hooks\\router_hook.py"',
+                            'cmd.exe /d /c python "%PLUGIN_ROOT%\\hooks\\router_hook.py"',
                             handler["commandWindows"],
                         )
                         self.assertEqual(
@@ -623,7 +623,7 @@ class RouterPluginTests(unittest.TestCase):
         for (event_name, handler), (args, kwargs) in zip(handlers, calls):
             with self.subTest(event=event_name):
                 self.assertEqual(
-                    f"cmd.exe /d /s /c {handler['commandWindows']}", args[0]
+                    handler["commandWindows"], args[0]
                 )
                 self.assertEqual(str(PLUGIN_ROOT), kwargs["env"]["PLUGIN_ROOT"])
                 self.assertEqual(event_name, json.loads(kwargs["input"])["hook_event_name"])

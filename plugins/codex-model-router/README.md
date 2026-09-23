@@ -250,13 +250,15 @@ DELEGATE task, and a DIRECT-to-DELEGATE escalation. The repository does not
 claim those experiments have passed until their transcripts and artifacts are
 captured from an installed plugin in clean Codex CLI sessions.
 
-Observed Codex CLI `0.155.0-alpha.9.2` `codex exec` sessions did not execute
-installed plugin lifecycle hooks even when the plugin was enabled and trust was
-bypassed for diagnosis. The live procedure therefore contains a fail-closed
-activation gate. Explicit invocation of `$codex-model-router:model-router` in a
-non-ephemeral session did successfully dispatch underscore-adapted native
-`task_name` workers, but that is separate evidence and does not establish
-automatic hook support or controller compliance.
+Earlier Codex CLI `codex exec` sessions failed the automatic activation gate
+because the Windows hook command used `%PLUGIN_ROOT%` without a CMD expansion
+step. The hook executor did not expand that variable. The Windows command now
+invokes `cmd.exe /d /c` explicitly. A second issue made hook-created config
+files unreadable to the Windows workspace sandbox; initialization now inherits
+the workspace ACL on Windows. A fresh `codex exec` session on CLI
+`0.155.0-alpha.16` created the config, resolved `DIRECT`, emitted `ROUTE:`
+before reading the business file, and completed the read. Keep the live
+activation gate for each installed version and environment.
 
 ## MVP Boundaries
 

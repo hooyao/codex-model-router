@@ -250,10 +250,11 @@ disposable workspace, but a bypassed run is diagnostic evidence, not the formal
 trusted-hook result.
 
 The historical `router-scenarios-live-20260923T031600Z` probe did not produce
-the required route/config evidence, but it also lacked the source-specific
-environment preflight. Its activation gate is FAIL and its root cause is
-unknown. Treat a future runtime as blocked for automatic cases unless a fresh
-probe passes; do not generalize the historical symptom into a platform limit.
+the required route/config evidence. Later controlled probes identified two
+Windows plugin defects: `%PLUGIN_ROOT%` was not expanded by the hook launcher,
+and owner-only ACLs on the hook-created config prevented sandbox reads. The
+historical gate remains FAIL. A fresh installed-plugin probe must pass before
+automatic cases run in a new environment.
 
 ### Explicit-Skill dispatcher diagnostic
 

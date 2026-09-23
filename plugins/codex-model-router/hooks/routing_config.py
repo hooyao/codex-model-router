@@ -469,8 +469,12 @@ def load_default_template() -> tuple[dict[str, Any], bytes]:
 def initialize_config(path: Path) -> bool:
     _config, template_bytes = load_default_template()
     config_directory = path.parent
+    # Windows' 0700/0600 modes create owner-only ACLs. Hook-created files must
+    # remain readable by the separate Codex workspace-sandbox identity.
+    directory_mode = 0o777 if os.name == "nt" else 0o700
+    file_mode = 0o666 if os.name == "nt" else 0o600
     try:
-        config_directory.mkdir(mode=0o700, parents=False, exist_ok=True)
+        config_directory.mkdir(mode=directory_mode, parents=False, exist_ok=True)
     except OSError as error:
         raise RoutingConfigError(f"cannot create routing config directory {config_directory}: {error}") from error
     if not config_directory.is_dir():
@@ -479,7 +483,7 @@ def initialize_config(path: Path) -> bool:
     descriptor: int | None = None
     created = False
     try:
-        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, file_mode)
         created = True
         with os.fdopen(descriptor, "wb") as stream:
             descriptor = None

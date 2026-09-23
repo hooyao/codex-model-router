@@ -117,10 +117,11 @@ without requiring a network connection or a live Codex session. Neither this
 smoke test nor the unit suite demonstrates live agent routing behavior. The
 documented clean CLI experiment is
 [`plugins/codex-model-router/docs/live-cli-validation.md`](plugins/codex-model-router/docs/live-cli-validation.md).
-Its activation gate currently records `codex exec` plugin-hook support as a
-prerequisite: CLI `0.155.0-alpha.9.2` did not execute installed lifecycle hooks,
-while explicit non-ephemeral Skill dispatch did work. Automatic routing remains
-unverified on that CLI rather than being inferred from synthetic output.
+Its activation gate records `codex exec` plugin-hook execution as a
+prerequisite. The Windows launcher and config ACL issues that prevented earlier
+activation have been corrected. A fresh CLI `0.155.0-alpha.16` diagnostic
+created the config and emitted a validated `DIRECT` route before the business
+action. Each installed version still needs its own live gate.
 After source
 changes, bump the plugin's SemVer release version and reinstall from the confirmed local
 marketplace, then use a new task so Codex reloads the plugin. Reinstalling never
