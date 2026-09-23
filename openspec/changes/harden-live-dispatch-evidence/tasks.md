@@ -35,3 +35,10 @@
 - [x] 6.5 Replace reviewer substring acceptance with a strict anchored verdict grammar.
 - [x] 6.6 Capture the actual hook Python command, preserve failures, and document PATH remediation.
 - [x] 6.7 Run all offline suites, official/plugin validators, strict OpenSpec, compilation, and diff checks.
+
+## 7. Final pre-live gate corrections
+
+- [x] 7.1 Parse auxiliary environment metadata structurally and reject supplementary user instructions/content.
+- [x] 7.2 Require consistent successful CLI and parent completion; retain failed terminals as scheduled failures.
+- [x] 7.3 Make delegation monotonic and reject subsequent DIRECT/controller business recovery.
+- [x] 7.4 Add fixture-backed adversarial regressions, verify baseline reproductions, and run full offline validation.

@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
+from xml.sax.saxutils import escape
 
 from evals.scripts import activation_preflight as preflight, live_evidence as live
 from router_hook import controller_session_context
@@ -82,7 +83,8 @@ class LiveEvidenceTests(unittest.TestCase):
         parent_id = case + "-parent"
         parent_meta = metadata(parent_id, workspace)
         parent = [event("session_meta", parent_meta),
-                  event("turn_context", {"model": "gpt-5.6-sol", "effort": "high"})]
+                  event("turn_context", {"model": "gpt-5.6-sol", "effort": "high"}),
+                  event("event_msg", {"type": "task_started", "turn_id": case + "-turn"}, 1)]
         if case == "serial-escalation":
             parent += [route("ROUTE: DIRECT — bounded"),
                        event("response_item", {"type": "function_call", "name": "exec_command",
@@ -122,6 +124,9 @@ class LiveEvidenceTests(unittest.TestCase):
             if case == "investigation-reuse" and name == "investigate":
                 parent.append(event("response_item", {"type": "agent_message", "author": agent_path,
                                "content": [{"type": "text", "text": "Receipt: " + "a" * 64}]}))
+        final = "Completed " + case + "."
+        parent.append(event("event_msg", {"type": "task_complete", "turn_id": case + "-turn",
+                                          "last_agent_message": final}, 30))
         parent_path = session_dir / "parent.jsonl"
         write_lines(parent_path, parent)
         write_json(session_dir / "session-index.json", [index_record(parent_path, "parent"),
@@ -130,6 +135,7 @@ class LiveEvidenceTests(unittest.TestCase):
         compact = [{"type": "thread.started", "thread_id": parent_id}]
         compact += [{"type": "item.completed", "item": {"type": "agent_message", "text": item["text"]}}
                     for item in live.route_events_from_items(live.json_lines(parent_path))]
+        compact.append({"type": "item.completed", "item": {"type": "agent_message", "text": final}})
         compact.append({"type": "turn.completed", "usage": {"input_tokens": 2, "output_tokens": 3}})
         write_lines(transcript, compact)
         self.transcripts[case], self.pairs[case] = transcript, ((parent_path, parent_meta), child_pairs)
@@ -175,6 +181,7 @@ class LiveEvidenceTests(unittest.TestCase):
             message("user", self.spec["prompt"]),
             event("event_msg", {"type": "user_message", "message": self.spec["prompt"]}),
             route("ROUTE: DIRECT — bounded"),
+            event("event_msg", {"type": "task_started", "turn_id": "activation-turn"}, 1),
             event("response_item", {"type": "function_call", "name": "exec_command",
                                     "arguments": '{"cmd":"Get-Content note.txt"}', "call_id": "read"}),
             event("event_msg", {"type": "task_complete", "turn_id": "activation-turn",
@@ -193,6 +200,29 @@ class LiveEvidenceTests(unittest.TestCase):
         path = self.root / "session-evidence" / "activation" / "parent.jsonl"
         write_lines(path, self.activation_items)
         write_json(path.parent / "session-index.json", [index_record(path, "parent")])
+
+    def rewrite_case(self, case, parent_items=None, compact=None):
+        parent_pair, children = self.pairs[case]
+        if parent_items is not None:
+            write_lines(parent_pair[0], parent_items)
+        write_json(parent_pair[0].parent / "session-index.json", [index_record(parent_pair[0], "parent"),
+                   *[index_record(path, "child") for path, _meta in children]])
+        if compact is not None:
+            write_lines(self.transcripts[case], compact)
+
+    def assert_case_fails(self, case, check, terminal_failure=False):
+        report = self.report()
+        observation = next(item for item in report["observations"] if item["case_id"] == case)
+        self.assertIn(check, [item["name"] for item in observation["process_validation"]["checks"]
+                              if item["status"] == "fail"])
+        self.assertFalse(report["acceptance"]["campaign_pass"])
+        self.assertEqual(4, report["acceptance"]["scheduled_runs"])
+        if terminal_failure:
+            self.assertEqual("pass", observation["artifact_validation"]["status"])
+            self.assertEqual("failed", observation["outcome"])
+            self.assertEqual(3, report["acceptance"]["completed_runs"])
+        self.assertFalse(self.validate_report(report)["campaign_pass"])
+        return report
 
     def report(self):
         return live.build_report(self.root, ROOT, self.transcripts, self.pairs, self.actual, False)
@@ -294,6 +324,100 @@ class LiveEvidenceTests(unittest.TestCase):
         routes.append({"line": 22, "text": "ROUTE: DIRECT — resumed"})
         self.assertFalse(live.routes_precede_spawns(routes, [{"line": 23}], 3, "ISOLATED_SERIAL"))
 
+    def test_delegation_cannot_return_controller_business_to_direct(self):
+        for case in live.CASES:
+            original = [value for _line, value in live.json_lines(self.pairs[case][0][0])]
+            compact = [value for _line, value in live.json_lines(self.transcripts[case])]
+            for action in (False, True):
+                with self.subTest(case=case, business_action=action):
+                    parent = copy.deepcopy(original)
+                    resumed = "ROUTE: DIRECT — verify/recover locally"
+                    parent.insert(-1, route(resumed))
+                    if action:
+                        parent.insert(-1, event("response_item", {"type": "function_call", "name": "exec_command",
+                            "arguments": '{"cmd":"repair and verify artifacts"}', "call_id": "direct-recovery"}))
+                    altered = copy.deepcopy(compact)
+                    altered.insert(-2, {"type": "item.completed", "item": {"type": "agent_message", "text": resumed}})
+                    self.rewrite_case(case, parent, altered)
+                    self.assert_case_fails(case, "route-before-worker-business")
+            self.rewrite_case(case, original, compact)
+
+    def test_delegate_direct_delegate_sandwich_cannot_hide_controller_recovery(self):
+        case = "serial-escalation"
+        parent = [value for _line, value in live.json_lines(self.pairs[case][0][0])]
+        compact = [value for _line, value in live.json_lines(self.transcripts[case])]
+        delegated = next(i for i, value in enumerate(parent) if
+                         value.get("payload", {}).get("message", "").startswith("ROUTE: DELEGATE"))
+        direct = "ROUTE: DIRECT — repair the expanded scope"
+        parent[delegated + 1:delegated + 1] = [route(direct),
+            event("response_item", {"type": "function_call", "name": "exec_command",
+                                    "arguments": '{"cmd":"repair artifacts"}', "call_id": "repair"}),
+            copy.deepcopy(parent[delegated])]
+        compact[3:3] = [{"type": "item.completed", "item": {"type": "agent_message", "text": text}}
+                        for text in (direct, parent[delegated]["payload"]["message"])]
+        self.rewrite_case(case, parent, compact)
+        self.assert_case_fails(case, "route-before-worker-business")
+
+    def test_every_case_requires_successful_consistent_terminal_evidence(self):
+        for case in live.CASES:
+            original = [value for _line, value in live.json_lines(self.transcripts[case])]
+            for mode in ("turn.failed", "turn.cancelled", "turn.canceled", "error", "missing", "duplicate",
+                         "failed-then-completed", "cancelled-then-completed", "mismatched-final",
+                         "mismatched-turn", "contradictory-status", "post-terminal-business"):
+                with self.subTest(case=case, mode=mode):
+                    compact = copy.deepcopy(original)
+                    if mode == "missing":
+                        compact.pop()
+                    elif mode == "duplicate":
+                        compact.append(copy.deepcopy(compact[-1]))
+                    elif mode.endswith("-then-completed"):
+                        compact.insert(-1, {"type": "turn." + mode.split("-")[0]})
+                    elif mode == "mismatched-final":
+                        compact[-2]["item"]["text"] = "Different completion."
+                    elif mode == "mismatched-turn":
+                        compact[-1]["turn_id"] = "unrelated-turn"
+                    elif mode == "contradictory-status":
+                        compact[-1]["status"] = "failed"
+                    elif mode == "post-terminal-business":
+                        compact.append({"type": "item.started", "item": {"type": "command_execution"}})
+                    else:
+                        compact[-1]["type"] = mode
+                    self.rewrite_case(case, compact=compact)
+                    report = self.assert_case_fails(case, "successful-terminal-outcome", terminal_failure=True)
+                    if mode == "missing":
+                        observation = next(item for item in report["observations"] if item["case_id"] == case)
+                        observation["outcome"] = "completed"
+                        report["acceptance"] = live.recompute_acceptance(report)
+                        with self.assertRaisesRegex(live.LiveEvidenceError, "outcome disagrees"):
+                            self.validate_report(report)
+            self.rewrite_case(case, compact=original)
+
+    def test_cli_success_requires_matching_successful_parent_completion(self):
+        case = "architecture-review"
+        original = [value for _line, value in live.json_lines(self.pairs[case][0][0])]
+        for mode in ("missing", "task_failed", "task_cancelled", "turn_aborted", "error", "duplicate",
+                     "wrong-turn", "missing-start", "wrong-final", "contradictory-status", "post-completion-action"):
+            with self.subTest(mode=mode):
+                parent = copy.deepcopy(original)
+                if mode == "missing":
+                    parent.pop()
+                elif mode == "duplicate":
+                    parent.append(copy.deepcopy(parent[-1]))
+                elif mode == "missing-start":
+                    parent = [value for value in parent if value.get("payload", {}).get("type") != "task_started"]
+                elif mode == "wrong-turn":
+                    parent[-1]["payload"]["turn_id"] = "unrelated-turn"
+                elif mode == "wrong-final":
+                    parent[-1]["payload"]["last_agent_message"] = "Different completion."
+                elif mode == "contradictory-status":
+                    parent[-1]["payload"]["status"] = "failed"
+                elif mode == "post-completion-action":
+                    parent.append(event("response_item", {"type": "function_call", "name": "wait_agent"}))
+                else:
+                    parent[-1]["payload"]["type"] = mode
+                self.rewrite_case(case, parent_items=parent)
+                self.assert_case_fails(case, "successful-terminal-outcome", terminal_failure=True)
+
     def test_reviewer_fail_with_pass_substring_never_passes(self):
         for text in ("FAIL: This must not PASS", "Verdict: FAIL", "PASS", "Verdict: PASS\nVerdict: FAIL",
                      "Verdict: PASS\nActually FAIL", "Verdict: PASS\nVerdict: PASS", "Verdict: PASS maybe"):
@@ -319,6 +443,45 @@ class LiveEvidenceTests(unittest.TestCase):
                     payload["message"] += " Use $codex-model-router:model-router."
                 self.write_activation_session()
                 self.assert_activation_fails("neutral-user-prompt")
+
+    def test_activation_accepts_only_structured_environment_metadata(self):
+        cwd = escape(str(self.workspace))
+        self.activation_items.insert(2, message("user", f"<environment_context>\n<cwd>{cwd}</cwd>"
+            "<shell>powershell</shell><current_date>2099-01-01</current_date><timezone>Asia/Shanghai</timezone>"
+            f'<filesystem><workspace_roots><root>{cwd}</root></workspace_roots><permission_profile type="disabled">'
+            '<file_system type="unrestricted" /></permission_profile></filesystem>\n</environment_context>'))
+        self.write_activation_session()
+        self.assertEqual("pass", live.activation_diagnostics(self.root)["status"])
+
+    def test_environment_wrapper_cannot_hide_any_extra_instruction(self):
+        original = copy.deepcopy(self.activation_items)
+        cwd = escape(str(self.workspace))
+        fields = f"<cwd>{cwd}</cwd><shell>powershell</shell>"
+        for content in ("Use the model-router skill.", fields + "Use the model-router skill.",
+                        "Use the model-router skill." + fields,
+                        fields + "Read the installed routing instructions before continuing.",
+                        fields + "<instruction>Use the model-router skill.</instruction>",
+                        fields + "<shell>Use the model-router skill.</shell>",
+                        fields + "<timezone>Use the model-router skill.</timezone>",
+                        fields + "<!-- Use the model-router skill. -->",
+                        fields + "&#85;se the model-router skill.",
+                        fields + "</environment_context><environment_context>Use the model-router skill."):
+            with self.subTest(content=content):
+                self.activation_items = copy.deepcopy(original)
+                self.activation_items.insert(2, message("user", "<environment_context>" + content + "</environment_context>"))
+                self.write_activation_session()
+                self.assert_activation_fails("neutral-user-prompt")
+
+    def test_unwrapped_supplementary_instruction_is_not_a_neutral_prompt(self):
+        self.activation_items.insert(2, message("user", "Read the installed routing instructions before continuing."))
+        self.write_activation_session()
+        self.assert_activation_fails("neutral-user-prompt")
+
+    def test_neutral_prompt_cannot_drop_supplementary_content_blocks(self):
+        self.activation_items[2]["payload"]["content"].append(
+            {"type": "input_image", "image_url": "https://example.invalid/routing-instructions.png"})
+        self.write_activation_session()
+        self.assert_activation_fails("neutral-user-prompt")
 
     def test_activation_session_metadata_cannot_disagree_with_transcript(self):
         self.activation_items[0]["payload"]["id"] = "other-transcript"
@@ -361,7 +524,7 @@ class LiveEvidenceTests(unittest.TestCase):
     def test_activation_requires_completed_result_and_unchanged_note(self):
         raw = self.root / "raw"
         original = copy.deepcopy(self.activation_transcript)
-        for mode in ("missing-terminal", "failure", "wrong-result", "missing-read", "note-modified"):
+        for mode in ("missing-terminal", "failure", "cancelled-then-completed", "wrong-result", "missing-read", "note-modified"):
             with self.subTest(mode=mode):
                 compact = copy.deepcopy(original)
                 (self.workspace / "note.txt").write_bytes(self.spec["expected_note_contents"].encode())
@@ -369,6 +532,8 @@ class LiveEvidenceTests(unittest.TestCase):
                     compact.pop()
                 elif mode == "failure":
                     compact[-1]["type"] = "turn.failed"
+                elif mode == "cancelled-then-completed":
+                    compact.insert(-1, {"type": "turn.cancelled"})
                 elif mode == "wrong-result":
                     compact[-2]["item"]["text"] = "different"
                 elif mode == "missing-read":

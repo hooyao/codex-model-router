@@ -120,8 +120,18 @@ matching thread, parent, and native-path metadata. Each child must descend from
 that parent and correspond one-to-one to a unique spawn call ID and its native
 result path. Parent-session and CLI route sequences must agree. A worker spawn
 requires the latest preceding route to be DELEGATE with the case topology;
-controller business tools require an active DIRECT route. Later decisions have
-no retroactive authority.
+controller business tools require an active DIRECT route before the first
+delegation. Delegation is monotonic: subsequent DIRECT decisions, controller
+business recovery, and delegated topology changes fail even if a later DELEGATE
+line precedes the next worker. Later decisions have no retroactive authority.
+
+Correct artifacts alone never establish completion. Every scenario requires
+exactly one successful terminal CLI event, with no failure/cancellation/error or
+later CLI event, and one parent task start/completion pair with the same turn ID.
+The CLI final message must match the parent completion, and a parent failure,
+missing/duplicate completion, or post-completion action fails the terminal check.
+Such observations keep their independent artifact grade but have outcome
+`failed`, remain scheduled, and cannot count as completed or pass the campaign.
 
 Reviewer output requires exactly one anchored `Verdict: PASS` line and no other
 case-insensitive PASS/FAIL token. `Verdict: FAIL`, missing/duplicate verdicts,
@@ -129,6 +139,14 @@ and contradictory text such as `FAIL: This must not PASS` fail review.
 
 The activation spec is the unchanged repository file. Both actual prompt
 sources must contain its exact neutral prompt, with no extra Skill/user request.
+The only auxiliary user message allowed is one structurally parsed environment
+record before routing: its unique fields are `cwd`, `shell`, optional ISO date,
+timezone identifier, and the captured filesystem metadata. The workspace path
+must match session metadata; the supported filesystem shape binds its single
+root to that workspace and its disabled/unrestricted permission attributes.
+Unknown fields, attributes, duplicate fields, mixed text, comments, declarations,
+extra content blocks, and supplementary instructions fail closed. This grammar
+does not exempt arbitrary text because it lacks known Skill or routing words.
 Session/index/transcript IDs, config workspace, full controller contract and
 serialized config, route order, successful read output, unchanged note/tree,
 terminal completion, and all final outputs must agree. The configured-hook

@@ -87,6 +87,11 @@ neutral user prompt, a matching completed session/result, and a successful
 `activation_preflight.py` capture of the configured hook Python command in the
 CLI launch environment. Historical failed captures remain immutable; the
 offline regression suite does not establish a new live pass.
+Environment metadata is parsed against a narrow structural grammar; wrapped
+supplementary instructions invalidate activation. Correct artifacts with a
+failed, cancelled, missing, or contradictory CLI/parent completion remain failed
+scheduled runs. Once delegation begins, later DIRECT routes and controller
+business recovery fail process validation.
 
 See [CONTRACT.md](CONTRACT.md) for exact invariants and [DESIGN.md](DESIGN.md)
 for the measurement rationale.

@@ -86,3 +86,11 @@ IDs, effort compatibility, and inheritance are derived from parsed sources.
 Output publication preflights the report and result-tree destinations, stages
 copies, validates before the final report rename, and rolls back newly
 published results on failure.
+
+Activation metadata uses a narrow XML grammar for the captured runtime format.
+Free-form text cannot become metadata through an environment wrapper or a
+keyword filter. Scenario completion is a separate raw-event fact from artifact
+quality: the CLI terminal and matching parent task/final message must both show
+success. The same check runs during collection and independent validation.
+Routing state is monotonic after delegation so a controller cannot regain
+business ownership by inserting another DIRECT line during recovery.

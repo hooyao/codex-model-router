@@ -16,6 +16,7 @@ import re
 import shutil
 import sys
 import uuid
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -156,6 +157,95 @@ def content_text(content: Any) -> str:
         return ""
     return "\n".join(item.get("text", "") for item in content
                      if isinstance(item, dict) and isinstance(item.get("text"), str))
+
+
+def environment_metadata(text: str, cwd: str) -> bool:
+    """Accept only the captured runtime metadata grammar, never free-form text."""
+    if "<!" in text or "<?" in text:
+        return False
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError:
+        return False
+
+    def container(node: ET.Element, tag: str, attributes: dict[str, str]) -> bool:
+        return node.tag == tag and node.attrib == attributes and not (node.text or "").strip() and \
+            all(not (child.tail or "").strip() for child in node)
+
+    def leaf(node: ET.Element) -> Optional[str]:
+        return node.text if not node.attrib and len(node) == 0 else None
+
+    if not container(root, "environment_context", {}):
+        return False
+    fields = {child.tag: child for child in root}
+    if len(fields) != len(root) or not {"cwd", "shell"} <= set(fields) or \
+            not set(fields) <= {"cwd", "shell", "current_date", "timezone", "filesystem"}:
+        return False
+    if leaf(fields["cwd"]) != cwd or leaf(fields["shell"]) not in {
+            "powershell", "pwsh", "cmd", "bash", "zsh", "sh", "fish"}:
+        return False
+    if "current_date" in fields:
+        date = leaf(fields["current_date"])
+        try:
+            if not date or datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m-%d") != date:
+                return False
+        except ValueError:
+            return False
+    if "timezone" in fields:
+        zone = leaf(fields["timezone"])
+        if not zone or re.fullmatch(r"[A-Za-z_+-]+(?:/[A-Za-z0-9_+-]+)*", zone) is None:
+            return False
+    if "filesystem" in fields:
+        filesystem = fields["filesystem"]
+        if not container(filesystem, "filesystem", {}) or [child.tag for child in filesystem] != [
+                "workspace_roots", "permission_profile"]:
+            return False
+        roots, profile = filesystem
+        if not container(roots, "workspace_roots", {}) or len(roots) != 1 or \
+                roots[0].tag != "root" or leaf(roots[0]) != cwd:
+            return False
+        if not container(profile, "permission_profile", {"type": "disabled"}) or len(profile) != 1:
+            return False
+        permission = profile[0]
+        if not container(permission, "file_system", {"type": "unrestricted"}) or len(permission):
+            return False
+    return True
+
+
+def successful_terminal_check(compact: list[tuple[int, dict[str, Any]]],
+                              parent: list[tuple[int, dict[str, Any]]]) -> dict[str, Any]:
+    """Require one successful CLI turn and its matching completed parent task."""
+    terminals = [(line, value) for line, value in compact if value.get("type") == "error" or
+                 (isinstance(value.get("type"), str) and value["type"].startswith(("turn.", "thread.")) and
+                  value["type"] not in ("turn.started", "thread.started"))]
+    task_events = [(line, value["payload"]) for line, value in parent if
+                   value.get("type") == "event_msg" and isinstance(value.get("payload"), dict) and
+                   isinstance(value["payload"].get("type"), str) and
+                   (value["payload"]["type"].startswith(("task_", "turn_")) or
+                    value["payload"]["type"] == "error")]
+    messages = [(line, value["item"].get("text")) for line, value in compact if
+                value.get("type") == "item.completed" and isinstance(value.get("item"), dict) and
+                value["item"].get("type") == "agent_message"]
+    valid = len(terminals) == 1 and terminals[0][1].get("type") == "turn.completed" and \
+        terminals[0][0] == compact[-1][0] and len(task_events) == 2 and \
+        [payload["type"] for _line, payload in task_events] == ["task_started", "task_complete"]
+    if valid:
+        terminal = terminals[0][1]
+        start, complete = task_events[0][1], task_events[1][1]
+        final = complete.get("last_agent_message")
+        valid = isinstance(start.get("turn_id"), str) and bool(start["turn_id"]) and \
+            complete.get("turn_id") == start["turn_id"] and \
+            terminal.get("turn_id", start["turn_id"]) == start["turn_id"] and \
+            all(value.get("status", "completed") == "completed" and value.get("error") is None
+                for value in (terminal, complete)) and \
+            isinstance(final, str) and bool(final.strip()) and bool(messages) and \
+            isinstance(messages[-1][1], str) and messages[-1][1].strip() == final.strip() and \
+            not any(line > task_events[-1][0] and value.get("type") == "response_item"
+                    for line, value in parent)
+    return status("successful-terminal-outcome", "pass" if valid else "fail",
+                  [f"transcript:{line}" for line, _value in terminals] +
+                  [f"parent-session:{line}" for line, _value in task_events],
+                  "one successful CLI terminal and matching parent task completion/final output")
 
 
 def session_meta(path: Path) -> Optional[dict[str, Any]]:
@@ -509,6 +599,19 @@ def routes_precede_spawns(routes: list[dict[str, Any]], spawns: list[dict[str, A
                           topology: Optional[str] = None) -> bool:
     if not routes:
         return False
+    delegated = False
+    previous_line = 0
+    delegated_topology = None
+    for route in routes:
+        ownership, active_topology = route_decision(route["text"])
+        if ownership is None or route["line"] <= previous_line:
+            return False
+        if delegated and (ownership != "DELEGATE" or active_topology != delegated_topology):
+            return False
+        if ownership == "DELEGATE":
+            delegated = True
+            delegated_topology = active_topology
+        previous_line = route["line"]
     for spawn in spawns:
         prior = [route for route in routes if route["line"] < spawn["line"]]
         ownership, active_topology = route_decision(prior[-1]["text"]) if prior else (None, None)
@@ -777,15 +880,19 @@ def activation_session_checks(root: Path, spec: dict[str, Any], resolved: dict[s
                    value.get("type") == "event_msg" and isinstance(value.get("payload"), dict) and
                    value["payload"].get("type") == "user_message"]
         prompt_ok = len(prompts) == 1 and prompts[0][1] == spec["prompt"] and prompts[0][0] < routes[0]["line"]
-        user_messages = [content_text(value["payload"].get("content")) for _line, value in items if
+        user_messages = [(line, value["payload"].get("content")) for line, value in items if
                          value.get("type") == "response_item" and isinstance(value.get("payload"), dict) and
                          value["payload"].get("type") == "message" and value["payload"].get("role") == "user"]
         # The only permitted auxiliary user message is runtime environment metadata.
         # Skill requests, AGENTS instructions, and additional prompts contaminate this probe.
-        user_messages = [text for text in user_messages if not (
-            text.startswith("<environment_context>") and text.endswith("</environment_context>") and
-            not any(token in text for token in ("ROUTE:", "<skill>", "$codex-model-router:model-router")))]
-        prompt_ok = prompt_ok and user_messages == [spec["prompt"]]
+        prompt_ok = prompt_ok and all(line < routes[0]["line"] and isinstance(content, list) and
+            len(content) == 1 and isinstance(content[0], dict) and set(content[0]) == {"type", "text"} and
+            content[0]["type"] == "input_text" and isinstance(content[0]["text"], str)
+            for line, content in user_messages)
+        texts = [content_text(content) for _line, content in user_messages]
+        metadata_messages = [text for text in texts if environment_metadata(text, meta["cwd"])]
+        prompt_ok = prompt_ok and len(metadata_messages) <= 1 and \
+            [text for text in texts if text not in metadata_messages] == [spec["prompt"]]
         checks.append(status("neutral-user-prompt", "pass" if prompt_ok else "fail", refs,
                              "exact repository-controlled neutral user message, once, before routing"))
 
@@ -814,7 +921,7 @@ def activation_session_checks(root: Path, spec: dict[str, Any], resolved: dict[s
         _identity, final_line, final_text = final_echo(items)
         captured_final = resolved["final_output"].read_text(encoding="utf-8").strip()
         compact = json_lines(resolved["transcript"])
-        terminal = [value for _line, value in compact if value.get("type") in ("turn.completed", "turn.failed", "error")]
+        terminal = successful_terminal_check(compact, items)
         messages = [value["item"].get("text") for _line, value in compact if
                     value.get("type") == "item.completed" and isinstance(value.get("item"), dict) and
                     value["item"].get("type") == "agent_message"]
@@ -827,7 +934,7 @@ def activation_session_checks(root: Path, spec: dict[str, Any], resolved: dict[s
                  value["item"].get("type") == "file_change"]
         allowed_finals = {expected_note.strip(), "```\n" + expected_note.rstrip("\n") + "\n```",
                           "```text\n" + expected_note.rstrip("\n") + "\n```"}
-        completed = bool(note_ok and len(terminal) == 1 and terminal[0].get("type") == "turn.completed" and
+        completed = bool(note_ok and terminal["status"] == "pass" and
                          final_line and final_line > business and messages and
                          final_text.strip() == captured_final == messages[-1].strip() and
                          captured_final in allowed_finals and reads and not edits and observed["failed_tool_events"] == 0)
@@ -859,6 +966,8 @@ def observation(case_id: str, root: Path, repo_root: Path, transcript_path: Path
     if copy_results:
         copy_business_tree(actual_root, result_path)
     checks = process_checks(case_id, routes, children, spawns, results, parent_business_lines(parent_items))
+    terminal = successful_terminal_check(json_lines(transcript_path), parent_items)
+    checks.append(terminal)
     identities = identity_checks(children, spawns)
     published = artifact_publish_path or result_path
     artifact_ref = {"path": published.relative_to(root).as_posix(), "files": actual_tree,
@@ -867,7 +976,7 @@ def observation(case_id: str, root: Path, repo_root: Path, transcript_path: Path
     lifetime_sessions = [{"start_at": child["session_start_at"], "end_at": child["session_end_at"]}
                          for child in children]
     return {
-        "case_id": case_id, "outcome": "completed" if artifact_matches else "failed",
+        "case_id": case_id, "outcome": "completed" if artifact_matches and terminal["status"] == "pass" else "failed",
         "parent_session": parent, "worker_sessions": children, "route_events": routes,
         "timing": {
             "parent_session_lifetime_ms": round((parse_iso(parent["session_end_at"]) - parse_iso(parent["session_start_at"])).total_seconds() * 1000) if parent["session_end_at"] else None,
@@ -901,11 +1010,12 @@ def recompute_acceptance(report: dict[str, Any]) -> dict[str, Any]:
     process = all(item["process_validation"]["status"] == "pass" for item in observations)
     identity = all(item["identity_contract_validation"]["status"] == "pass" for item in observations)
     activation = report["activation_gate"]["status"] == "pass"
+    completed = sum(item["outcome"] == "completed" for item in observations)
     return {"scheduled_runs": len(observations),
-            "completed_runs": sum(item["outcome"] == "completed" for item in observations),
+            "completed_runs": completed,
             "artifact_pass": artifact, "required_route_process_pass": process,
             "identity_contract_pass": identity, "activation_gate_pass": activation,
-            "campaign_pass": activation and artifact and process and identity}
+            "campaign_pass": completed == len(observations) and activation and artifact and process and identity}
 
 
 def validate_acceptance(report: dict[str, Any]) -> dict[str, Any]:
@@ -1105,6 +1215,8 @@ def _derived_observation(root: Path, authored: dict[str, Any]) -> dict[str, Any]
             "transcript routes disagree with parent session")
     checks = process_checks(authored["case_id"], routes, children, spawns, results,
                             parent_business_lines(parent_items))
+    terminal = successful_terminal_check(json_lines(transcript_path), parent_items)
+    checks.append(terminal)
     identities = identity_checks(children, spawns)
 
     artifact = evidence["artifact_tree"]
@@ -1126,7 +1238,7 @@ def _derived_observation(root: Path, authored: dict[str, Any]) -> dict[str, Any]
     lifetime_sessions = [{"start_at": child["session_start_at"], "end_at": child["session_end_at"]}
                          for child in children]
     return {
-        "outcome": "completed" if artifact_matches else "failed",
+        "outcome": "completed" if artifact_matches and terminal["status"] == "pass" else "failed",
         "parent_session": parent,
         "worker_sessions": children,
         "route_events": routes,
