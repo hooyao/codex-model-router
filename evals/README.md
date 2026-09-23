@@ -58,7 +58,7 @@ observed record with:
 
 ```powershell
 python evals/scripts/live_evidence.py collect --root <evidence-root> --sessions-root "$env:CODEX_HOME\sessions"
-python evals/scripts/live_evidence.py validate --results <evidence-root>\live-results-v2.json
+python evals/scripts/live_evidence.py validate --results <evidence-root>\live-results-v3.json
 ```
 
 The collector uses role-bounded parent/child events for packet identity, native
@@ -71,6 +71,15 @@ runtime exposes measured billing. Its selective-only observed schema is kept
 separate from the frozen three-treatment synthetic comparison contract.
 Acceptance is recomputed during validation. Historical evidence can be
 reprocessed to a new `--output` without overwriting its original result.
+
+The canonical capture layout is `raw/` for the activation spec, transcript,
+final output, routing config, environment, hook provenance, CLI/manifest, and
+capability sources; `session-evidence/<case>/session-index.json` for session
+indexes; and fresh `results/` plus `live-results-v3.json` for collector output.
+Collection checks every destination before mutation, stages copies, validates
+the report against raw sources, and atomically publishes or rolls back.
+Validation reparses every hash-bound reference, including the frozen oracle;
+authored status and acceptance fields have no authority.
 
 See [CONTRACT.md](CONTRACT.md) for exact invariants and [DESIGN.md](DESIGN.md)
 for the measurement rationale.

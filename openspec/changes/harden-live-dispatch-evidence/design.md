@@ -21,6 +21,10 @@ Explicit selectors require captured spawn-schema and model-catalog evidence.
 Inheritance requires a separately captured inheritance contract. Missing
 evidence produces a capability blocker.
 
+Capability records contain file paths and hashes. Preflight opens each source,
+rejects empty/zero/mismatched evidence, parses a kind-specific schema, and
+derives supported arguments, model/effort compatibility, and inheritance.
+
 ### Parse only role-bounded events
 
 Routes come from controller messages, transport from spawn calls, runtime data
@@ -31,6 +35,13 @@ is absent or encrypted is unknown.
 
 The validator hashes every referenced artifact and recomputes campaign
 acceptance. Versioned reprocessing links the immutable original report.
+
+Validation treats the report as an untrusted cache: it reparses raw transcript
+and session events, validates index/source links, snapshots the actual result
+and frozen oracle, rebuilds every leaf, and then compares authored fields.
+Activation uses one formal `raw/` layout and source-bound hook provenance.
+Collection preflights all destinations, stages result copies, validates, and
+publishes atomically or rolls back fresh output.
 
 ## Risks / Trade-offs
 

@@ -76,7 +76,7 @@ inventing avoided-token counters. Synthetic campaigns cannot
 support release, savings, latency, or quality claims. Failures, retries,
 conflicts, route violations, and artifact failures remain visible.
 
-## Observed live evidence v2
+## Observed live evidence v3
 
 Live analysis parses only typed controller route events, native spawn calls,
 child assignment boundaries, child result events, runtime turn context, and
@@ -91,3 +91,18 @@ tree references are hash-bound. Validation recomputes acceptance from evidence
 statuses and rejects authored acceptance flags that disagree. Assignment-span
 overlap and session-lifetime overlap are distinct metrics. Historical reports
 are immutable inputs to versioned reprocessing outputs.
+
+Capability records are references, not evidence by themselves. Dispatch
+preflight opens each nonempty source, verifies its nonzero hash, parses its
+formal kind, derives spawn selectors and model/effort compatibility, and checks
+verified inheritance against the exact inherited pair. Live validation rebuilds
+every leaf from raw events, indexed session sources, actual artifacts, and a
+hash-bound frozen oracle. Unknown, unavailable, partial, contradictory, or
+quoted/example evidence never becomes a pass.
+
+The activation gate uses only the v3 `raw/` layout. It parses environment,
+routing config, CLI, manifest, hook provenance, spawn schema, and model catalog;
+binds the copied config to its source and transcript thread; and requires a
+controller message whose first characters are `ROUTE:` before business action.
+Collection is fresh-only and staged; existing or partially published output is
+never reused.

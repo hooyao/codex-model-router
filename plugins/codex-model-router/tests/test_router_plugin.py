@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import shutil
 import subprocess
@@ -881,6 +882,9 @@ class RouterPluginTests(unittest.TestCase):
             "source_evidence_lines", "source_sha256", "copied_sha256",
             "parent_thread_id", "subsequent mirror inspection",
             "verify.ps1` invocation necessarily reads the mirror",
+            "fresh-activation-probe-v3.json", "raw/activation-spec.json",
+            "resolved_python_executable_sha256", "source-bound",
+            "atomic renames", "frozen oracle",
         ):
             self.assertIn(expected, procedure)
         self.assertNotIn("codex exec --ephemeral", procedure)
@@ -1189,16 +1193,29 @@ class RouterPluginTests(unittest.TestCase):
             hook.build_hook_output({"hook_event_name": "Stop"})
 
     def dispatch_contract(self, mode="explicit") -> dict:
+        evidence_root = self.policy_workspace / "dispatch-evidence"
+        evidence_root.mkdir(exist_ok=True)
+        spawn_path = evidence_root / "spawn-schema.json"
+        catalog_path = evidence_root / "model-catalog.json"
+        inheritance_path = evidence_root / "inheritance.json"
+        spawn_path.write_text(json.dumps({"schema_version": 1, "kind": "spawn_schema",
+            "tool": "spawn_agent", "supported_arguments": ["task_name", "message", "model", "reasoning_effort"]}), encoding="utf-8")
+        catalog_path.write_text(json.dumps({"schema_version": 1, "kind": "model_catalog", "models": [
+            {"id": "gpt-5.6-sol", "reasoning_efforts": ["low", "high"]}]}), encoding="utf-8")
+        inheritance_path.write_text(json.dumps({"schema_version": 1, "kind": "inheritance_contract",
+            "tool": "spawn_agent", "when_omitted": True,
+            "inherits": {"model": "gpt-5.6-sol", "reasoning_effort": "high"}}), encoding="utf-8")
         evidence = [
-            {"id": "schema", "kind": "spawn_schema", "source": "runtime:spawn_agent",
-             "sha256": "1" * 64, "captured_at": "2026-09-23T04:00:00Z"},
-            {"id": "catalog", "kind": "model_catalog", "source": "runtime:model-list",
-             "sha256": "2" * 64, "captured_at": "2026-09-23T04:00:00Z"},
+            {"id": "schema", "kind": "spawn_schema", "source": str(spawn_path),
+             "sha256": hashlib.sha256(spawn_path.read_bytes()).hexdigest(), "captured_at": "2026-09-23T04:00:00Z"},
+            {"id": "catalog", "kind": "model_catalog", "source": str(catalog_path),
+             "sha256": hashlib.sha256(catalog_path.read_bytes()).hexdigest(), "captured_at": "2026-09-23T04:00:00Z"},
         ]
         refs = ["catalog"]
         if mode == "verified_inheritance":
             evidence.append({"id": "inheritance", "kind": "inheritance_contract",
-                             "source": "runtime:spawn-inheritance", "sha256": "3" * 64,
+                             "source": str(inheritance_path),
+                             "sha256": hashlib.sha256(inheritance_path.read_bytes()).hexdigest(),
                              "captured_at": "2026-09-23T04:00:00Z"})
             refs = ["inheritance"]
         return {
@@ -1207,7 +1224,6 @@ class RouterPluginTests(unittest.TestCase):
             "packet": {"worker_name": "edit-gpt-5-6-sol-high", "task_id": "edit-gpt-5-6-sol-high",
                        "native_task_name": "edit_gpt_5_6_sol_high"},
             "native_dispatch": {"tool": "spawn_agent", "naming_field": "task_name",
-                                "supported_arguments": ["task_name", "message", "model", "reasoning_effort"],
                                 "native_name": "edit_gpt_5_6_sol_high", "schema_evidence_ref": "schema"},
             "selection": {"mode": mode, "model": "gpt-5.6-sol", "reasoning_effort": "high",
                           "evidence_refs": refs},
@@ -1218,7 +1234,10 @@ class RouterPluginTests(unittest.TestCase):
         value = self.dispatch_contract()
         self.assertEqual(value, dispatch.validate_dispatch_contract(value))
 
-        value["native_dispatch"]["supported_arguments"].remove("model")
+        source = Path(value["capability_evidence"][0]["source"])
+        source.write_text(json.dumps({"schema_version": 1, "kind": "spawn_schema", "tool": "spawn_agent",
+                                     "supported_arguments": ["task_name", "message"]}), encoding="utf-8")
+        value["capability_evidence"][0]["sha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
         with self.assertRaisesRegex(dispatch.DispatchContractError, "selectors are absent"):
             dispatch.validate_dispatch_contract(value)
 
@@ -1232,6 +1251,31 @@ class RouterPluginTests(unittest.TestCase):
         self.assertEqual(value, dispatch.validate_dispatch_contract(value))
         value["selection"]["evidence_refs"] = ["catalog"]
         with self.assertRaisesRegex(dispatch.DispatchContractError, "inheritance_contract"):
+            dispatch.validate_dispatch_contract(value)
+
+    def test_dispatch_contract_rejects_nonexistent_tampered_and_impossible_capability_evidence(self) -> None:
+        value = self.dispatch_contract()
+        value["capability_evidence"][0]["source"] = str(self.policy_workspace / "missing.json")
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "does not exist"):
+            dispatch.validate_dispatch_contract(value)
+
+        value = self.dispatch_contract()
+        value["capability_evidence"][0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "nonzero"):
+            dispatch.validate_dispatch_contract(value)
+
+        value = self.dispatch_contract()
+        value["selection"]["reasoning_effort"] = "ultra"
+        value["canonical_name"] = "edit-gpt-5-6-sol-ultra"
+        value["packet"] = {"worker_name": value["canonical_name"], "task_id": value["canonical_name"],
+                           "native_task_name": "edit_gpt_5_6_sol_ultra"}
+        value["native_dispatch"]["native_name"] = "edit_gpt_5_6_sol_ultra"
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "unsupported"):
+            dispatch.validate_dispatch_contract(value)
+
+        value = self.dispatch_contract("verified_inheritance")
+        value["selection"]["model"] = "gpt-6-astra"
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "contradict"):
             dispatch.validate_dispatch_contract(value)
 
 

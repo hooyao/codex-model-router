@@ -76,3 +76,13 @@ topology checks use paired `task_started`/`task_complete` assignment spans.
 Session-lifetime overlap remains a separate diagnostic and is never substituted
 for assignment concurrency. Derived historical reports link, rather than
 replace, their original result.
+
+The v3 integrity boundary treats every authored summary as an untrusted cache.
+The validator reopens transcript, session index, session JSONL, activation,
+artifact, oracle, and original-report references and deterministically rebuilds
+identity, process, artifact, activation, and campaign outcomes. Dispatch
+capability JSON is strict source evidence: supported arguments, available model
+IDs, effort compatibility, and inheritance are derived from parsed sources.
+Output publication preflights the report and result-tree destinations, stages
+copies, validates before the final report rename, and rolls back newly
+published results on failure.

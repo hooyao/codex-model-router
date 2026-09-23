@@ -13,6 +13,12 @@ or unresolved model/effort values.
 - **THEN** dispatch is blocked with a capability-evidence record
 - **AND** no model route is fabricated
 
+#### Scenario: Capability metadata names a nonexistent or contradictory source
+
+- **WHEN** a capability path is absent, empty, zero-hashed, hash-mismatched, malformed, or its parsed facts do not support the selected model/effort
+- **THEN** preflight blocks before dispatch
+- **AND** claimed metadata does not substitute for opened source evidence
+
 ### Requirement: Role-bounded observed evidence
 
 The live collector SHALL keep packet identity, native transport, selector
@@ -24,6 +30,12 @@ them from aggregate inherited text.
 - **WHEN** inherited instructions contain worker-packet template fields
 - **THEN** those fields do not satisfy packet or final-echo evidence
 
+#### Scenario: Identity dimensions contradict
+
+- **WHEN** packet Task ID/name, native name, selected or inherited model/effort, runtime metadata, and final echo do not describe one canonical worker
+- **THEN** identity validation fails
+- **AND** missing facts remain unknown rather than passing
+
 ### Requirement: Evidence-derived acceptance and chronology
 
 Validation SHALL hash all transcript, index, session, and artifact references,
@@ -34,6 +46,36 @@ lifetime overlap SHALL be reported separately.
 
 - **WHEN** an authored campaign flag disagrees with derived statuses
 - **THEN** validation rejects the report
+
+#### Scenario: A leaf status or frozen oracle is tampered
+
+- **WHEN** an authored leaf differs from reparsed raw events or a referenced original, index, session, artifact, or oracle hash changes
+- **THEN** validation rejects the report before computing campaign acceptance
+
+### Requirement: Source-bound activation and fresh publication
+
+The activation gate SHALL parse the formal probe, environment, routing config,
+CLI, manifest, capability, and hook-provenance sources in one canonical `raw/`
+layout. A route SHALL count only when its controller message begins with
+`ROUTE:` before business action. Collection SHALL preflight every destination,
+stage outputs, publish fresh with atomic renames, and roll back on validation
+failure.
+
+#### Scenario: Route text is quoted or output already exists
+
+- **WHEN** `ROUTE:` occurs only in an example/quote or any report/result destination exists
+- **THEN** activation or collection fails without mutating existing evidence
+
+### Requirement: Dependency and receipt provenance
+
+Required process checks SHALL bind producer-authored receipt hashes to the
+dependent consumer packet and SHALL derive dependency stage order from paired
+assignment spans. Every worker dispatch SHALL follow a role-bounded route.
+
+#### Scenario: Receipt or follow-up linkage is missing
+
+- **WHEN** a consumer does not quote its producer's observed receipt hash or a dependent assignment begins before its producer ends
+- **THEN** the process check fails
 
 ### Requirement: Immutable historical reprocessing
 

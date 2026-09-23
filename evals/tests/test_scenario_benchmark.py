@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from evals.scripts import contract as c, evaluate, fixture, live_evidence, runner
 
@@ -501,6 +502,77 @@ class ScenarioBenchmarkTests(unittest.TestCase):
         self.assertIsNone(spawns[0]["packet_identity"]["worker_name"])
         self.assertEqual("real-gpt-5-6-sol-high", identity["worker_name"])
         self.assertEqual(3, line)
+
+    def test_live_route_parser_rejects_quoted_or_late_route_prose(self) -> None:
+        items = [
+            (1, {"type": "event_msg", "payload": {"type": "agent_message",
+                  "message": "Example:\nROUTE: DIRECT — quoted"}}),
+            (2, {"type": "event_msg", "payload": {"type": "agent_message",
+                  "message": "> ROUTE: DIRECT — quote"}}),
+            (3, {"type": "event_msg", "payload": {"type": "agent_message",
+                  "message": "ROUTE: DIRECT — bounded\nNow acting."}}),
+        ]
+        routes = live_evidence.route_events_from_items(items)
+        self.assertEqual([3], [item["line"] for item in routes])
+        self.assertTrue(live_evidence.routes_precede_spawns(routes, [{"line": 5}], 4))
+        self.assertFalse(live_evidence.routes_precede_spawns(routes, [{"line": 5}], 2))
+
+    def test_live_identity_rejects_cross_dimension_contradictions_and_accepts_verified_inheritance(self) -> None:
+        canonical = "edit-gpt-5-6-sol-high"
+        native = "edit_gpt_5_6_sol_high"
+        child = {"thread_id": "worker-1", "agent_path": f"/root/{native}",
+                 "runtime": {"model": "gpt-5.6-sol", "reasoning_effort": "high", "evidence_line": 8},
+                 "final_echo": {"worker_name": canonical, "task_id": canonical, "native_task_name": native},
+                 "final_echo_line": 20}
+        spawn = {"line": 10, "packet_identity": {"worker_name": canonical, "task_id": canonical,
+                 "native_task_name": native}, "arguments": {"task_name": native},
+                 "verified_inheritance": {"verified": True, "model": "gpt-5.6-sol",
+                                           "reasoning_effort": "high"}}
+        self.assertEqual("pass", live_evidence.identity_checks([child], [spawn])[0]["status"])
+        contradictory = copy.deepcopy(child)
+        contradictory["runtime"]["model"] = "gpt-6-astra"
+        self.assertEqual("fail", live_evidence.identity_checks([contradictory], [spawn])[0]["status"])
+        contradictory = copy.deepcopy(child)
+        contradictory["final_echo"]["task_id"] = "different-gpt-5-6-sol-high"
+        self.assertEqual("fail", live_evidence.identity_checks([contradictory], [spawn])[0]["status"])
+
+    def test_collection_refuses_existing_destinations_before_mutation(self) -> None:
+        root = Path(self.temp.name) / "live"
+        root.mkdir()
+        destination = root / "live-results-v3.json"
+        destination.write_text("preserve\n", encoding="utf-8")
+        with mock.patch.object(live_evidence, "collect") as collector:
+            with self.assertRaisesRegex(live_evidence.LiveEvidenceError, "overwrite"):
+                live_evidence.collect_and_publish(root, ROOT, root / "sessions", destination)
+            collector.assert_not_called()
+        self.assertEqual("preserve\n", destination.read_text(encoding="utf-8"))
+
+        destination.unlink()
+        (root / "results").mkdir()
+        marker = root / "results" / "marker.txt"
+        marker.write_text("preserve\n", encoding="utf-8")
+        with mock.patch.object(live_evidence, "collect") as collector:
+            with self.assertRaisesRegex(live_evidence.LiveEvidenceError, "collected results"):
+                live_evidence.collect_and_publish(root, ROOT, root / "sessions", destination)
+            collector.assert_not_called()
+        self.assertEqual("preserve\n", marker.read_text(encoding="utf-8"))
+
+    def test_collection_rolls_back_partial_publication_when_validation_fails(self) -> None:
+        root = Path(self.temp.name) / "live-rollback"
+        root.mkdir()
+        destination = root / "live-results-v3.json"
+
+        def invalid_collect(_root, _repo, _sessions, staging):
+            (staging / "investigation-reuse").mkdir(parents=True)
+            (staging / "investigation-reuse" / "marker.txt").write_text("staged\n", encoding="utf-8")
+            return {"schema_version": 999, "data_origin": "observed"}
+
+        with mock.patch.object(live_evidence, "collect", side_effect=invalid_collect):
+            with self.assertRaisesRegex(live_evidence.LiveEvidenceError, "report keys|not an observed"):
+                live_evidence.collect_and_publish(root, ROOT, root / "sessions", destination)
+        self.assertFalse(destination.exists())
+        self.assertFalse((root / "results").exists())
+        self.assertEqual([], list(root.glob(".live-evidence-stage-*")))
 
     def test_live_acceptance_is_recomputed_after_flag_tampering(self) -> None:
         report = {"activation_gate": {"status": "fail"}, "observations": []}

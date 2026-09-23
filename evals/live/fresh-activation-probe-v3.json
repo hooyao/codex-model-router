@@ -1,0 +1,38 @@
+{
+  "schema_version": 3,
+  "probe_id": "fresh-activation-no-explicit-skill",
+  "prompt": "Read note.txt and report its exact contents without modifying files.",
+  "prompt_must_not_contain": [
+    "$codex-model-router:model-router",
+    "Use the model-router skill",
+    "ROUTE:"
+  ],
+  "expected_route": "DIRECT",
+  "paths": {
+    "transcript": "raw/activation.jsonl",
+    "final_output": "raw/activation-final.txt",
+    "routing_config": "raw/activation-routing.json",
+    "environment": "raw/activation-environment.json",
+    "hook_provenance": "raw/activation-hook-provenance.json",
+    "codex_version": "raw/codex-version.txt",
+    "plugin_manifest": "raw/plugin-manifest.json",
+    "spawn_schema": "raw/spawn-schema.json",
+    "model_catalog": "raw/model-catalog.json",
+    "activation_session_index": "session-evidence/activation/session-index.json"
+  },
+  "required_environment_fields": [
+    "resolved_python_executable",
+    "resolved_python_executable_sha256",
+    "python_version",
+    "python_encodings_import_exit_code",
+    "sandbox_mode_requested",
+    "sandbox_probe_exit_code",
+    "codex_version",
+    "plugin_manifest_sha256"
+  ],
+  "capability_kinds": [
+    "spawn_schema",
+    "model_catalog"
+  ],
+  "root_cause_policy": "Report unknown unless a captured source-specific observation establishes the cause."
+}

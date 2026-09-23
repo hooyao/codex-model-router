@@ -17,3 +17,11 @@
 ## 4. Validation
 
 - [x] 4.1 Run unit suites, plugin validation, strict OpenSpec validation, and diff checks.
+
+## 5. Independent-review P1 corrections
+
+- [x] 5.1 Parse and hash capability sources; derive selector compatibility and inheritance.
+- [x] 5.2 Enforce complete identity relationships and raw-derived report validation.
+- [x] 5.3 Require formal source-bound activation and one canonical capture layout.
+- [x] 5.4 Stage fresh collection and add overwrite/rollback adversarial tests.
+- [x] 5.5 Bind receipts, dependency spans, and route-before-business chronology.
