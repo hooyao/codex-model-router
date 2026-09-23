@@ -57,7 +57,34 @@
     "output_tokens": 27494,
     "reasoning_output_tokens": 9571
   },
-  "cost": {"kind": "unavailable", "complete": false, "usd": null},
+  "cost": {
+    "kind": "estimated_api_standard_short_context",
+    "rate_card_url": "https://developers.openai.com/api/docs/pricing",
+    "rate_card_checked_on": "2026-09-23",
+    "billing_verified": false,
+    "selected_scenario_sessions": 14,
+    "selected_scenario_input_tokens": 3193668,
+    "selected_scenario_cached_input_tokens": 2832916,
+    "selected_scenario_cache_write_input_tokens": 311803,
+    "selected_scenario_output_tokens": 43896,
+    "selected_scenario_usd": 2.715472525,
+    "activation_probe_usd": 0.149307,
+    "failed_activation_attempts_usd": 0.18108077,
+    "all_identified_attempts_usd": 3.045860295,
+    "scenario_usd": {
+      "direct-small-control": 0.2197838,
+      "investigation-reuse": 0.46046463,
+      "serial-escalation": 0.42967305,
+      "parallel-disjoint": 0.634925185,
+      "architecture-review": 0.97062586
+    },
+    "rates_usd_per_million": {
+      "gpt-5.6-sol": { "input": 4.0, "cached_input": 0.4, "cache_write_input": 5.0, "output": 20.0 },
+      "gpt-6-luna": { "input": 0.1, "cached_input": 0.01, "cache_write_input": 0.125, "output": 0.5 },
+      "gpt-6-astra": { "input": 10.0, "cached_input": 1.0, "cache_write_input": 12.5, "output": 50.0 }
+    },
+    "method": "Sum each distinct parent and child session's ordinary, cached, cache-write, and output tokens at its observed model's Standard short-context API rate; ordinary=input-cached-cache_write."
+  },
   "validated_result": {
     "path": "live-results-final.json",
     "sha256": "aeff49f0e763c60f063392507f17411dcc4a9f4f17b260a3cc2db11a274af6e0"

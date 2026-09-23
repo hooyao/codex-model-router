@@ -35,7 +35,22 @@ Delegated identity is UNKNOWN because current persisted parent spawn packets are
 
 The source-backed supported-selection control accepted `gpt-6-luna`/low. The negative-capability control rejected a nonexistent model with a nonzero exit. Both controls passed.
 
-Across the five scenario parents, measured lifetime totals 1,067,632 ms. Terminal usage records report 2,191,799 input tokens, 2,007,201 cached input tokens, 165,637 cache-write input tokens, 27,494 output tokens, and 9,571 reasoning tokens. USD cost is unavailable and is not estimated. These are observed single-campaign totals, not comparative cost or latency claims.
+Across the five scenario parents, measured lifetime totals 1,067,632 ms. Their terminal usage records report 2,191,799 input tokens, 2,007,201 cached input tokens, 165,637 cache-write input tokens, 27,494 output tokens, and 9,571 reasoning tokens. These parent totals exclude the nine child sessions: the 123 response IDs are distinct across the 14 scenario sessions. Including children, the five scenarios used 3,193,668 input tokens (2,832,916 cached and 311,803 cache-write) and 43,896 output tokens.
+
+Using the [official OpenAI API Standard rate card](https://developers.openai.com/api/docs/pricing) on 2026-09-23, the five scenarios have an **estimated API token cost of $2.715473**. The controller used `gpt-5.6-sol`; workers used `gpt-6-luna` and one `gpt-6-astra`. Every observed response had fewer than 272,000 input tokens, so the short-context rates apply. The calculation treats reasoning tokens as part of reported output tokens and calculates ordinary input as `input - cached input - cache-write input`.
+
+| Scenario | Parent and child sessions | Estimated USD |
+| --- | ---: | ---: |
+| direct-small-control | 1 | $0.219784 |
+| investigation-reuse | 3 | $0.460465 |
+| serial-escalation | 2 | $0.429673 |
+| parallel-disjoint | 5 | $0.634925 |
+| architecture-review | 3 | $0.970626 |
+| **Five scenarios** | **14** | **$2.715473** |
+
+The successful activation probe adds an estimated $0.149307. Two failed activation attempts that reached a model add $0.181081; a pre-session CLI invocation failure consumed no observed model tokens. Across these identified attempts and the five scenarios, the estimated API token cost is **$3.045860**. The rate card, per-model token classes, and exact unrounded totals are in `campaign-summary.json`.
+
+Formula per session: `(ordinary_input × input_rate + cached_input × cached_rate + cache_write_input × cache_write_rate + output × output_rate) / 1,000,000`. The Standard short-context USD rates per million tokens are `gpt-5.6-sol` $4/$0.40/$5/$20, `gpt-6-luna` $0.10/$0.01/$0.125/$0.50, and `gpt-6-astra` $10/$1/$12.50/$50, in the same input/cached/cache-write/output order. No Fast-mode override was present in the captured launch commands. These figures estimate API pricing from observed token usage; they are not a verified invoice. The campaign has no live forced-direct or mandatory-delegation comparison arm, so it does not establish cost savings.
 
 ## Repository defects fixed during the campaign
 
