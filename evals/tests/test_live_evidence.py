@@ -327,7 +327,7 @@ class LiveEvidenceTests(unittest.TestCase):
         self.assertFalse(live.routes_precede_spawns(routes, [{"line": 23}], 3, "ISOLATED_SERIAL"))
 
     def test_bundled_decision_resolver_is_routing_transport(self):
-        resolver = r'python C:\plugin\hooks\execution_decision.py --config C:\work\routing.json'
+        resolver = r'$request | python C:\plugin\hooks\execution_decision.py --config C:\work\routing.json'
         items = [
             (1, event("response_item", {"type": "custom_tool_call", "name": "exec", "input": resolver})),
             (2, route("ROUTE: DIRECT — bounded")),
@@ -348,6 +348,25 @@ class LiveEvidenceTests(unittest.TestCase):
         observed = live.transcript_observations(transcript)
         self.assertEqual(2, observed["route_events"][0]["line"])
         self.assertEqual(3, observed["first_business_line"])
+
+    def test_mixed_resolver_and_business_command_is_not_routing_transport(self):
+        mixed = (r'$request | python C:\plugin\hooks\execution_decision.py '
+                 r'--config C:\work\routing.json; Get-Content README.md')
+        items = [
+            (1, event("response_item", {"type": "custom_tool_call", "name": "exec", "input": mixed})),
+            (2, route("ROUTE: DIRECT — too late")),
+        ]
+        self.assertEqual([1], live.parent_business_lines(items))
+        transcript = self.root / "mixed-routing-business.jsonl"
+        write_lines(transcript, [
+            {"type": "item.completed", "item": {"type": "command_execution", "command": mixed,
+                                                   "status": "completed", "exit_code": 0}},
+            {"type": "item.completed", "item": {"type": "agent_message",
+                                                   "text": "ROUTE: DIRECT — too late"}},
+        ])
+        observed = live.transcript_observations(transcript)
+        self.assertEqual(1, observed["first_business_line"])
+        self.assertGreater(observed["route_events"][0]["line"], observed["first_business_line"])
 
     def test_delegation_cannot_return_controller_business_to_direct(self):
         for case in (item for item in live.CASES if item != "direct-small-control"):

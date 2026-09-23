@@ -52,7 +52,7 @@ not a self-reported savings counter.
 
 Live execution remains an explicit operator action; the repository never starts
 paid model calls from the offline runner. After an operator has retained the
-four required selective-treatment CLI transcripts, disposable workspaces, and
+five required selective-treatment CLI transcripts, disposable workspaces, and
 persisted Codex sessions under one evidence root, derive and validate the
 observed record with:
 
