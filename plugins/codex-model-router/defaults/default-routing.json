@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "selection_principle": "Choose the least expensive available model class and lowest supported reasoning effort that can reliably satisfy the task. Escalate for ambiguity, risk, multi-step tool use, multiple sources, or important tradeoffs.",
   "runtime_resolution": "Model classes are advisory preferences. Resolve them against the models and reasoning efforts exposed by the current runtime; never invent an unavailable model or effort.",
   "execution_policy": {
@@ -10,8 +10,14 @@
       "no-network-or-sync",
       "no-long-running-or-monitoring",
       "no-failure-or-recovery-workflow",
+      "no-named-multistep-runbook",
       "no-substantive-research-or-investigation",
-      "no-independent-review-or-validation"
+      "no-independent-review-or-validation",
+      "no-high-risk",
+      "permissions-confirmed",
+      "safety-constraints-known",
+      "verification-plan-present",
+      "write-scope-known"
     ],
     "delegate_if_any": [
       "multiple-repositories-systems-or-sources",
@@ -20,9 +26,34 @@
       "long-running-or-monitoring",
       "failure-or-recovery-workflow",
       "substantive-research-or-investigation",
-      "independent-review-or-validation"
+      "independent-review-or-validation",
+      "high-risk"
     ],
-    "reroute_on_escalation": true
+    "reroute_on_escalation": true,
+    "delegate_topology": {
+      "parallel_enabled": true,
+      "parallel_requires_all": [
+        "multiple-bounded-tasks",
+        "independent-tasks",
+        "no-dependencies",
+        "disjoint-write-scopes"
+      ],
+      "fallback_mode": "isolated_serial",
+      "context_isolation": "minimal-packet-compact-receipt"
+    },
+    "limits": {
+      "max_depth": 1,
+      "max_concurrency": 3,
+      "max_retries": 1
+    },
+    "verification": {
+      "direct_minimum": "self_check",
+      "delegate_minimum": "self_check",
+      "independent_review_if_any": [
+        "independent-review-required",
+        "high-risk"
+      ]
+    }
   },
   "effort_guidance": {
     "low": "Use for clear, short, repeatable work with little ambiguity.",

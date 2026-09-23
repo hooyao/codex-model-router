@@ -9,17 +9,38 @@ injects policy; it does not spawn agents itself.
 ## Controller/Worker Contract
 
 Before inspecting business files, researching, running commands, editing,
-testing, invoking a task Skill, or making a network call, the controller emits
+testing, invoking a task Skill, or making a network call, the controller records
+a validated routing decision contract and emits
 `ROUTE: DIRECT — <rule/reason>` or
-`ROUTE: DELEGATE — <rule/model/effort/reason>`. Skills define HOW, not WHO.
+`ROUTE: DELEGATE — <topology/rule/model/effort/reason>`. Skills define HOW, not WHO.
 
 DIRECT requires one local scope, one bounded known outcome, and no network or
 synchronization, long-running work or monitoring, failure/recovery workflow,
-substantive research/investigation, or independent review/validation. DELEGATE
+substantive research/investigation, high risk, or independent review/validation.
+Permissions, safety constraints, write scope, and a self-check plan must also be
+known. Unknown signals do not qualify for DIRECT. DELEGATE
 is required when any such nontrivial signal exists, including multiple
 repositories, systems, or sources and named multi-step runbooks. A direct task
 that reveals a delegation signal must be rerouted before its next business
-action.
+action. The versioned result records ownership, topology, verification, rule,
+reasons, limits, and any direct-bound escalation trigger.
+
+The injected routing block includes the absolute bundled resolver path, the
+workspace config path, and the complete compact request field inventory. The
+controller sends one decision-request-v1 JSON object to
+`execution_decision.py --config <routing.json>` on standard input and uses the
+validated JSON result. The full request schema and example are documented in
+[`skills/model-router/references/decision-contract.md`](skills/model-router/references/decision-contract.md).
+
+A delegated decision resolves to `PARALLEL` only for multiple bounded,
+independent, dependency-free tasks with disjoint write scopes. Any unknown,
+dependency, shared state, or overlapping write scope resolves to
+`ISOLATED_SERIAL`. Isolation describes a minimized packet and compact result
+receipt; it does not erase parent history or provide a technical sandbox.
+Depth, concurrency, retry, permission, safety, write-ownership, and verification
+constraints apply to both direct and delegated execution. Configured numeric
+limits are ceilings and must be lowered to the actual runtime capability; they
+do not assert that a spawn API or a number of worker slots exists.
 
 Only a DELEGATE route triggers worker capability discovery and model/effort
 selection. If native spawn or wait/collect is unavailable, the controller
@@ -116,14 +137,15 @@ and interpreter failures. On POSIX it runs every event through the resolved
 launches, so `hooks.json` and the package validator also require the literal
 `python` command on Windows.
 
-Schema version 2 is a JSON object with exactly these fields:
+Schema version 3 is a JSON object with exactly these fields:
 
-- `schema_version`: integer `2`.
+- `schema_version`: integer `3`.
 - `selection_principle` and `runtime_resolution`: non-empty strings.
 - `execution_policy`: `default_mode` (`direct`, `delegate`, or `evaluate`),
   non-empty `direct_requires_all` and `delegate_if_any` arrays of supported
-  machine-readable signals, and `reroute_on_escalation: true`. The two signal
-  arrays must contain every required direct/delegate signal exactly once.
+  machine-readable signals, `reroute_on_escalation: true`, explicit delegate
+  topology rules, bounded depth/concurrency/retry limits, and verification
+  minima. Required signal arrays are exact sets.
 - `effort_guidance`: non-empty string guidance for `low`, `medium`, `high`, and
   `xhigh`.
 - `official_sources`: a non-empty array of HTTPS URLs.
@@ -132,14 +154,12 @@ Schema version 2 is a JSON object with exactly these fields:
   `delegate`, or `evaluate`, `preferred_model_class` set to `Astra`, `Sol`,
   `Terra`, or `Luna`, a supported `reasoning_effort`, and a non-empty `rationale`.
 
-Valid schema v1 files remain supported and are injected without rewriting or
-expanding their JSON. The hook applies the built-in v2 execution policy and
-treats each legacy example as `execution_mode: evaluate`; the compatibility
-notice is included next to the injected v1 JSON. New files use v2. `direct` is an
-eligibility hint subject to every direct criterion, `delegate` is mandatory,
-and `evaluate` asks the agent to apply the full semantic gate. These fields are
-machine-readable policy inputs, not a claim that static config can completely
-classify arbitrary natural-language tasks.
+Obsolete schema v1 and v2 files are rejected rather than silently translated.
+Regenerate or deliberately migrate them to schema v3. `direct` is an eligibility
+hint subject to every direct criterion, `delegate` is mandatory, and `evaluate`
+applies the structured semantic gate. These fields are machine-readable policy
+inputs, not a claim that static config can completely classify arbitrary
+natural-language tasks.
 
 Precedence is: hard delegation signals first; one matching example overrides
 `execution_policy.default_mode`; no match uses the global default; disagreeing
@@ -212,8 +232,9 @@ python -m unittest discover -s tests -v
 
 The validation command checks package structure and synthetic lifecycle outputs
 without a network connection or a live Codex session. Regression tests check
-the v1/v2 schemas, route gate, escalation rule, meta-task routing, deterministic
-worker naming, worker responsibilities, and context size. These are
+schema v3 and obsolete-version rejection, ownership/topology precedence,
+escalation records, verification, deterministic worker naming, worker
+responsibilities, and context size. These are
 instruction-contract checks, not evidence of live-model compliance or savings.
 
 For live behavioral validation, follow
@@ -238,8 +259,8 @@ automatic hook support or controller compliance.
 - No direct subagent dispatch, cancellation, or strict `PreToolUse` enforcement.
 
 This is policy enforcement at the agent-instruction layer. Context injection
-cannot technically intercept tool calls and is not an OS/tool permission
-barrier. This plugin registers only the three context hooks above; it does not
+cannot erase history, technically intercept tool calls, create a sandbox, or
+act as an OS/tool permission barrier. This plugin registers only the three context hooks above; it does not
 install tool-denial hooks, alter permissions, or guarantee model compliance.
 Codex supports separate tool hooks, but their coverage has exceptions and they
 are not implemented here. See the official [hook documentation](https://learn.chatgpt.com/docs/hooks#tool-coverage).

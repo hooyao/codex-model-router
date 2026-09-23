@@ -9,12 +9,16 @@ The plugin separates execution ownership from model routing. Before the first
 business action, the primary agent chooses DIRECT for genuinely local, bounded
 work or DELEGATE for nontrivial work. Only delegated work is matched to an
 available worker model and effort. A direct task that reveals complexity must
-be rerouted before the next business action.
+be rerouted with a recorded trigger before the next business action. Delegated
+work uses an isolated serial topology unless multiple bounded tasks are
+explicitly independent, dependency-free, and write-disjoint.
 
 ## What It Does
 
 - Repeats an explicit pre-business-action DIRECT/DELEGATE gate on
   `SessionStart` and `UserPromptSubmit`.
+- Records a versioned decision that separates ownership, delegate topology,
+  and verification requirements; unknown signals cannot take the direct path.
 - Injects a bounded worker contract on `SubagentStart`.
 - Loads, validates, and injects editable repo-local routing examples on every
   supported lifecycle event.
@@ -47,8 +51,8 @@ dispatch through `PreToolUse`, connect to an MCP server, call a network service,
 or store credentials.
 
 The execution-ownership contract is policy enforcement at the agent-instruction
-layer. Context injection cannot intercept tool calls and is not an OS/tool
-permission barrier. Offline tests check emitted instructions and schema behavior,
+layer. Context injection cannot erase history, intercept tool calls, create a
+sandbox, or act as an OS/tool permission barrier. Offline tests check emitted instructions and schema behavior,
 not live compliance.
 When a native dispatch API has no supported name field, the canonical worker
 name remains the worker packet Task ID and appears in the result, but the
@@ -92,7 +96,7 @@ Init validates the actual runtime and lifecycle hook command path and creates
 `.codex-model-router/routing.json` only when absent. It never overwrites edits.
 Hooks also initialize a missing file, discover existing config upward from a
 nested `cwd`, and fail clearly rather than falling back on invalid config. See
-the plugin README for the versioned schema, v1 compatibility, execution modes,
+the plugin README for the versioned schema, execution modes,
 discovery precedence, size budgets, and failure behavior. The default model
 routing policy follows official
 [Codex model guidance](https://learn.chatgpt.com/docs/models) and the
@@ -156,28 +160,22 @@ no Git history; run it from a checkout, or pass `--baseline <git-ref>` in CI.
 
 ## Evaluation
 
-Offline evaluation lives under [`evals`](evals/README.md). The strict v2 contract
-checks complete paired campaigns, hashes, provenance, accounting ledgers, and
-failure precedence. Exactly one fixture-backed task (`small-edit`) has an
-exact-tree grader; eight other scenarios remain draft. Validate the matrix with:
+Offline evaluation lives under [`evals`](evals/README.md). The strict scenario
+contract freezes five exact-tree tasks and compares forced direct, mandatory
+serial delegation, and selective execution. Validate and generate the matrix:
 
 ```powershell
-python evals/scripts/evaluate.py validate-cases --cases evals/cases.json
+python evals/scripts/evaluate.py validate-manifest --manifest evals/benchmark.json
+python evals/scripts/runner.py --manifest evals/benchmark.json --output evals/generated
 ```
 
-The existing strict v2 synthetic campaign predates execution-ownership routing
-and still models the earlier pure-orchestrator policy; it is retained as an
-integrity fixture, not evidence for current DIRECT/DELEGATE behavior.
-Ten reproducible synthetic campaigns test integrity and decision behavior without
-live models. Reports include pass rates, exploratory paired quality differences,
-ratios of mean cost/latency, and safety/policy counts. They do not establish router
-savings or authorize a release pass. The `ccusage` importer always produces
-unverified observations. See the evaluation README for commands and limitations.
-
-The no-paid-call [EvalPlus campaign preparation layer](evals/EVALPLUS.md) adds a
-pinned six-task HumanEval+/MBPP+ schedule, clean Codex CLI arm isolation, a
-provider-budget refusal gate, terminal-usage accounting, and a Docker/WSL-only
-grader adapter contract. It remains dry-run unless `--live` is explicit.
+The scenarios target noisy investigation and receipt reuse, direct-to-delegate
+escalation, dependent serial work, safe parallelism with disjoint artifacts,
+independent architecture review, and one small direct calibration. Reports keep
+quality, route adherence, critical-path/wall time, context and receipt volume,
+tools/logs, retries, conflicts, failures, and measured versus estimated cost
+separate. Bundled observations are deterministic synthetic fixtures and do not
+establish live performance or savings.
 
 ## OpenSpec
 
@@ -190,5 +188,7 @@ The earlier evaluation and pure-orchestrator reconciliation is documented in
 [`openspec/changes/add-evaluation-integrity-fixture`](openspec/changes/add-evaluation-integrity-fixture).
 Those records describe completed historical changes and do not override the
 current execution-ownership policy.
-The clean EvalPlus CLI campaign is specified under
-[`openspec/changes/add-evalplus-cli-harness`](openspec/changes/add-evalplus-cli-harness).
+The current scenario benchmark replacement is specified under
+[`openspec/changes/replace-evalplus-with-router-scenarios`](openspec/changes/replace-evalplus-with-router-scenarios).
+Earlier EvalPlus records are historical only and no longer describe the active
+evaluation harness.

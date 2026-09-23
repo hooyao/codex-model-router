@@ -26,6 +26,7 @@ validator = load_module("router_validator", PLUGIN_ROOT / "scripts" / "validate_
 hook = load_module("router_hook", PLUGIN_ROOT / "hooks" / "router_hook.py")
 naming = load_module("subagent_naming", PLUGIN_ROOT / "hooks" / "subagent_naming.py")
 config_module = load_module("routing_config_under_test", PLUGIN_ROOT / "hooks" / "routing_config.py")
+decision = load_module("execution_decision_under_test", PLUGIN_ROOT / "hooks" / "execution_decision.py")
 init_router = load_module("init_router_under_test", PLUGIN_ROOT / "scripts" / "init_router.py")
 
 
@@ -53,69 +54,33 @@ class RouterPluginTests(unittest.TestCase):
         workspace = config_module.load_config(workspace_path)
         for label, config in (("default", default), ("workspace", workspace)):
             with self.subTest(config=label):
-                self.assertEqual(2, config["schema_version"])
+                self.assertEqual(3, config["schema_version"])
                 self.assertEqual("evaluate", config["execution_policy"]["default_mode"])
                 self.assertLessEqual(
                     len(config_module.serialized_config(config).encode("utf-8")),
                     config_module.MAX_SERIALIZED_CONFIG_BYTES,
                 )
 
-    def test_valid_v1_config_uses_effective_defaults_without_rewriting_file(self) -> None:
-        current = json.loads(
+    def test_obsolete_config_versions_are_rejected_instead_of_silently_migrated(self) -> None:
+        template = json.loads(
             (PLUGIN_ROOT / "defaults" / "default-routing.json").read_text(encoding="utf-8")
         )
-        legacy = {key: value for key, value in current.items() if key != "execution_policy"}
-        legacy["schema_version"] = 1
-        for example in legacy["examples"]:
-            example.pop("execution_mode")
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            path = Path(temporary_directory) / "routing.json"
-            path.write_text(json.dumps(legacy, indent=2), encoding="utf-8")
-            before = path.read_bytes()
-            loaded = config_module.load_config(path)
-            after = path.read_bytes()
-        self.assertEqual(before, after)
-        self.assertEqual(1, loaded["schema_version"])
-        self.assertNotIn("execution_policy", loaded)
-        self.assertEqual(
-            config_module.DEFAULT_EXECUTION_POLICY,
-            config_module.effective_execution_policy(loaded),
-        )
-        self.assertTrue(
-            all(config_module.effective_execution_mode(loaded, item) == "evaluate" for item in loaded["examples"])
-        )
+        for old_version in (1, 2):
+            with self.subTest(version=old_version):
+                obsolete = json.loads(json.dumps(template))
+                obsolete["schema_version"] = old_version
+                with self.assertRaisesRegex(config_module.RoutingConfigError, "must be integer 3"):
+                    config_module.validate_config(obsolete)
 
-    def test_v1_hook_context_explains_effective_policy_and_preserves_legacy_json(self) -> None:
-        current = json.loads(
-            (PLUGIN_ROOT / "defaults" / "default-routing.json").read_text(encoding="utf-8")
-        )
-        legacy = {key: value for key, value in current.items() if key != "execution_policy"}
-        legacy["schema_version"] = 1
-        for example in legacy["examples"]:
-            example.pop("execution_mode")
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            workspace = Path(temporary_directory).resolve()
-            directory = workspace / ".codex-model-router"
-            directory.mkdir()
-            path = directory / "routing.json"
-            path.write_text(json.dumps(legacy), encoding="utf-8")
-            before = path.read_bytes()
-            context = self.build_hook_output({
-                "hook_event_name": "UserPromptSubmit", "cwd": str(workspace),
-            })["hookSpecificOutput"]["additionalContext"]
-            after = path.read_bytes()
-        self.assertEqual(before, after)
-        self.assertIn("Legacy schema v1 remains valid and unchanged", context)
-        self.assertIn("treat every example execution_mode as evaluate", context)
-        self.assertIn('"schema_version":1', context)
-
-    def test_v2_execution_policy_and_route_modes_are_strictly_validated(self) -> None:
+    def test_v3_execution_policy_and_route_modes_are_strictly_validated(self) -> None:
         template = json.loads(
             (PLUGIN_ROOT / "defaults" / "default-routing.json").read_text(encoding="utf-8")
         )
         cases = (
             ("execution_policy.default_mode", lambda value: value["execution_policy"].__setitem__("default_mode", "sometimes")),
             ("execution_policy.reroute_on_escalation", lambda value: value["execution_policy"].__setitem__("reroute_on_escalation", 1)),
+            ("execution_policy.delegate_topology.parallel_enabled", lambda value: value["execution_policy"]["delegate_topology"].__setitem__("parallel_enabled", False)),
+            ("execution_policy.limits.max_concurrency", lambda value: value["execution_policy"]["limits"].__setitem__("max_concurrency", 0)),
             ("examples[0].execution_mode", lambda value: value["examples"][0].__setitem__("execution_mode", "controller")),
         )
         for expected, mutate in cases:
@@ -174,6 +139,200 @@ class RouterPluginTests(unittest.TestCase):
             config_module.configured_execution_mode(
                 config, ("astra-complex-tools", "astra-complex-tools")
             )
+
+    def decision_request(self, **overrides):
+        signals = {
+            "one_local_scope": True,
+            "bounded_known_outcome": True,
+            "network_or_sync": False,
+            "long_running_or_monitoring": False,
+            "failure_or_recovery": False,
+            "named_multistep_runbook": False,
+            "substantive_research_or_investigation": False,
+            "independent_review_required": False,
+            "high_risk": False,
+            "multiple_bounded_tasks": False,
+            "tasks_independent": False,
+            "dependencies_absent": False,
+            "write_scopes_disjoint": False,
+            "permissions_confirmed": True,
+            "safety_constraints_known": True,
+            "verification_plan_present": True,
+            "write_scope_known": True,
+        }
+        signals.update(overrides.pop("signals", {}))
+        request = {
+            "schema_version": 1,
+            "decision_id": "route-one",
+            "phase": "initial",
+            "prior_ownership": None,
+            "escalation_trigger": None,
+            "matched_example_ids": ["luna-local-bounded-change"],
+            "signals": signals,
+        }
+        request.update(overrides)
+        return request
+
+    def test_decision_resolver_applies_rule_precedence_and_unknowns_fail_closed(self) -> None:
+        config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        config["execution_policy"]["default_mode"] = "delegate"
+        direct = decision.resolve_routing_decision(config, self.decision_request())
+        self.assertEqual("DIRECT", direct["ownership"])
+        self.assertEqual("bounded-direct-fast-path", direct["matched_rule"])
+
+        conflict = decision.resolve_routing_decision(
+            config,
+            self.decision_request(matched_example_ids=["luna-local-bounded-change", "astra-complex-tools"]),
+        )
+        self.assertEqual("DELEGATE", conflict["ownership"])
+        self.assertEqual("configured-delegate", conflict["matched_rule"])
+
+        unknown = decision.resolve_routing_decision(
+            config, self.decision_request(signals={"one_local_scope": None})
+        )
+        self.assertEqual("DELEGATE", unknown["ownership"])
+        self.assertIn("local scope is not known to be singular", unknown["reasons"])
+        unknown_risk = decision.resolve_routing_decision(
+            config, self.decision_request(signals={"high_risk": None})
+        )
+        self.assertEqual("INDEPENDENT_REVIEW", unknown_risk["verification_requirement"])
+
+    def test_required_review_forces_delegate_and_independent_verification(self) -> None:
+        config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        result = decision.resolve_routing_decision(
+            config,
+            self.decision_request(signals={"independent_review_required": True}),
+        )
+        self.assertEqual("DELEGATE", result["ownership"])
+        self.assertEqual("INDEPENDENT_REVIEW", result["verification_requirement"])
+        self.assertEqual("ISOLATED_SERIAL", result["delegate_topology"])
+
+    def test_direct_bound_escalation_is_recorded_and_reclassified(self) -> None:
+        config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        request = self.decision_request(
+            phase="reclassification",
+            prior_ownership="DIRECT",
+            escalation_trigger="validation-failed",
+        )
+        result = decision.resolve_routing_decision(config, request)
+        self.assertEqual("DELEGATE", result["ownership"])
+        self.assertEqual("DIRECT", result["reclassified_from"])
+        self.assertEqual("validation-failed", result["escalation_trigger"])
+        self.assertIn("approved direct bounds exceeded", result["reasons"][0])
+
+    def test_delegate_topology_selects_parallel_only_for_explicit_safe_signals(self) -> None:
+        config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        base = {
+            "substantive_research_or_investigation": True,
+            "multiple_bounded_tasks": True,
+            "tasks_independent": True,
+            "dependencies_absent": True,
+            "write_scopes_disjoint": True,
+        }
+        parallel = decision.resolve_routing_decision(config, self.decision_request(signals=base))
+        self.assertEqual("PARALLEL", parallel["delegate_topology"])
+
+        for field, unsafe in (("tasks_independent", False), ("dependencies_absent", False),
+                              ("write_scopes_disjoint", False), ("write_scopes_disjoint", None)):
+            with self.subTest(field=field, value=unsafe):
+                signals = dict(base)
+                signals[field] = unsafe
+                result = decision.resolve_routing_decision(
+                    config, self.decision_request(signals=signals)
+                )
+                self.assertEqual("ISOLATED_SERIAL", result["delegate_topology"])
+
+    def test_parallel_topology_respects_single_worker_concurrency_ceiling(self) -> None:
+        config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        config["execution_policy"]["limits"]["max_concurrency"] = 1
+        result = decision.resolve_routing_decision(
+            config,
+            self.decision_request(signals={
+                "substantive_research_or_investigation": True,
+                "multiple_bounded_tasks": True,
+                "tasks_independent": True,
+                "dependencies_absent": True,
+                "write_scopes_disjoint": True,
+            }),
+        )
+        self.assertEqual("DELEGATE", result["ownership"])
+        self.assertEqual("ISOLATED_SERIAL", result["delegate_topology"])
+        self.assertEqual(1, result["constraints"]["max_concurrency"])
+
+    def test_named_multistep_runbook_true_or_unknown_requires_delegation(self) -> None:
+        config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        for value in (True, None):
+            with self.subTest(value=value):
+                result = decision.resolve_routing_decision(
+                    config,
+                    self.decision_request(signals={"named_multistep_runbook": value}),
+                )
+                self.assertEqual("DELEGATE", result["ownership"])
+                self.assertEqual("ISOLATED_SERIAL", result["delegate_topology"])
+        self.assertIn("a named multi-step runbook is required", decision.resolve_routing_decision(
+            config, self.decision_request(signals={"named_multistep_runbook": True})
+        )["reasons"])
+        missing_request_signal = self.decision_request()
+        del missing_request_signal["signals"]["named_multistep_runbook"]
+        with self.assertRaisesRegex(decision.DecisionContractError, "named_multistep_runbook"):
+            decision.validate_decision_request(missing_request_signal)
+        missing_config_signal = json.loads(json.dumps(config))
+        missing_config_signal["execution_policy"]["direct_requires_all"].remove(
+            "no-named-multistep-runbook"
+        )
+        with self.assertRaisesRegex(config_module.RoutingConfigError, "every direct requirement"):
+            config_module.validate_config(missing_config_signal)
+
+    def test_hook_exposes_and_cli_executes_decision_workflow(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            workspace = Path(temporary_directory).resolve()
+            context = self.build_hook_output({
+                "hook_event_name": "UserPromptSubmit", "cwd": str(workspace),
+            })["hookSpecificOutput"]["additionalContext"]
+            config_path = workspace / ".codex-model-router" / "routing.json"
+            resolver_path = PLUGIN_ROOT / "hooks" / "execution_decision.py"
+            self.assertIn(f"Decision resolver program: {resolver_path}", context)
+            self.assertIn("decision-request-v1 JSON on stdin", context)
+            self.assertIn("named_multistep_runbook", context)
+            completed = subprocess.run(
+                [sys.executable, str(resolver_path), "--config", str(config_path)],
+                input=json.dumps(self.decision_request()),
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        result = json.loads(completed.stdout)
+        self.assertEqual("DIRECT", result["ownership"])
+        self.assertEqual("NONE", result["delegate_topology"])
+
+    def test_decision_contract_rejects_invalid_data_and_inconsistent_results(self) -> None:
+        request = self.decision_request()
+        request["signals"]["network_or_sync"] = "unknown"
+        with self.assertRaisesRegex(decision.DecisionContractError, "boolean or null"):
+            decision.validate_decision_request(request)
+        result = {
+            "schema_version": 1,
+            "decision_id": "route-one",
+            "ownership": "DIRECT",
+            "delegate_topology": "PARALLEL",
+            "verification_requirement": "SELF_CHECK",
+            "configured_mode": "direct",
+            "matched_rule": "bounded-direct-fast-path",
+            "reasons": ["bounded"],
+            "reclassified_from": None,
+            "escalation_trigger": None,
+            "constraints": {
+                "max_depth": 1,
+                "max_concurrency": 3,
+                "max_retries": 1,
+                "write_policy": "exclusive-ownership-serialize-overlap",
+                "context_policy": "minimal-packet-compact-receipt",
+            },
+        }
+        with self.assertRaisesRegex(decision.DecisionContractError, "DIRECT ownership requires NONE"):
+            decision.validate_decision_result(result)
 
     def test_windows_hooks_use_python_and_coherent_limits(self) -> None:
         manifest = json.loads(
@@ -290,7 +449,7 @@ class RouterPluginTests(unittest.TestCase):
                 config_module.load_config(malformed)
 
             invalid = root / "invalid.json"
-            invalid.write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
+            invalid.write_text(json.dumps({"schema_version": 3}), encoding="utf-8")
             with self.assertRaisesRegex(config_module.RoutingConfigError, "missing required fields"):
                 config_module.load_config(invalid)
 
@@ -728,7 +887,7 @@ class RouterPluginTests(unittest.TestCase):
     def test_controller_context_contains_policy_roles(self) -> None:
         fixture = json.loads((PLUGIN_ROOT / "tests" / "fixtures" / "session-start.json").read_text(encoding="utf-8"))
         context = self.build_hook_output(fixture)["hookSpecificOutput"]["additionalContext"]
-        for expected in ("Active controller model", "Luna", "Terra", "Sol", "Astra", "capability preflight", "independent review"):
+        for expected in ("Active controller model", "Luna", "Terra", "Sol", "Astra", "native spawn/wait", "independent reviewer"):
             self.assertIn(expected, context)
         self.assertIn(str(self.policy_workspace / ".codex-model-router" / "routing.json"), context)
         self.assertNotIn(str(PLUGIN_ROOT.parents[1] / ".codex-model-router" / "routing.json"), context)
@@ -743,11 +902,12 @@ class RouterPluginTests(unittest.TestCase):
         for event_name, context in self.controller_contexts():
             with self.subTest(event=event_name):
                 for expected in (
-                    "decide execution ownership before the first business action",
+                    "Decide execution ownership before the first business action",
+                    "validated decision-contract-v1 result",
                     "ROUTE: DIRECT — <rule/reason>",
-                    "ROUTE: DELEGATE — <rule/model/effort/reason>",
+                    "ROUTE: DELEGATE — <topology/rule/model/effort/reason>",
                     "Skills define HOW work is performed, not WHO performs it",
-                    "Static configuration and keyword matching cannot fully classify",
+                    "structured signals; keyword matching alone is insufficient",
                 ):
                     self.assertIn(expected, context)
 
@@ -755,38 +915,32 @@ class RouterPluginTests(unittest.TestCase):
         for event_name, context in self.controller_contexts():
             with self.subTest(event=event_name):
                 for expected in (
-                    "DIRECT is allowed only when ALL are true", "exactly one local scope",
-                    "exactly one bounded, known outcome", "no network or synchronization",
-                    "no long-running work or monitoring", "no failure/recovery workflow",
-                    "no substantive research or investigation", "no independent review or validation",
-                    "DELEGATE when ANY exists", "multiple repositories, systems, or sources",
-                    "named multi-step runbook", "network access or synchronization",
-                    "long-running work or monitoring", "failure handling or recovery",
-                    "substantive investigation or research", "independent review or validation",
+                    "DIRECT is a bounded fast path only when every fact is explicitly known",
+                    "one local scope", "one bounded known outcome", "no network/sync",
+                    "permissions and safety constraints are known", "self-check plan",
+                    "Unknown signals never qualify", "DIRECT owns its implementation",
+                    "PARALLEL only when", "ISOLATED_SERIAL",
                 ):
                     self.assertIn(expected, context)
 
-    def test_delegation_preflight_and_reroute_are_ordered(self) -> None:
+    def test_delegation_topology_and_reroute_are_ordered(self) -> None:
         for event_name, context in self.controller_contexts():
             with self.subTest(event=event_name):
-                self.assertIn("Only after selecting DELEGATE, run a capability preflight", context)
-                self.assertIn("Apply model/effort routing only to delegated work", context)
-                self.assertIn("reroute before the next business action", context)
-                self.assertIn("Do not continue directly through the escalation", context)
-                self.assertIn("hard escalation barrier", context)
-                self.assertIn("Re-evaluate after every direct tool result", context)
-                self.assertIn("must not inspect the newly revealed scope", context)
-                self.assertIn("report BLOCKED to the user with the missing capability", context)
+                self.assertIn("exceeds approved bounds, stop before the next business action", context)
+                self.assertIn("record a reclassification from DIRECT to DELEGATE", context)
+                self.assertIn("validation-failed", context)
+                self.assertIn("Any dependency, overlapping/shared write scope", context)
+                self.assertIn("requires ISOLATED_SERIAL", context)
+                self.assertIn("Only after DELEGATE", context)
 
     def test_packet_validation_and_conflict_resolution_do_not_allow_rework(self) -> None:
         for event_name, context in self.controller_contexts():
             with self.subTest(event=event_name):
                 for expected in (
-                    "task identity", "required fields", "evidence references",
-                    "reported acceptance/validation status only",
-                    "require a worker follow-up", "conflict resolution means coordinating workers",
-                    "not inspecting artifacts, resolving code conflicts, or rerunning tests yourself",
-                    "Serialize overlapping write scopes",
+                    "task identity", "scope and write ownership", "permissions/safety constraints",
+                    "acceptance and verification criteria", "topology position", "limits",
+                    "compact evidence receipts", "retain successful receipts",
+                    "exclusive write ownership and serialize overlap",
                 ):
                     self.assertIn(expected, context)
 
@@ -794,11 +948,8 @@ class RouterPluginTests(unittest.TestCase):
         for event_name, context in self.controller_contexts():
             with self.subTest(event=event_name):
                 for expected in (
-                    "purpose-model-effort", "Unicode NFKD",
-                    "discard non-ASCII code points", "lowercase",
-                    "duplicate planned identifier", "as both Worker name and Task ID",
-                    "underscore-only `task_name`", "Native task name",
-                    "Do not retry a rejected hyphenated value",
+                    "purpose-model-effort", "documented native transport adaptation",
+                    "task identity", "actual model/effort",
                 ):
                     self.assertIn(expected, context)
 
@@ -873,11 +1024,9 @@ class RouterPluginTests(unittest.TestCase):
                     "hook_event_name": "UserPromptSubmit", "prompt": prompt,
                 })["hookSpecificOutput"]["additionalContext"]
                 for expected in (
-                    "router self-improvement", "routing-policy review", "evaluation design",
-                    "benchmark selection", "independent review is mandatory before finalization",
-                    "separate from the author/implementer", "highest suitable available model",
-                    "implementation must also have an implementation worker",
-                    "a review-only worker does not fulfill it",
+                    "Router self-improvement", "routing-policy review", "evaluation design",
+                    "benchmark selection", "Independent-review or high-risk signals",
+                    "require an independent reviewer",
                 ):
                     self.assertIn(expected, context)
 
@@ -888,8 +1037,8 @@ class RouterPluginTests(unittest.TestCase):
         ):
             context = self.build_hook_output(event)["hookSpecificOutput"]["additionalContext"]
             self.assertIn("ROUTE: DIRECT — <rule/reason>", context)
-            self.assertIn("ROUTE: DELEGATE — <rule/model/effort/reason>", context)
-            self.assertIn("independent review is mandatory", context)
+            self.assertIn("ROUTE: DELEGATE — <topology/rule/model/effort/reason>", context)
+            self.assertIn("decision-contract-v1", context)
 
     def test_worker_context_requires_structured_result(self) -> None:
         fixture = json.loads((PLUGIN_ROOT / "tests" / "fixtures" / "subagent-start.json").read_text(encoding="utf-8"))
@@ -914,9 +1063,8 @@ class RouterPluginTests(unittest.TestCase):
         for event_name, context in self.controller_contexts():
             with self.subTest(event=event_name):
                 self.assertIn("CONTROLLER ROLE ONLY: SessionStart/UserPromptSubmit", context)
-                self.assertIn("does not apply to dispatched workers, including verification workers", context)
-                self.assertIn("even if this controller context was inherited", context)
-                self.assertIn("Controller discovery, mandatory dispatch, and missing-delegation rules do not apply to workers", context)
+                self.assertIn("does not apply to dispatched workers", context)
+                self.assertIn("minimal bounded packet", context)
 
     def test_worker_role_override_authorizes_work_without_controller_preflight(self) -> None:
         fixture = json.loads((PLUGIN_ROOT / "tests" / "fixtures" / "subagent-start.json").read_text(encoding="utf-8"))
@@ -1001,18 +1149,18 @@ class RouterPluginTests(unittest.TestCase):
                     self.assertNotIn(forbidden, normalized)
                 for required in (
                     "route: direct — <rule/reason>",
-                    "route: delegate — <rule/model/effort/reason>",
-                    "one local scope", "multiple repositories", "reroute before the next business action",
-                    "highest suitable available model", "os/tool permission barrier",
+                    "route: delegate — <topology/rule/model/effort/reason>",
+                    "one local scope", "unknown", "isolated_serial", "parallel",
+                    "overlapping", "self-check", "os/tool permission barrier",
                 ):
                     self.assertIn(required, normalized)
 
     def test_hook_context_is_instruction_policy_not_tool_interception(self) -> None:
         for event_name, context in self.controller_contexts():
             with self.subTest(event=event_name):
-                self.assertIn("policy enforcement at the agent-instruction layer", context)
-                self.assertIn("Context injection cannot intercept tool calls", context)
-                self.assertIn("not an OS/tool permission barrier", context)
+                self.assertIn("instruction-layer policy", context)
+                self.assertIn("context injection cannot erase history, intercept tool calls, create a sandbox", context)
+                self.assertIn("OS/tool permission barrier", context)
                 output = self.build_hook_output({"hook_event_name": event_name})
                 self.assertEqual({"hookSpecificOutput"}, set(output))
                 self.assertEqual({"hookEventName", "additionalContext"}, set(output["hookSpecificOutput"]))

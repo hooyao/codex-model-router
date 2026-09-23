@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "architecture-review",
+  "grader_version": "exact-tree-v2",
+  "prompt": "Create decision.json as one compact JSON object with exactly: schema_version=1; decision='separate-ownership-and-topology'; ownership_first=true; parallel_requires=['independent-tasks','no-dependencies','disjoint-write-scopes']; verification='independent-review'. Preserve existing files. Require a passing reviewer session distinct from controller and artifact author.",
+  "initial": {
+    "path": "initial",
+    "tree": {
+      "files": {
+        "constraints.md": "807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368",
+        "current.md": "099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7"
+      },
+      "directories": []
+    }
+  },
+  "reference": {
+    "path": "reference",
+    "tree": {
+      "files": {
+        "constraints.md": "807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368",
+        "current.md": "099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7",
+        "decision.json": "b364b888e5e798bb2de3fa8f0ac8b3bdc3e4973c63c8ba83fb4f82cec642d24b"
+      },
+      "directories": []
+    }
+  }
+}

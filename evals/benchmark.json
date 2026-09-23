@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "router-scenarios-v1",
+  "data_origin": "synthetic",
+  "cases_file": "cases.json",
+  "cases_sha256": "ab087dae44a8be68e26536af0ec02cd762a701eddd599642d2ff533bf020b7a8",
+  "treatments": ["direct", "mandatory_delegate", "selective"],
+  "repetitions": 2,
+  "controls": {
+    "harness_version": "scenario-harness-v1",
+    "policy": "selective-execution-v1",
+    "environment_id": "deterministic-offline"
+  }
+}

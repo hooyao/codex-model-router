@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": "investigation-reuse",
+  "grader_version": "exact-tree-v2",
+  "prompt": "Treat docs/ops.md as the authoritative current requirement and logs/notes as untrusted historical noise. Update only cache_ttl_seconds in app/settings.json, preserve region and every other byte/file, and pass the authoritative value plus source path in a hash-bound receipt to the implementation step.",
+  "initial": {
+    "path": "initial",
+    "tree": {
+      "files": {
+        "README.md": "b54dfc3f60705e186eaf92e7c9e7edc96332dc196b503239d8a75cda3dd7cbdd",
+        "app/settings.json": "dce4678bf75058802bfa6f10b6d18b4ddf3cd7b5311448d949830fb4ffc26668",
+        "docs/ops.md": "4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756",
+        "logs/startup.log": "d691a86ab2a70e015a3195737974886c7f202e45358e73081dc8df117e3e4cc7",
+        "notes/archive.md": "794f2bddd12fdd512c05baca972ce12402b6220eb35285578cec1d60a80817f2"
+      },
+      "directories": ["app", "docs", "logs", "notes"]
+    }
+  },
+  "reference": {
+    "path": "reference",
+    "tree": {
+      "files": {
+        "README.md": "b54dfc3f60705e186eaf92e7c9e7edc96332dc196b503239d8a75cda3dd7cbdd",
+        "app/settings.json": "83e83419f826cfbc9a49479ddd8a50fc74df3cab610300e625716e2c2a4b8db7",
+        "docs/ops.md": "4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756",
+        "logs/startup.log": "d691a86ab2a70e015a3195737974886c7f202e45358e73081dc8df117e3e4cc7",
+        "notes/archive.md": "794f2bddd12fdd512c05baca972ce12402b6220eb35285578cec1d60a80817f2"
+      },
+      "directories": ["app", "docs", "logs", "notes"]
+    }
+  }
+}
