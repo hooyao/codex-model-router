@@ -309,9 +309,15 @@ def _validate_spans(spans: Any, execution: dict, context: dict, route: dict,
         prior_events = [event for event in events if event["at_ms"] <= span["start_ms"]]
         require(bool(prior_events), f"business span starts before ownership decision: {span['id']}")
         state = prior_events[-1]["ownership"]
+        active_topology = prior_events[-1]["topology"]
         required_state = "DIRECT" if span["role"] == "controller" else "DELEGATE"
         require(state == required_state,
                 f"business span role is not covered by recorded ownership: {span['id']}")
+        if required_state == "DIRECT":
+            require(active_topology == "NONE", f"DIRECT span has invalid active topology: {span['id']}")
+        else:
+            require(active_topology == route["delegate_topology"],
+                    f"worker/reviewer span is not covered by final delegate topology: {span['id']}")
         later_events = [event for event in events if event["at_ms"] > span["start_ms"]]
         if later_events:
             require(span["end_ms"] <= later_events[0]["at_ms"],
@@ -424,6 +430,12 @@ def validate_record(record: Any) -> dict:
             events[-1]["ownership"] == route["final_ownership"] and
             events[-1]["topology"] == route["delegate_topology"], "route events do not match route summary")
     require(events[-1]["trigger"] == route["escalation_trigger"], "route event escalation mismatch")
+    if route["initial_ownership"] == route["final_ownership"]:
+        require(len(events) == 1, "delegate topology transitions are unsupported by frozen cases")
+    else:
+        require(len(events) == 2 and events[0]["ownership"] == "DIRECT"
+                and events[1]["ownership"] == "DELEGATE",
+                "only one DIRECT-to-DELEGATE transition is supported")
     delegation_events = [event for event in events if event["ownership"] == "DELEGATE"]
     require((delegation_events[0]["at_ms"] if delegation_events else None) == route["first_delegation_ms"],
             "first delegation timestamp does not match route events")

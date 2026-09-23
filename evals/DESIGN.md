@@ -58,3 +58,6 @@ Route decisions form a time-indexed ownership state machine over business spans.
 Parallel overlap must represent distinct worker sessions, not multiple spans in
 one session. Route adherence intentionally excludes absolute elapsed values so a
 scaled but correctly ordered execution remains semantically compliant.
+Topology is stable after delegation in the frozen scenarios. Unsupported
+delegate-topology transitions fail rather than retroactively reclassifying
+earlier spans.

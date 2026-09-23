@@ -55,6 +55,11 @@ artifact ownership, context and receipt volume, and critical-path time.
 - **WHEN** overlapping parallel worker spans share one session ID
 - **THEN** contract validation rejects the run
 
+#### Scenario: Late parallel transition
+
+- **WHEN** worker spans overlap while ISOLATED_SERIAL is active and a later event changes topology to PARALLEL
+- **THEN** contract validation rejects the unsupported topology transition
+
 ### Requirement: Review and failure integrity
 
 Completed independent-review work SHALL name a passing reviewer distinct from

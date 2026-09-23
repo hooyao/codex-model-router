@@ -8,6 +8,7 @@
 - [x] Freeze dependency/receipt edges and derive post-delegation controller activity from span time.
 - [x] Permit only downward-closed frozen graph prefixes for failed terminal runs.
 - [x] Enforce chronological ownership coverage, real parallel sessions, and time-scale-independent route adherence.
+- [x] Reject unsupported delegate-topology transitions and bind spans to active topology.
 - [x] Add deterministic campaign runner and provenance-aware analysis report.
 - [x] Add regressions for isolation/reuse, escalation, serial dependencies, parallel safety, review, failures, and cost labels.
 - [x] Update evaluation and repository documentation.

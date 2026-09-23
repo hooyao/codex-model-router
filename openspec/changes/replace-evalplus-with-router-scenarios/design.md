@@ -33,6 +33,8 @@ impossible downstream stages or invented edges.
 Route events form a chronological ownership state machine over every business
 span. Parallel overlap requires distinct worker sessions. Semantic adherence
 excludes absolute elapsed timestamps, which remain contract-validated.
+Frozen cases permit no DELEGATE-to-DELEGATE topology transition; each business
+span is checked against the topology active at its start.
 
 The bundled runner is deterministic and makes no model call. Its observations
 exercise contract and report semantics only. A future live collector may emit

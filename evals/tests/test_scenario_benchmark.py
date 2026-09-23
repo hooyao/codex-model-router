@@ -142,6 +142,17 @@ class ScenarioBenchmarkTests(unittest.TestCase):
         with self.assertRaisesRegex(c.ContractError, "requires distinct worker sessions"):
             c.validate_record(record)
 
+    def test_late_parallel_transition_cannot_retroactively_authorize_overlap(self) -> None:
+        record = copy.deepcopy(self.record("parallel-disjoint", "selective"))
+        record["route_trace"]["route_events"] = [
+            {"sequence": 1, "at_ms": 0, "ownership": "DELEGATE",
+             "topology": "ISOLATED_SERIAL", "trigger": None},
+            {"sequence": 2, "at_ms": 50, "ownership": "DELEGATE",
+             "topology": "PARALLEL", "trigger": None},
+        ]
+        with self.assertRaisesRegex(c.ContractError, "topology transitions are unsupported"):
+            c.validate_record(record)
+
     def test_architecture_requires_distinct_review_without_polluting_artifact_quality(self) -> None:
         direct = self.record("architecture-review", "direct")
         selective = self.record("architecture-review", "selective")

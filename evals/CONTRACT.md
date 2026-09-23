@@ -62,6 +62,11 @@ ownership decision, match the active ownership state for its role, and finish
 before the next transition. Semantic route adherence compares ownership,
 topology, verification, and trigger—not absolute timestamps; elapsed timing is
 validated independently.
+Frozen cases support only a single stable route event or one DIRECT/NONE to
+DELEGATE transition. DELEGATE-to-DELEGATE topology changes are rejected, so a
+late PARALLEL event cannot retroactively authorize work that overlapped while
+ISOLATED_SERIAL was active. Every worker/reviewer span must match the active
+delegate topology.
 
 ## Reporting boundary
 
