@@ -349,9 +349,15 @@ class LiveEvidenceTests(unittest.TestCase):
         self.assertEqual(2, observed["route_events"][0]["line"])
         self.assertEqual(3, observed["first_business_line"])
 
-    def test_mixed_resolver_and_business_command_is_not_routing_transport(self):
+    def test_business_before_resolver_is_not_routing_transport(self):
+        mixed = (r'Get-Content README.md; $request | python C:\plugin\hooks\execution_decision.py '
+                 r'--config C:\work\.codex-model-router\routing.json')
+        items = [(1, event("response_item", {"type": "custom_tool_call", "name": "exec", "input": mixed}))]
+        self.assertEqual([1], live.parent_business_lines(items))
+
+    def test_business_after_resolver_is_not_routing_transport(self):
         mixed = (r'$request | python C:\plugin\hooks\execution_decision.py '
-                 r'--config C:\work\routing.json; Get-Content README.md')
+                 r'--config C:\work\.codex-model-router\routing.json; Get-Content src/main.py')
         items = [
             (1, event("response_item", {"type": "custom_tool_call", "name": "exec", "input": mixed})),
             (2, route("ROUTE: DIRECT — too late")),

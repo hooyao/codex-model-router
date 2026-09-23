@@ -392,19 +392,24 @@ def first_parent_business_line(items: list[tuple[int, dict[str, Any]]]) -> Optio
 
 def embedded_shell_command(value: str) -> Optional[str]:
     """Extract one exec `cmd` string from model-tool JavaScript, failing closed."""
-    matches = list(re.finditer(r"\bcmd\s*:\s*", value))
+    matches = list(re.finditer(r"(?:\bcmd\b|\"cmd\")\s*:\s*", value))
     if not matches:
-        return value
-    if len(matches) != 1:
-        return None
-    source = value[matches[0].end():].lstrip()
+        shorthand = re.search(r"\bconst\s+cmd\s*=\s*", value)
+        invoked = re.search(r"tools\.exec_command\(\{\s*cmd\s*[,}]", value)
+        if shorthand is None or invoked is None:
+            return value
+        source = value[shorthand.end():].lstrip()
+    else:
+        if len(matches) != 1:
+            return None
+        source = value[matches[0].end():].lstrip()
     if not source:
         return None
     if source[0] == "`":
         escaped = False
         for index, character in enumerate(source[1:], 1):
             if character == "`" and not escaped:
-                return source[1:index]
+                return source[1:index].replace("\\n", "\n").replace("\\r", "\r")
             escaped = character == "\\" and not escaped
             if character != "\\":
                 escaped = False
@@ -422,20 +427,35 @@ def embedded_shell_command(value: str) -> Optional[str]:
 
 def pure_resolver_command(command: str) -> bool:
     """Accept one request pipe into the resolver with no trailing shell action."""
-    normalized = re.sub(r"[\\/]+", "/", command).lower()
-    marker = "/hooks/execution_decision.py"
-    if normalized.count(marker) != 1 or normalized.count("--config") != 1:
+    markers = list(re.finditer(r"[\\/]+hooks[\\/]+execution_decision\.py", command, re.I))
+    if len(markers) != 1 or len(re.findall(r"--config", command, re.I)) != 1:
         return False
-    marker_start = normalized.index(marker)
-    python_start = normalized.rfind("python", 0, marker_start)
+    marker_start = markers[0].start()
+    python_start = command.lower().rfind("python", 0, marker_start)
     pipe = command.rfind("|", 0, python_start)
-    if python_start < 0 or pipe < 0:
+    if python_start < 0:
         return False
-    feeder = re.split(r"[;\r\n]", command[:pipe])[-1].strip(" \t'\"`&")
-    if feeder != "$request" and re.fullmatch(r"\$[a-z_][a-z0-9_]*request", feeder, re.I) is None and \
-            feeder != "$input" and not (
-            feeder.startswith("{") or feeder.startswith("'{") or feeder.startswith('"{')):
-        return False
+    if pipe < 0:
+        prefix = command[:python_start]
+        if "-command" in prefix.lower():
+            prefix = re.split(r"-command", prefix, flags=re.I)[-1]
+        if re.fullmatch(r"[\s'\"`&()]*", prefix) is None:
+            return False
+    else:
+        feeder = re.split(r"[;\r\n]", command[:pipe])[-1].strip(" \t'\"`&")
+        if re.fullmatch(r"\$[a-z_][a-z0-9_]*", feeder, re.I) is None and not (
+                feeder.startswith("{") or feeder.startswith("'{") or feeder.startswith('"{')):
+            return False
+        if feeder.startswith("$"):
+            feeder_start = command.rfind(feeder, 0, pipe)
+            prefix = command[:feeder_start]
+            assignments = list(re.finditer(re.escape(feeder) + r"\s*=", prefix, re.I))
+            if assignments:
+                prefix = prefix[:assignments[0].start()]
+            if "-command" in prefix.lower():
+                prefix = re.split(r"-command", prefix, flags=re.I)[-1]
+            if re.fullmatch(r"[\s'\"`&()]*", prefix) is None:
+                return False
     config = re.search(r"--config\s+(?:\"(?:\\.|[^\"])*\"|'(?:\\.|[^'])*'|[^\s;|&]+)",
                        command[marker_start:], re.I)
     if config is None:
@@ -446,13 +466,11 @@ def pure_resolver_command(command: str) -> bool:
 
 def pure_dispatch_contract_command(command: str) -> bool:
     """Accept one dispatch-contract validation and no trailing shell action."""
-    normalized = re.sub(r"[\\/]+", "/", command).lower()
-    marker = "/hooks/dispatch_contract.py"
-    if normalized.count(marker) != 1:
+    markers = list(re.finditer(r"[\\/]+hooks[\\/]+dispatch_contract\.py", command, re.I))
+    if len(markers) != 1:
         return False
-    marker_start = normalized.index(marker)
-    marker_end = marker_start + len(marker)
-    python_start = normalized.rfind("python", 0, marker_start)
+    marker_start, marker_end = markers[0].span()
+    python_start = command.lower().rfind("python", 0, marker_start)
     if python_start < 0:
         return False
     tail = command[marker_end:]
@@ -471,46 +489,31 @@ def pure_dispatch_contract_command(command: str) -> bool:
     return valid_feeder and re.fullmatch(r"[\s'\"`\\)]*", tail) is not None
 
 
-def referenced_filenames(value: str) -> set[str]:
-    return {name.lower() for name in re.findall(
-        r"(?i)(?<![a-z0-9_.-])([a-z0-9_.-]+\.(?:json|md|txt|log))(?![a-z0-9_.-])", value)}
-
-
-def pure_installed_policy_read(value: str) -> bool:
-    allowed = {"skill.md", "decision-contract.md", "dispatch-contract.md", "routing-policy.md"}
-    names = referenced_filenames(value)
-    dispatch_source = "/hooks/dispatch_contract.py" in re.sub(r"[\\/]+", "/", value).lower()
-    return "get-content" in value.lower() and (dispatch_source or (bool(names) and names.issubset(allowed)))
-
-
-def pure_capability_operation(value: str) -> bool:
-    patch_paths = re.findall(r"\*\*\* (?:Add|Delete|Update) File:\s*([^\\\r\n]+)", value)
-    if patch_paths:
-        return all(".codex-model-router/" in re.sub(r"[\\/]+", "/", path).lower().strip() or
-                   ".router-" in path.lower().strip() for path in patch_paths)
-    allowed = {"routing.json", "spawn-schema.json", "model-catalog.json", "index.json",
-               ".router-spawn-schema.json", ".router-model-catalog.json"}
-    return referenced_filenames(value).issubset(allowed)
-
-
 def is_routing_preflight_command(value: Any) -> bool:
     """Recognize a structurally pure routing preflight, never a mixed shell command."""
     if not isinstance(value, str):
         return False
     command = embedded_shell_command(value)
     if command is None:
-        return False
+        normalized = re.sub(r"[\\/]+", "/", value).lower()
+        if "/hooks/execution_decision.py" in normalized or "/hooks/dispatch_contract.py" in normalized:
+            return False
+        return ("/codex-model-router/" in normalized and any(path in normalized for path in (
+            "/skills/model-router/skill.md", "/skills/model-router/references"))) or \
+            ".codex-model-router" in normalized or ".router-" in normalized
     normalized = re.sub(r"[\\/]+", "/", value).lower()
-    resolver = pure_resolver_command(command)
-    dispatch = pure_dispatch_contract_command(command)
-    installed_policy = pure_installed_policy_read(value) and "/codex-model-router/" in normalized and \
-        any(path in normalized for path in (
+    command_normalized = re.sub(r"[\\/]+", "/", command).lower()
+    if "/hooks/execution_decision.py" in command_normalized:
+        return pure_resolver_command(command)
+    if "/hooks/dispatch_contract.py" in command_normalized and "python" in command_normalized:
+        return pure_dispatch_contract_command(command)
+    installed_policy = "/codex-model-router/" in normalized and any(path in normalized for path in (
         "/skills/model-router/skill.md", "/skills/model-router/references",
         "/hooks/dispatch_contract.py"))
-    capability_source = pure_capability_operation(value) and (".codex-model-router" in normalized or \
+    capability_source = ".codex-model-router" in normalized or \
         ".router-dispatch-evidence/" in normalized or \
-        ".router-spawn-schema.json" in normalized or ".router-model-catalog.json" in normalized)
-    return resolver or dispatch or installed_policy or capability_source
+        ".router-spawn-schema.json" in normalized or ".router-model-catalog.json" in normalized
+    return installed_policy or capability_source
 
 
 def parent_business_lines(items: list[tuple[int, dict[str, Any]]]) -> list[int]:
