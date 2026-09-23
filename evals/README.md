@@ -58,16 +58,19 @@ observed record with:
 
 ```powershell
 python evals/scripts/live_evidence.py collect --root <evidence-root> --sessions-root "$env:CODEX_HOME\sessions"
-python evals/scripts/live_evidence.py validate --results <evidence-root>\live-results.json
+python evals/scripts/live_evidence.py validate --results <evidence-root>\live-results-v2.json
 ```
 
-The collector uses persisted parent/child session metadata for identity,
-model/effort, and timing instead of trusting controller self-report. It grades
+The collector uses role-bounded parent/child events for packet identity, native
+transport, actual selectors, runtime metadata, result echo, and assignment
+timing instead of searching aggregate inherited text. It grades
 business trees while reporting hook-created `.codex-model-router` state
 separately, hashes every transcript and session source, retains terminal
 failures in the denominator, and records USD cost as unavailable unless the
 runtime exposes measured billing. Its selective-only observed schema is kept
 separate from the frozen three-treatment synthetic comparison contract.
+Acceptance is recomputed during validation. Historical evidence can be
+reprocessed to a new `--output` without overwriting its original result.
 
 See [CONTRACT.md](CONTRACT.md) for exact invariants and [DESIGN.md](DESIGN.md)
 for the measurement rationale.

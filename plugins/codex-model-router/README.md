@@ -47,6 +47,12 @@ selection. If native spawn or wait/collect is unavailable, the controller
 reports BLOCKED with the observed limitation. It must not fall back to doing
 delegated work itself or create user-facing tasks as substitute workers.
 
+Before every native spawn, the controller validates `dispatch-contract-v1`
+against hash-bound spawn-schema and model-catalog evidence. Explicit selectors
+must be exposed by the spawn schema. Inheritance requires a captured runtime
+inheritance contract; omitted arguments or later child metadata do not prove
+it. Unresolved placeholders and missing capability evidence block dispatch.
+
 Controller packet validation checks identity, fields, completeness, consistency,
 evidence references, and reported acceptance/validation status. It does not
 verify business correctness by opening artifacts or rerunning tests. Missing

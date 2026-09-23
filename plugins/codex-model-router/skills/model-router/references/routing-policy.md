@@ -88,6 +88,15 @@ user-facing threads to simulate workers. If dispatch fails, use the declared
 retry/escalation limit and then report the blocker; controller execution is
 never the fallback. Model preferences below do not establish availability.
 
+Before each native spawn, validate the structured dispatch preflight described
+in `dispatch-contract.md`. Keep its dimensions separate: planned packet
+identity, native naming transport, actual selector arguments, capability
+evidence, later runtime metadata, and final worker echo. Explicit selection
+requires observed model and reasoning-effort arguments plus a current runtime
+catalog. Inheritance is allowed only when the runtime contract is captured and
+hash-bound; omitted arguments alone do not prove inheritance. Placeholder or
+unresolved model/effort values block dispatch.
+
 ## Meta-task routing
 
 Router self-improvement, routing-policy review, evaluation design, benchmark

@@ -129,12 +129,26 @@ ephemeral `codex exec` parent can fail with `no thread with id`.
 Run this before the behavioral cases. It fails closed when the installed CLI
 does not execute the plugin lifecycle hook.
 
+Use `evals/live/fresh-activation-probe-v2.json` as the machine-readable probe
+configuration. Its prompt intentionally contains no explicit Skill request,
+route hint, or expected route text. Before `codex exec`, write
+`raw/activation-environment.json` with the resolved Python executable/version,
+an `import encodings` probe exit code, requested sandbox mode, a sandbox command
+probe exit code, Codex version, and plugin-manifest SHA-256. A missing value is
+`unknown`; do not infer a root cause from a later symptom.
+
+Capture native spawn-tool schema and runtime model-catalog evidence before any
+delegated case. When inheritance is intended, also capture a runtime contract
+that explicitly defines it. An omitted selector, child turn context, or
+successful spawn does not prove inheritance.
+
 ```powershell
 $probeRepo = Join-Path $runRoot "activation-probe"
 Initialize-TestRepository $probeRepo
 Set-Content -LiteralPath (Join-Path $probeRepo "note.txt") -Value "unchanged"
 Commit-TestBaseline $probeRepo
-codex exec --json -C $probeRepo -s workspace-write -o (Join-Path $evidenceRoot "activation-final.txt") "Read note.txt and report its exact contents without modifying files." 2>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "activation.jsonl")
+$probeSpec = Get-Content -Raw Q:\codex-model-router\evals\live\fresh-activation-probe-v2.json | ConvertFrom-Json
+codex exec --json -C $probeRepo -s workspace-write -o (Join-Path $evidenceRoot "activation-final.txt") $probeSpec.prompt 2>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "activation.jsonl")
 Capture-PersistedSessionTree (Join-Path $evidenceRoot "activation.jsonl") "activation" $false
 $probeConfig = Join-Path $probeRepo ".codex-model-router\routing.json"
 if (-not (Test-Path -LiteralPath $probeConfig)) { throw "BLOCKED: installed CLI did not execute the router lifecycle hook" }
@@ -149,13 +163,11 @@ live passes. `--dangerously-bypass-hook-trust` may isolate trust problems in a
 disposable workspace, but a bypassed run is diagnostic evidence, not the formal
 trusted-hook result.
 
-On Codex CLI `0.155.0-alpha.9.2`, observed `codex exec` runs did not execute
-installed plugin lifecycle hooks, including with trust bypass and a per-run
-`plugin_hooks` feature override. The plugin was installed and enabled, but no
-routing config or automatic route line appeared. Treat that runtime as blocked
-for the automatic cases unless a newer run passes the activation gate. The
-explicit Skill path remains independently testable; it does not retroactively
-pass automatic hook activation.
+The historical `router-scenarios-live-20260923T031600Z` probe did not produce
+the required route/config evidence, but it also lacked the source-specific
+environment preflight. Its activation gate is FAIL and its root cause is
+unknown. Treat a future runtime as blocked for automatic cases unless a fresh
+probe passes; do not generalize the historical symptom into a platform limit.
 
 ### Explicit-Skill dispatcher diagnostic
 
@@ -267,7 +279,7 @@ policy failure even when the final files are correct.
 ## Evidence review and claim boundary
 
 Correlate route text, tool events, and worker events in each JSONL transcript.
-The `codex exec --json` stream does not include complete spawn arguments or
+The compact `codex exec --json` stream may omit complete spawn arguments or
 worker packets. Retain the matched parent and child persisted rollout records;
 the generated `session-index.json` records their original source paths,
 one-based evidence line numbers, SHA-256 hashes, copied paths, and copy hashes.
@@ -281,3 +293,9 @@ disk proves hook execution, not correct routing; route text without the required
 event ordering is also insufficient. Record missing hook execution, missing
 native dispatch, rejected transport names, direct recovery after escalation, or
 other noncompliance as failures rather than rewriting the evidence as a pass.
+
+Run `evals/scripts/live_evidence.py collect` for a new campaign; it writes
+`live-results-v2.json` by default and refuses to overwrite an existing report.
+Use `reprocess --original ... --output ...` for versioned derived analysis of a
+historical campaign. Validation recomputes acceptance from evidence statuses;
+submitted acceptance flags are not trusted.

@@ -105,6 +105,12 @@ back to defaults.
    unavailable, report BLOCKED rather than silently executing delegated work.
    A failed dispatch permits bounded retry/escalation, then a blocked report;
    it never permits controller fallback.
+   Before each spawn, read the [dispatch preflight contract](references/dispatch-contract.md),
+   build a hash-bound `dispatch-contract-v1` record from the observed spawn
+   schema and model catalog (or an explicitly observed inheritance contract),
+   and run the bundled `hooks/dispatch_contract.py`. Missing selectors,
+   catalogs, or inheritance proof are recorded capability blockers. Later
+   runtime metadata cannot retroactively authorize the dispatch.
 7. Build a task DAG from the user's request and returned worker packets. If
    decomposition needs repository knowledge or domain analysis, dispatch a
    discovery/analysis worker first. Declare dependencies, acceptance criteria,

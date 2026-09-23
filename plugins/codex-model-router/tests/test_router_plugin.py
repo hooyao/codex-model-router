@@ -25,6 +25,8 @@ def load_module(name: str, path: Path):
 validator = load_module("router_validator", PLUGIN_ROOT / "scripts" / "validate_plugin.py")
 hook = load_module("router_hook", PLUGIN_ROOT / "hooks" / "router_hook.py")
 naming = load_module("subagent_naming", PLUGIN_ROOT / "hooks" / "subagent_naming.py")
+sys.path.insert(0, str(PLUGIN_ROOT / "hooks"))
+dispatch = load_module("dispatch_contract_under_test", PLUGIN_ROOT / "hooks" / "dispatch_contract.py")
 config_module = load_module("routing_config_under_test", PLUGIN_ROOT / "hooks" / "routing_config.py")
 decision = load_module("execution_decision_under_test", PLUGIN_ROOT / "hooks" / "execution_decision.py")
 init_router = load_module("init_router_under_test", PLUGIN_ROOT / "scripts" / "init_router.py")
@@ -932,6 +934,8 @@ class RouterPluginTests(unittest.TestCase):
                 self.assertIn("Any dependency, overlapping/shared write scope", context)
                 self.assertIn("requires ISOLATED_SERIAL", context)
                 self.assertIn("Only after DELEGATE", context)
+                self.assertIn("dispatch-contract-v1", context)
+                self.assertIn("missing evidence is a capability blocker", context)
 
     def test_packet_validation_and_conflict_resolution_do_not_allow_rework(self) -> None:
         for event_name, context in self.controller_contexts():
@@ -1183,6 +1187,52 @@ class RouterPluginTests(unittest.TestCase):
     def test_unsupported_hook_event_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             hook.build_hook_output({"hook_event_name": "Stop"})
+
+    def dispatch_contract(self, mode="explicit") -> dict:
+        evidence = [
+            {"id": "schema", "kind": "spawn_schema", "source": "runtime:spawn_agent",
+             "sha256": "1" * 64, "captured_at": "2026-09-23T04:00:00Z"},
+            {"id": "catalog", "kind": "model_catalog", "source": "runtime:model-list",
+             "sha256": "2" * 64, "captured_at": "2026-09-23T04:00:00Z"},
+        ]
+        refs = ["catalog"]
+        if mode == "verified_inheritance":
+            evidence.append({"id": "inheritance", "kind": "inheritance_contract",
+                             "source": "runtime:spawn-inheritance", "sha256": "3" * 64,
+                             "captured_at": "2026-09-23T04:00:00Z"})
+            refs = ["inheritance"]
+        return {
+            "schema_version": 1, "dispatch_id": "edit-worker", "purpose": "edit",
+            "canonical_name": "edit-gpt-5-6-sol-high",
+            "packet": {"worker_name": "edit-gpt-5-6-sol-high", "task_id": "edit-gpt-5-6-sol-high",
+                       "native_task_name": "edit_gpt_5_6_sol_high"},
+            "native_dispatch": {"tool": "spawn_agent", "naming_field": "task_name",
+                                "supported_arguments": ["task_name", "message", "model", "reasoning_effort"],
+                                "native_name": "edit_gpt_5_6_sol_high", "schema_evidence_ref": "schema"},
+            "selection": {"mode": mode, "model": "gpt-5.6-sol", "reasoning_effort": "high",
+                          "evidence_refs": refs},
+            "capability_evidence": evidence,
+        }
+
+    def test_dispatch_contract_requires_observed_selectors_and_resolved_values(self) -> None:
+        value = self.dispatch_contract()
+        self.assertEqual(value, dispatch.validate_dispatch_contract(value))
+
+        value["native_dispatch"]["supported_arguments"].remove("model")
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "selectors are absent"):
+            dispatch.validate_dispatch_contract(value)
+
+        value = self.dispatch_contract()
+        value["selection"]["model"] = "model-unexposed"
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "unresolved placeholder"):
+            dispatch.validate_dispatch_contract(value)
+
+    def test_dispatch_contract_requires_capability_proof_for_inheritance(self) -> None:
+        value = self.dispatch_contract("verified_inheritance")
+        self.assertEqual(value, dispatch.validate_dispatch_contract(value))
+        value["selection"]["evidence_refs"] = ["catalog"]
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "inheritance_contract"):
+            dispatch.validate_dispatch_contract(value)
 
 
 if __name__ == "__main__":

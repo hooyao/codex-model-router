@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "probe_id": "fresh-activation-no-explicit-skill",
+  "prompt": "Read note.txt and report its exact contents without modifying files.",
+  "prompt_must_not_contain": [
+    "$codex-model-router:model-router",
+    "Use the model-router skill",
+    "ROUTE:"
+  ],
+  "environment_preflight": {
+    "output": "raw/activation-environment.json",
+    "required_observations": [
+      "resolved_python_executable",
+      "python_version",
+      "python_encodings_import_exit_code",
+      "sandbox_mode_requested",
+      "sandbox_probe_exit_code",
+      "codex_version",
+      "plugin_manifest_sha256"
+    ]
+  },
+  "hook_evidence": {
+    "transcript": "raw/activation.jsonl",
+    "required_role_bounded_event": "controller agent_message whose own text begins with ROUTE: DIRECT",
+    "required_hook_artifact": "raw/activation-routing.json",
+    "required_artifact_source": "routing config copied from the fresh probe workspace after the run"
+  },
+  "dispatch_capability_evidence": {
+    "required_before_delegated_cases": ["spawn_schema", "model_catalog"],
+    "verified_inheritance_is_optional": true,
+    "omitted_selectors_do_not_prove_inheritance": true
+  },
+  "root_cause_policy": "Report unknown unless a captured source-specific observation establishes the cause.",
+  "collector_output": "live-results-v2.json",
+  "overwrite_existing_evidence": false
+}

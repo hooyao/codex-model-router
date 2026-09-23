@@ -75,3 +75,19 @@ validated producer/consumer links and reports linked-consumer context without
 inventing avoided-token counters. Synthetic campaigns cannot
 support release, savings, latency, or quality claims. Failures, retries,
 conflicts, route violations, and artifact failures remain visible.
+
+## Observed live evidence v2
+
+Live analysis parses only typed controller route events, native spawn calls,
+child assignment boundaries, child result events, runtime turn context, and
+final worker output. Inherited instructions and arbitrary nested text are not
+identity or process evidence. Packet identity, native transport identity,
+actual model/effort arguments, runtime metadata, and final echo are separate
+dimensions. Missing or encrypted evidence is `unknown`; placeholders and
+contradictory observed values fail. Unknown never satisfies acceptance.
+
+All transcript, session-index, external session-source, activation, and result
+tree references are hash-bound. Validation recomputes acceptance from evidence
+statuses and rejects authored acceptance flags that disagree. Assignment-span
+overlap and session-lifetime overlap are distinct metrics. Historical reports
+are immutable inputs to versioned reprocessing outputs.

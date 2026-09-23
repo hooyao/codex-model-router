@@ -61,3 +61,18 @@ scaled but correctly ordered execution remains semantically compliant.
 Topology is stable after delegation in the frozen scenarios. Unsupported
 delegate-topology transitions fail rather than retroactively reclassifying
 earlier spans.
+
+## Live collector design
+
+The live collector uses an event allowlist instead of recursive text search.
+This prevents an inherited Skill template, user prompt, or quoted receipt from
+becoming false identity/process evidence. It records `unknown` when encrypted
+packets, selector capability, or source-specific activation diagnostics are not
+observable, while preserving explicit failures such as placeholder echoes or
+runtime contradictions.
+
+Worker session lifetime can contain idle gaps and follow-up assignments, so
+topology checks use paired `task_started`/`task_complete` assignment spans.
+Session-lifetime overlap remains a separate diagnostic and is never substituted
+for assignment concurrency. Derived historical reports link, rather than
+replace, their original result.

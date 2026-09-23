@@ -467,17 +467,54 @@ class ScenarioBenchmarkTests(unittest.TestCase):
         self.assertFalse(live_evidence.ordered_without_overlap(sessions))
 
     def test_live_identity_contract_rejects_placeholder_model_names(self) -> None:
-        valid = {"thread_id": "worker-1", "model": "gpt-5.6-sol", "reasoning_effort": "high", "identity": {
-            "worker_name": "edit-gpt-5-6-sol-high", "task_id": "edit-gpt-5-6-sol-high",
-            "native_task_name": "edit_gpt_5_6_sol_high",
-        }}
-        placeholder = {"thread_id": "worker-2", "model": "gpt-5.6-sol", "reasoning_effort": "high", "identity": {
-            "worker_name": "edit-model-unexposed-effort-unexposed",
-            "task_id": "edit-model-unexposed-effort-unexposed",
-            "native_task_name": "edit_model_unexposed_effort_unexposed",
-        }}
-        self.assertTrue(live_evidence.identity_checks([valid])[0]["passed"])
-        self.assertFalse(live_evidence.identity_checks([placeholder])[0]["passed"])
+        def child(name: str) -> dict:
+            return {"thread_id": "worker-1", "agent_path": "/root/edit_gpt_5_6_sol_high",
+                    "runtime": {"model": "gpt-5.6-sol", "reasoning_effort": "high", "evidence_line": 8},
+                    "final_echo": {"worker_name": name, "task_id": name, "native_task_name": None},
+                    "final_echo_line": 20}
+
+        spawn = {"line": 10, "packet_identity": live_evidence.empty_identity(),
+                 "arguments": {"task_name": "edit_gpt_5_6_sol_high"}}
+        valid = live_evidence.identity_checks([child("edit-gpt-5-6-sol-high")], [spawn])[0]
+        placeholder = live_evidence.identity_checks(
+            [child("edit-model-unexposed-effort-unexposed")], [spawn]
+        )[0]
+        self.assertEqual("unknown", valid["status"])
+        self.assertEqual("fail", placeholder["status"])
+        self.assertEqual("unknown", valid["dimensions"]["packet_identity"]["status"])
+        self.assertEqual("unknown", valid["dimensions"]["spawn_selection"]["status"])
+
+    def test_live_role_bounded_parsing_ignores_prompt_contamination(self) -> None:
+        items = [
+            (1, {"type": "response_item", "payload": {"type": "message", "role": "developer",
+                                                        "content": [{"type": "input_text", "text": "Worker name: fake-model-unexposed"}]}}),
+            (2, {"timestamp": "2026-09-23T03:00:00Z", "type": "response_item",
+                 "payload": {"type": "function_call", "name": "spawn_agent",
+                             "arguments": json.dumps({"task_name": "real_gpt_5_6_sol_high", "message": "encrypted"})}}),
+            (3, {"timestamp": "2026-09-23T03:00:10Z", "type": "event_msg",
+                 "payload": {"type": "task_complete", "turn_id": "turn",
+                             "last_agent_message": "Worker name: real-gpt-5-6-sol-high\nTask ID: real-gpt-5-6-sol-high"}}),
+        ]
+        spawns = live_evidence.spawn_events(items)
+        identity, line, _text = live_evidence.final_echo(items)
+        self.assertEqual("encrypted-or-unavailable", spawns[0]["packet_visibility"])
+        self.assertIsNone(spawns[0]["packet_identity"]["worker_name"])
+        self.assertEqual("real-gpt-5-6-sol-high", identity["worker_name"])
+        self.assertEqual(3, line)
+
+    def test_live_acceptance_is_recomputed_after_flag_tampering(self) -> None:
+        report = {"activation_gate": {"status": "fail"}, "observations": []}
+        for case_id in live_evidence.CASES:
+            report["observations"].append({"case_id": case_id, "outcome": "completed",
+                                           "artifact_validation": {"status": "pass"},
+                                           "process_validation": {"status": "pass"},
+                                           "identity_contract_validation": {"status": "pass"}})
+        report["acceptance"] = {"campaign_pass": True}
+        recomputed = live_evidence.recompute_acceptance(report)
+        self.assertFalse(recomputed["campaign_pass"])
+        self.assertNotEqual(report["acceptance"], recomputed)
+        with self.assertRaisesRegex(live_evidence.LiveEvidenceError, "acceptance flags"):
+            live_evidence.validate_acceptance(report)
 
 
 if __name__ == "__main__":
