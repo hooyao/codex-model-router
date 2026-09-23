@@ -1,2 +1,4 @@
 # Fixture and campaign hashes are byte-sensitive across platforms.
 evals/** text eol=lf
+# Raw observed transcripts retain byte-exact whitespace for evidence hashing.
+evals/live/** whitespace=-trailing-space

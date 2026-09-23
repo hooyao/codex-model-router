@@ -21,11 +21,12 @@ and CLI/plugin versions before making a behavioral claim.
 ```powershell
 $runRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("codex-router-live-" + [guid]::NewGuid().ToString("N"))
 $evidenceRoot = Join-Path $runRoot "evidence"
+$rawRoot = Join-Path $evidenceRoot "raw"
 $validationStartedAt = Get-Date
-New-Item -ItemType Directory -Path $evidenceRoot | Out-Null
-codex --version | Tee-Object -FilePath (Join-Path $evidenceRoot "codex-version.txt")
-codex plugin list | Select-String "codex-model-router" | Tee-Object -FilePath (Join-Path $evidenceRoot "plugin-install.txt")
-Get-Content Q:\codex-model-router\plugins\codex-model-router\.codex-plugin\plugin.json | Tee-Object -FilePath (Join-Path $evidenceRoot "plugin-manifest.json")
+New-Item -ItemType Directory -Path $rawRoot | Out-Null
+codex --version | Tee-Object -FilePath (Join-Path $rawRoot "codex-version.txt")
+codex plugin list | Select-String "codex-model-router" | Tee-Object -FilePath (Join-Path $rawRoot "plugin-install.txt")
+Get-Content Q:\codex-model-router\plugins\codex-model-router\.codex-plugin\plugin.json | Tee-Object -FilePath (Join-Path $rawRoot "plugin-manifest.json")
 
 function Initialize-TestRepository([string]$Path) {
     New-Item -ItemType Directory -Path $Path | Out-Null
@@ -82,7 +83,7 @@ function Capture-PersistedSessionTree(
     $children = @($matched | Where-Object Relation -eq "child")
     if ($parents.Count -ne 1) { throw "Expected one persisted parent record for $parentThreadId" }
 
-    $sessionEvidence = Join-Path $evidenceRoot "persisted-sessions\$CaseName"
+    $sessionEvidence = Join-Path $evidenceRoot "session-evidence\$CaseName"
     New-Item -ItemType Directory -Path $sessionEvidence | Out-Null
     $index = foreach ($record in @($parents + $children)) {
         $sourceHash = (Get-FileHash -LiteralPath $record.File.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -104,7 +105,7 @@ function Capture-PersistedSessionTree(
         [pscustomobject]@{
             relation = $record.Relation
             thread_id = $record.Meta.id
-            parent_thread_id = $parentThreadId
+            parent_thread_id = $record.Meta.parent_thread_id
             agent_path = $record.Meta.agent_path
             source_path = $record.File.FullName
             source_sha256 = $sourceHash
@@ -113,7 +114,7 @@ function Capture-PersistedSessionTree(
             copied_sha256 = $copyHash
         }
     }
-    $index | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $sessionEvidence "session-index.json")
+    ConvertTo-Json -InputObject @($index) -Depth 5 | Set-Content -LiteralPath (Join-Path $sessionEvidence "session-index.json")
     if ($ExpectChildren -and $children.Count -eq 0) {
         throw "No persisted child sessions found for delegated case $CaseName"
     }
@@ -129,18 +130,117 @@ ephemeral `codex exec` parent can fail with `no thread with id`.
 Run this before the behavioral cases. It fails closed when the installed CLI
 does not execute the plugin lifecycle hook.
 
+Use `evals/live/fresh-activation-probe-v3.json` as the machine-readable probe
+configuration and copy it unchanged to `raw/activation-spec.json`. Its prompt intentionally contains no explicit Skill request,
+route hint, or expected route text. Before `codex exec`, write
+`raw/activation-environment.json` with the resolved Python executable/version,
+an `import encodings` probe exit code, requested sandbox mode, a sandbox command
+probe exit code, Codex version, and plugin-manifest SHA-256. A missing value is
+`unknown`; do not infer a root cause from a later symptom.
+
+The formal gate compares the spec byte-for-byte to the repository version. It
+also reads the actual user-message event and user-role prompt in the persisted
+session; editing the spec or adding a Skill/route hint invalidates activation.
+An auxiliary `<environment_context>` message is accepted only under its exact
+metadata schema. A timezone value must be an identifier in the repository-pinned
+IANA catalog; instruction-shaped or merely syntax-shaped values fail closed.
+The session metadata ID, index metadata, CLI thread ID, workspace config source,
+and full injected controller/config content must agree. An injected marker and
+a matching path alone do not establish activation.
+
+Run `evals/scripts/activation_preflight.py` from the same environment and working
+directory that will launch the CLI. It invokes the configured hook interpreter
+command (`python` through `cmd.exe` on Windows, `python3` on POSIX), imports
+`encodings`, and captures the actual executable, version, exit code, stdout,
+stderr, and executable/config hashes. Launching the collector with an absolute
+working interpreter does not substitute for a working hook command on PATH.
+The preflight writes a fresh capture even on failure and exits 2; preserve that
+file, repair PATH, restart Codex from the repaired environment, and use a new
+capture directory for the next formal attempt. Do not silently select another
+interpreter or replace a failed record with a successful one.
+
+On the reviewed Windows environment, `C:\Python\Python39\python.exe` failed
+startup with `ModuleNotFoundError: No module named 'encodings'`. This is an
+observed interpreter failure, not proof about historical hook activation. A
+complete Python 3.9+ installation must precede that executable on the PATH
+inherited by Codex. Unit suites run with an explicitly repaired process PATH
+are offline verification only and do not establish automatic activation.
+
+Capture native spawn-tool schema and runtime model-catalog evidence before any
+delegated case as `raw/spawn-schema.json` and `raw/model-catalog.json`. These
+are source exports, not operator-authored summaries: the preflight opens them,
+checks their nonzero SHA-256 values, parses their formal `kind` schemas, and
+derives selector/model/effort compatibility. When inheritance is intended,
+also capture `raw/inheritance-contract.json` from a runtime source that
+explicitly states the inherited model and effort. An omitted selector, child
+turn context, or successful spawn does not prove inheritance.
+
 ```powershell
 $probeRepo = Join-Path $runRoot "activation-probe"
 Initialize-TestRepository $probeRepo
-Set-Content -LiteralPath (Join-Path $probeRepo "note.txt") -Value "unchanged"
+[IO.File]::WriteAllText((Join-Path $probeRepo "note.txt"), "unchanged`n", [Text.UTF8Encoding]::new($false))
 Commit-TestBaseline $probeRepo
-codex exec --json -C $probeRepo -s workspace-write -o (Join-Path $evidenceRoot "activation-final.txt") "Read note.txt and report its exact contents without modifying files." 2>&1 | Tee-Object -FilePath (Join-Path $evidenceRoot "activation.jsonl")
-Capture-PersistedSessionTree (Join-Path $evidenceRoot "activation.jsonl") "activation" $false
+$probeSpecPath = "Q:\codex-model-router\evals\live\fresh-activation-probe-v3.json"
+Copy-Item -LiteralPath $probeSpecPath -Destination (Join-Path $rawRoot "activation-spec.json")
+$probeSpec = Get-Content -Raw $probeSpecPath | ConvertFrom-Json
+Copy-Item -LiteralPath (Join-Path $probeRepo "note.txt") -Destination (Join-Path $rawRoot "activation-note-before.txt")
+# The launcher may be an absolute working Python, but the script probes the hook's PATH command.
+python "Q:\codex-model-router\evals\scripts\activation_preflight.py" --workspace $probeRepo --output (Join-Path $rawRoot "activation-python-preflight.json")
+if ($LASTEXITCODE -ne 0) { throw "BLOCKED: configured hook Python preflight failed; preserve its capture" }
+codex exec --json -C $probeRepo -s workspace-write -o (Join-Path $rawRoot "activation-final.txt") $probeSpec.prompt 2>&1 | Tee-Object -FilePath (Join-Path $rawRoot "activation.jsonl")
+Capture-PersistedSessionTree (Join-Path $rawRoot "activation.jsonl") "activation" $false
 $probeConfig = Join-Path $probeRepo ".codex-model-router\routing.json"
 if (-not (Test-Path -LiteralPath $probeConfig)) { throw "BLOCKED: installed CLI did not execute the router lifecycle hook" }
-if (-not (Select-String -LiteralPath (Join-Path $evidenceRoot "activation.jsonl") -SimpleMatch "ROUTE: DIRECT" -Quiet)) { throw "BLOCKED: hook ran, but no pre-action DIRECT decision was observed" }
-Copy-Item -LiteralPath $probeConfig -Destination (Join-Path $evidenceRoot "activation-routing.json")
-Get-FileHash -LiteralPath $probeConfig | Format-List | Out-String | Tee-Object -FilePath (Join-Path $evidenceRoot "activation-routing.sha256.txt")
+if (-not (Select-String -LiteralPath (Join-Path $rawRoot "activation.jsonl") -Pattern '^.*"text":"ROUTE: DIRECT' -Quiet)) { throw "BLOCKED: no controller message beginning with pre-action ROUTE: DIRECT was observed" }
+Copy-Item -LiteralPath $probeConfig -Destination (Join-Path $rawRoot "activation-routing.json")
+```
+
+Write `raw/activation-hook-provenance.json` with schema version 1, the actual
+`SessionStart` or `UserPromptSubmit` hook event, transcript thread ID, absolute
+source config path, and matching source/captured config SHA-256 values. This is
+the source-bound hook record; the
+collector reopens the source path and rejects copied files or prose claims that
+are not bound to the live thread. Write `raw/activation-environment.json` with
+all fields listed in the v3 spec. Its manifest hash must match
+`raw/plugin-manifest.json`; its Codex version must match `raw/codex-version.txt`.
+The route must be the first text in its own controller message and precede the
+first command, file, MCP, web, or image business action.
+
+Copy the interpreter/version/import facts from the successful
+`raw/activation-python-preflight.json` into the environment record below. Its
+workspace must match the activation session and its timestamp must precede the
+session. The gate rejects a capture of an arbitrary absolute interpreter.
+Completion requires a successful `note.txt` read with the expected captured
+output, an unchanged business tree, one completed CLI turn, and matching final
+text in the CLI stream, final file, and persisted task-complete event. The final
+text may contain only `unchanged`, either bare or in a plain/text code fence.
+Missing results, failure events, or extra Skill/user messages fail the gate.
+
+The two activation records have these exact shapes (replace values with captured
+facts; never use these strings as evidence):
+
+```json
+{
+  "resolved_python_executable": "C:\\absolute\\python.exe",
+  "resolved_python_executable_sha256": "<64 lowercase hex characters>",
+  "python_version": "<captured version>",
+  "python_encodings_import_exit_code": 0,
+  "sandbox_mode_requested": "workspace-write",
+  "sandbox_probe_exit_code": 0,
+  "codex_version": "<captured version>",
+  "plugin_manifest_sha256": "<64 lowercase hex characters>"
+}
+```
+
+```json
+{
+  "schema_version": 1,
+  "hook_event": "SessionStart",
+  "thread_id": "<activation transcript thread ID>",
+  "source_config_path": "C:\\absolute\\probe\\.codex-model-router\\routing.json",
+  "source_config_sha256": "<64 lowercase hex characters>",
+  "captured_config_sha256": "<the identical hash>"
+}
 ```
 
 If this gate fails, stop. A manually successful `router_hook.py` invocation,
@@ -149,13 +249,12 @@ live passes. `--dangerously-bypass-hook-trust` may isolate trust problems in a
 disposable workspace, but a bypassed run is diagnostic evidence, not the formal
 trusted-hook result.
 
-On Codex CLI `0.155.0-alpha.9.2`, observed `codex exec` runs did not execute
-installed plugin lifecycle hooks, including with trust bypass and a per-run
-`plugin_hooks` feature override. The plugin was installed and enabled, but no
-routing config or automatic route line appeared. Treat that runtime as blocked
-for the automatic cases unless a newer run passes the activation gate. The
-explicit Skill path remains independently testable; it does not retroactively
-pass automatic hook activation.
+The historical `router-scenarios-live-20260923T031600Z` probe did not produce
+the required route/config evidence. Later controlled probes identified two
+Windows plugin defects: `%PLUGIN_ROOT%` was not expanded by the hook launcher,
+and owner-only ACLs on the hook-created config prevented sandbox reads. The
+historical gate remains FAIL. A fresh installed-plugin probe must pass before
+automatic cases run in a new environment.
 
 ### Explicit-Skill dispatcher diagnostic
 
@@ -267,7 +366,7 @@ policy failure even when the final files are correct.
 ## Evidence review and claim boundary
 
 Correlate route text, tool events, and worker events in each JSONL transcript.
-The `codex exec --json` stream does not include complete spawn arguments or
+The compact `codex exec --json` stream may omit complete spawn arguments or
 worker packets. Retain the matched parent and child persisted rollout records;
 the generated `session-index.json` records their original source paths,
 one-based evidence line numbers, SHA-256 hashes, copied paths, and copy hashes.
@@ -281,3 +380,31 @@ disk proves hook execution, not correct routing; route text without the required
 event ordering is also insufficient. Record missing hook execution, missing
 native dispatch, rejected transport names, direct recovery after escalation, or
 other noncompliance as failures rather than rewriting the evidence as a pass.
+
+Run `evals/scripts/live_evidence.py collect` for a new campaign; it writes
+`live-results-v3.json` by default. Before copying anything it refuses an
+existing report or `results/` tree, stages all result copies, validates a
+temporary report by reparsing raw evidence, and publishes with atomic renames.
+Failed validation rolls back the fresh result tree; it never overwrites or
+partially updates evidence.
+Use `reprocess --original ... --output ...` for versioned derived analysis of a
+historical campaign. Validation reopens and hashes the original report,
+session index, every session source, captured artifact tree, and frozen oracle;
+then it rebuilds every leaf check and overall acceptance. Submitted statuses,
+acceptance flags, quoted `ROUTE:` examples, and prose-only receipts are not
+trusted.
+
+The validator resolves each oracle from its own repository's pinned benchmark,
+case, fixture descriptor, and frozen snapshot. A report cannot choose another
+oracle repository or arbitrary result directory: artifacts are always
+`results/<case>`, and indexes are always `session-evidence/<case>/session-index.json`.
+Every source must agree with index metadata and the transcript parent ID; each
+child must have that parent and match a unique native spawn call/result pair.
+The latest route before each spawn must be DELEGATE with the case's topology.
+A late DELEGATE line cannot authorize an earlier spawn, and controller business
+actions require an active DIRECT decision.
+
+For the architecture scenario, instruct the reviewer to include exactly one
+`Verdict: PASS` or `Verdict: FAIL` line in its final receipt. No other PASS/FAIL
+token may occur in that receipt. Missing, duplicate, qualified, contradictory,
+or failing verdicts fail closed, including `FAIL: This must not PASS`.

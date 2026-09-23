@@ -13,8 +13,7 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = 2
-LEGACY_SCHEMA_VERSIONS = {1}
+SCHEMA_VERSION = 3
 CONFIG_DIRECTORY = ".codex-model-router"
 CONFIG_FILENAME = "routing.json"
 MAX_CONFIG_FILE_BYTES = 32_768
@@ -23,17 +22,14 @@ MAX_EXAMPLES = 64
 MODEL_CLASSES = {"Astra", "Sol", "Terra", "Luna"}
 REASONING_EFFORTS = {"low", "medium", "high", "xhigh", "max", "ultra"}
 EXAMPLE_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-COMMON_TOP_LEVEL_FIELDS = {
+TOP_LEVEL_FIELDS = {
     "schema_version",
     "selection_principle",
     "runtime_resolution",
     "effort_guidance",
     "official_sources",
     "examples",
-}
-TOP_LEVEL_FIELDS_BY_VERSION = {
-    1: COMMON_TOP_LEVEL_FIELDS,
-    2: COMMON_TOP_LEVEL_FIELDS | {"execution_policy"},
+    "execution_policy",
 }
 EFFORT_FIELDS = {"low", "medium", "high", "xhigh"}
 EXAMPLE_FIELDS = {
@@ -43,25 +39,46 @@ EXAMPLE_FIELDS = {
     "reasoning_effort",
     "rationale",
 }
-EXAMPLE_FIELDS_BY_VERSION = {
-    1: EXAMPLE_FIELDS,
-    2: EXAMPLE_FIELDS | {"execution_mode"},
-}
+EXAMPLE_FIELDS = EXAMPLE_FIELDS | {"execution_mode"}
 EXECUTION_MODES = {"direct", "delegate", "evaluate"}
 EXECUTION_POLICY_FIELDS = {
     "default_mode",
     "direct_requires_all",
     "delegate_if_any",
     "reroute_on_escalation",
+    "delegate_topology",
+    "limits",
+    "verification",
 }
+DELEGATE_TOPOLOGY_FIELDS = {
+    "parallel_enabled",
+    "parallel_requires_all",
+    "fallback_mode",
+    "context_isolation",
+}
+LIMIT_FIELDS = {"max_depth", "max_concurrency", "max_retries"}
+VERIFICATION_FIELDS = {"direct_minimum", "delegate_minimum", "independent_review_if_any"}
+PARALLEL_REQUIRED_SIGNALS = {
+    "multiple-bounded-tasks",
+    "independent-tasks",
+    "no-dependencies",
+    "disjoint-write-scopes",
+}
+INDEPENDENT_REVIEW_SIGNALS = {"independent-review-required", "high-risk"}
 DIRECT_REQUIRED_SIGNALS = {
     "one-local-scope",
     "one-bounded-known-outcome",
     "no-network-or-sync",
     "no-long-running-or-monitoring",
     "no-failure-or-recovery-workflow",
+    "no-named-multistep-runbook",
     "no-substantive-research-or-investigation",
     "no-independent-review-or-validation",
+    "no-high-risk",
+    "permissions-confirmed",
+    "safety-constraints-known",
+    "verification-plan-present",
+    "write-scope-known",
 }
 DELEGATE_SIGNALS = {
     "multiple-repositories-systems-or-sources",
@@ -71,6 +88,7 @@ DELEGATE_SIGNALS = {
     "failure-or-recovery-workflow",
     "substantive-research-or-investigation",
     "independent-review-or-validation",
+    "high-risk",
 }
 EXECUTION_SIGNALS = DIRECT_REQUIRED_SIGNALS | DELEGATE_SIGNALS
 DEFAULT_EXECUTION_POLICY = {
@@ -81,8 +99,14 @@ DEFAULT_EXECUTION_POLICY = {
         "no-network-or-sync",
         "no-long-running-or-monitoring",
         "no-failure-or-recovery-workflow",
+        "no-named-multistep-runbook",
         "no-substantive-research-or-investigation",
         "no-independent-review-or-validation",
+        "no-high-risk",
+        "permissions-confirmed",
+        "safety-constraints-known",
+        "verification-plan-present",
+        "write-scope-known",
     ],
     "delegate_if_any": [
         "multiple-repositories-systems-or-sources",
@@ -92,8 +116,26 @@ DEFAULT_EXECUTION_POLICY = {
         "failure-or-recovery-workflow",
         "substantive-research-or-investigation",
         "independent-review-or-validation",
+        "high-risk",
     ],
     "reroute_on_escalation": True,
+    "delegate_topology": {
+        "parallel_enabled": True,
+        "parallel_requires_all": [
+            "multiple-bounded-tasks",
+            "independent-tasks",
+            "no-dependencies",
+            "disjoint-write-scopes",
+        ],
+        "fallback_mode": "isolated_serial",
+        "context_isolation": "minimal-packet-compact-receipt",
+    },
+    "limits": {"max_depth": 1, "max_concurrency": 3, "max_retries": 1},
+    "verification": {
+        "direct_minimum": "self_check",
+        "delegate_minimum": "self_check",
+        "independent_review_if_any": ["independent-review-required", "high-risk"],
+    },
 }
 
 
@@ -216,20 +258,57 @@ def _validate_execution_policy(value: Any, label: str) -> None:
     if policy["reroute_on_escalation"] is not True:
         raise RoutingConfigError(f"{label}.reroute_on_escalation must be true")
 
+    topology = _require_object(policy["delegate_topology"], f"{label}.delegate_topology")
+    _require_exact_fields(topology, DELEGATE_TOPOLOGY_FIELDS, f"{label}.delegate_topology")
+    if topology["parallel_enabled"] is not True:
+        raise RoutingConfigError(f"{label}.delegate_topology.parallel_enabled must be true")
+    _validate_exact_string_set(
+        topology["parallel_requires_all"], PARALLEL_REQUIRED_SIGNALS,
+        f"{label}.delegate_topology.parallel_requires_all",
+    )
+    if topology["fallback_mode"] != "isolated_serial":
+        raise RoutingConfigError(f"{label}.delegate_topology.fallback_mode must be isolated_serial")
+    if topology["context_isolation"] != "minimal-packet-compact-receipt":
+        raise RoutingConfigError(
+            f"{label}.delegate_topology.context_isolation must be minimal-packet-compact-receipt"
+        )
+
+    limits = _require_object(policy["limits"], f"{label}.limits")
+    _require_exact_fields(limits, LIMIT_FIELDS, f"{label}.limits")
+    for field, maximum in (("max_depth", 4), ("max_concurrency", 8), ("max_retries", 3)):
+        setting = limits[field]
+        if type(setting) is not int or not 1 <= setting <= maximum:
+            raise RoutingConfigError(f"{label}.limits.{field} must be an integer from 1 through {maximum}")
+
+    verification = _require_object(policy["verification"], f"{label}.verification")
+    _require_exact_fields(verification, VERIFICATION_FIELDS, f"{label}.verification")
+    for field in ("direct_minimum", "delegate_minimum"):
+        if verification[field] != "self_check":
+            raise RoutingConfigError(f"{label}.verification.{field} must be self_check")
+    _validate_exact_string_set(
+        verification["independent_review_if_any"], INDEPENDENT_REVIEW_SIGNALS,
+        f"{label}.verification.independent_review_if_any",
+    )
+
+
+def _validate_exact_string_set(value: Any, expected: set[str], label: str) -> None:
+    if not isinstance(value, list) or any(type(item) is not str for item in value):
+        raise RoutingConfigError(f"{label} must be a string array")
+    if len(value) != len(set(value)):
+        raise RoutingConfigError(f"{label} must not contain duplicates")
+    if set(value) != expected:
+        raise RoutingConfigError(f"{label} must contain every required value exactly once")
+
 
 def effective_execution_policy(config: dict[str, Any]) -> dict[str, Any]:
-    """Return execution policy for an already validated v1 or v2 config."""
+    """Return an isolated effective policy for an already validated config."""
 
-    if config["schema_version"] in LEGACY_SCHEMA_VERSIONS:
-        return deepcopy(DEFAULT_EXECUTION_POLICY)
     return deepcopy(config["execution_policy"])
 
 
 def effective_execution_mode(config: dict[str, Any], example: dict[str, Any]) -> str:
-    """Return the route mode, using evaluate for a legacy v1 example."""
+    """Return the configured execution mode for an example."""
 
-    if config["schema_version"] in LEGACY_SCHEMA_VERSIONS:
-        return "evaluate"
     return example["execution_mode"]
 
 
@@ -264,16 +343,13 @@ def configured_execution_mode(
 def validate_config(config: Any, source: str = "routing config") -> dict[str, Any]:
     root = _require_object(config, source)
     version = root.get("schema_version")
-    supported_versions = sorted(LEGACY_SCHEMA_VERSIONS | {SCHEMA_VERSION})
-    if type(version) is not int or version not in supported_versions:
-        choices = ", ".join(str(item) for item in supported_versions)
-        raise RoutingConfigError(f"{source}.schema_version must be an integer set to one of: {choices}")
-    _require_exact_fields(root, TOP_LEVEL_FIELDS_BY_VERSION[version], source)
+    if type(version) is not int or version != SCHEMA_VERSION:
+        raise RoutingConfigError(f"{source}.schema_version must be integer {SCHEMA_VERSION}")
+    _require_exact_fields(root, TOP_LEVEL_FIELDS, source)
     _require_string(root["selection_principle"], f"{source}.selection_principle", 1_000)
     _require_string(root["runtime_resolution"], f"{source}.runtime_resolution", 1_000)
 
-    if version == SCHEMA_VERSION:
-        _validate_execution_policy(root["execution_policy"], f"{source}.execution_policy")
+    _validate_execution_policy(root["execution_policy"], f"{source}.execution_policy")
 
     guidance = _require_object(root["effort_guidance"], f"{source}.effort_guidance")
     _require_exact_fields(guidance, EFFORT_FIELDS, f"{source}.effort_guidance")
@@ -299,7 +375,7 @@ def validate_config(config: Any, source: str = "routing config") -> dict[str, An
     for index, raw_example in enumerate(examples):
         label = f"{source}.examples[{index}]"
         example = _require_object(raw_example, label)
-        _require_exact_fields(example, EXAMPLE_FIELDS_BY_VERSION[version], label)
+        _require_exact_fields(example, EXAMPLE_FIELDS, label)
         example_id = _require_string(example["id"], f"{label}.id", 64)
         if not EXAMPLE_ID_PATTERN.fullmatch(example_id):
             raise RoutingConfigError(f"{label}.id must match {EXAMPLE_ID_PATTERN.pattern}")
@@ -329,8 +405,7 @@ def validate_config(config: Any, source: str = "routing config") -> dict[str, An
             )
         _require_string(example["rationale"], f"{label}.rationale", 500)
 
-        if version == SCHEMA_VERSION:
-            _require_execution_mode(example["execution_mode"], f"{label}.execution_mode")
+        _require_execution_mode(example["execution_mode"], f"{label}.execution_mode")
 
     serialized_config(root, source)
     return root
@@ -394,8 +469,12 @@ def load_default_template() -> tuple[dict[str, Any], bytes]:
 def initialize_config(path: Path) -> bool:
     _config, template_bytes = load_default_template()
     config_directory = path.parent
+    # Windows' 0700/0600 modes create owner-only ACLs. Hook-created files must
+    # remain readable by the separate Codex workspace-sandbox identity.
+    directory_mode = 0o777 if os.name == "nt" else 0o700
+    file_mode = 0o666 if os.name == "nt" else 0o600
     try:
-        config_directory.mkdir(mode=0o700, parents=False, exist_ok=True)
+        config_directory.mkdir(mode=directory_mode, parents=False, exist_ok=True)
     except OSError as error:
         raise RoutingConfigError(f"cannot create routing config directory {config_directory}: {error}") from error
     if not config_directory.is_dir():
@@ -404,7 +483,7 @@ def initialize_config(path: Path) -> bool:
     descriptor: int | None = None
     created = False
     try:
-        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, file_mode)
         created = True
         with os.fdopen(descriptor, "wb") as stream:
             descriptor = None
@@ -435,18 +514,26 @@ def load_workspace_config(workspace_cwd: Path) -> tuple[Path, dict[str, Any], bo
 
 def routing_context_block(path: Path, config: dict[str, Any]) -> str:
     serialized = serialized_config(config, str(path))
-    compatibility = ""
-    if config["schema_version"] in LEGACY_SCHEMA_VERSIONS:
-        compatibility = (
-            "Legacy schema v1 remains valid and unchanged: apply the built-in v2 execution policy "
-            "and treat every example execution_mode as evaluate.\n"
-        )
+    resolver = plugin_root() / "hooks" / "execution_decision.py"
+    effective_policy = json.dumps(
+        effective_execution_policy(config), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
     return (
         "ROUTING_CONFIG_BEGIN\n"
         f"Workspace routing config: {path}\n"
-        "Execution mode is evaluated before model selection. Treat execution_mode and preferred_model_class as "
-        "policy inputs, not a complete natural-language classifier; resolve model preferences only after delegation.\n"
-        f"{compatibility}"
+        "Routing decision contract version: 1. Ownership is resolved before delegate topology, verification, "
+        "and model selection. Unknown decision signals cannot qualify for DIRECT.\n"
+        f"Decision resolver program: {resolver}\n"
+        f"Invocation: use an available Python 3.9+ runtime to run the resolver with --config {path}; "
+        "send one decision-request-v1 JSON on stdin and use its validated JSON result.\n"
+        "Request fields: schema_version=1, decision_id, phase, prior_ownership, escalation_trigger, "
+        "matched_example_ids, and signals. Signals: one_local_scope, bounded_known_outcome, "
+        "network_or_sync, long_running_or_monitoring, failure_or_recovery, named_multistep_runbook, "
+        "substantive_research_or_investigation, independent_review_required, high_risk, "
+        "multiple_bounded_tasks, tasks_independent, dependencies_absent, write_scopes_disjoint, "
+        "permissions_confirmed, safety_constraints_known, verification_plan_present, write_scope_known. "
+        "Every signal is true, false, or null; null is unknown.\n"
+        f"EFFECTIVE_EXECUTION_POLICY:{effective_policy}\n"
         f"{serialized}\n"
         "ROUTING_CONFIG_END"
     )

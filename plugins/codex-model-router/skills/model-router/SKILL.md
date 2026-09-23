@@ -43,6 +43,11 @@ Each `SessionStart`, `UserPromptSubmit`, and `SubagentStart` context contains a
 delimited `ROUTING_CONFIG_BEGIN`/`ROUTING_CONFIG_END` block loaded from the
 validated workspace `.codex-model-router/routing.json` on that invocation.
 Treat that JSON as the source of execution-policy inputs and routing examples.
+Use the absolute resolver/config paths and compact request schema included in
+that block. Read the [decision contract](references/decision-contract.md), send
+one decision-request-v1 JSON object to the bundled resolver, and use its
+validated result before emitting the route line. Resolver invocation is a
+routing-only preflight action, not business execution.
 Decide execution ownership first. Only for a delegated route, resolve advisory
 model classes against the runtime model catalog and supported efforts, then
 choose the lowest capable available option. Do not treat an example as proof
@@ -60,60 +65,75 @@ back to defaults.
 
 ## Controller protocol
 
-1. Before the first business action, emit exactly one explicit decision:
+1. Before the first business action, construct a decision-contract version 1
+   request using every field defined in the injected block. Invoke the bundled
+   resolver with the injected workspace config path. Record its validated
+   ownership, delegate topology,
+   verification requirement, effective config mode, matched rule, reasons,
+   inherited constraints, and reclassification trigger. Also emit
    `ROUTE: DIRECT — <rule/reason>` or
-   `ROUTE: DELEGATE — <rule/model/effort/reason>`. Skills define HOW work is
-   performed, not WHO performs it; selecting this Skill does not decide the
-   route or bypass the gate.
-2. Select DIRECT only when all conditions hold: one local scope, one bounded
-   known outcome, no network/synchronization, no long-running work/monitoring,
-   no failure/recovery workflow, no substantive research/investigation, and no
-   independent review/validation. The controller may then inspect, edit, run
-   commands, and perform narrow validation within that scope.
-3. Select DELEGATE when any condition exists: multiple repositories, systems,
-   or sources; a named multi-step runbook; network access/synchronization;
-   long-running work/monitoring; failure/recovery; substantive investigation;
-   or independent review/validation. A delegate signal overrides direct
-   eligibility. Per-route `direct` means eligible subject to every direct
-   condition, `delegate` is mandatory, and `evaluate` applies this semantic
-   gate.
-   Resolve config precedence in this order: hard DELEGATE signals first; one
-   matched route's `execution_mode` overrides global
-   `execution_policy.default_mode`; no route match uses the global default; and
-   disagreeing matched routes fail closed to DELEGATE. Neither global nor
-   per-route `direct` waives a direct condition.
-4. If a direct task reveals a delegate signal or stops satisfying every direct
-   condition, emit the DELEGATE line and reroute before the next business
-   action. Re-evaluate after every direct tool result. A failed validation, a
-   tool result naming another repository/system/source, or a recovery
-   instruction is a hard barrier: the only next steps are the DELEGATE line,
-   capability/model resolution, and dispatch. Do not inspect the newly revealed
-   scope, diagnose further, or perform the recovery directly.
-5. Only for DELEGATE, discover native multi-agent spawn and matching
+   `ROUTE: DELEGATE — <topology/rule/model/effort/reason>`.
+2. DIRECT is eligible only when every bounded fact is explicitly known: one
+   local scope, one bounded known outcome, no network/sync, monitoring,
+   recovery, substantive research, independent review, or high risk;
+   permissions and safety constraints are confirmed; and write scope and a
+   self-check plan are known. A false or unknown required fact disqualifies the
+   fast path. DIRECT performs the work and its self-check without waiving any
+   scope, permission, safety, or write-ownership obligation.
+3. Resolve precedence deterministically: a direct-bound escalation or hard
+   DELEGATE/unknown signal wins; one matching example overrides the global
+   default; no match uses the default; disagreeing matched modes resolve to
+   DELEGATE. Config `direct` is eligibility only, `delegate` is mandatory, and
+   `evaluate` applies the structured gate.
+4. If DIRECT exceeds an approved bound, stop before the next business action.
+   Create a reclassification result with `reclassified_from: DIRECT` and one
+   explicit `escalation_trigger`, then route DELEGATE. Supported triggers cover
+   scope/outcome expansion, network, monitoring, recovery, research, review,
+   dependency or overlap discovery, failed validation, and permission/safety
+   changes. Do not silently continue or omit the trigger record.
+5. For DELEGATE, choose `PARALLEL` only when multiple bounded tasks,
+   independence, absence of dependencies, and disjoint write scopes are all
+   explicitly true. Otherwise choose `ISOLATED_SERIAL`; dependencies and
+   overlapping or shared writes always serialize. Isolation here means a
+   minimal worker packet plus compact receipt/artifact references. Never claim
+   parent history was erased or a technical sandbox exists unless the runtime
+   actually provides and verifies it.
+6. Only for DELEGATE, discover native multi-agent spawn and matching
    wait/collect tools using exposed discovery interfaces. Inspect available
    worker models and supported efforts; do not invent them. Thread-management
    tools alone do not establish native capability. If native capability is
    unavailable, report BLOCKED rather than silently executing delegated work.
    A failed dispatch permits bounded retry/escalation, then a blocked report;
    it never permits controller fallback.
-6. Build a task DAG from the user's request and returned worker packets. If
+   Before each spawn, read the [dispatch preflight contract](references/dispatch-contract.md),
+   build a hash-bound `dispatch-contract-v1` record from the observed spawn
+   schema and model catalog (or an explicitly observed inheritance contract),
+   and run the bundled `hooks/dispatch_contract.py`. Missing selectors,
+   catalogs, or inheritance proof are recorded capability blockers. Later
+   runtime metadata cannot retroactively authorize the dispatch.
+7. Build a task DAG from the user's request and returned worker packets. If
    decomposition needs repository knowledge or domain analysis, dispatch a
    discovery/analysis worker first. Declare dependencies, acceptance criteria,
    write ownership, and bounded retries before dispatch. Read the
    [routing policy](references/routing-policy.md) for model selection,
    meta-task review, and integration rules.
-7. Wait for dependencies, collect packets, and validate their structure and
-   reported status. Worker-packet validation covers task identity, required
+8. Apply the configured maximum depth, concurrency, and retry count as ceilings,
+   lowering them to actual limits exposed by the runtime. Never invent worker
+   slots, isolation, or dispatch features. Preserve
+   permissions, safety constraints, exclusive write ownership, and verification
+   requirements in every packet. Wait for dependencies, collect compact
+   receipts, and validate their structure and reported status. Worker-packet
+   validation covers task identity, required
    fields, completeness, consistency, evidence references, and reported
    acceptance/validation status. It does not establish business correctness.
    Missing or inconsistent evidence requires a worker follow-up. Workers
    perform substantive validation; the controller does not reopen artifacts
    or rerun tests to check their claims.
-8. Resolve conflicts by scheduling workers and selecting among their supported
+9. Resolve conflicts by scheduling workers and selecting among their supported
    recommendations. Delegate substantive disagreements to a review worker
    and file conflicts to an integration worker, followed by worker validation
    of the integrated result. The controller does not repair or merge files.
-9. Synthesize accepted worker evidence into the final user-facing response.
+10. Synthesize accepted worker evidence into the final user-facing response.
    Attribute validation to the workers and disclose unverified results or
    blockers. Do not invent analysis or claim checks the workers did not perform.
 
@@ -121,7 +141,8 @@ back to defaults.
 
 For router self-improvement, routing-policy review, evaluation design, and
 benchmark selection, independent review is mandatory before finalization.
-That independent-validation signal makes these tasks DELEGATE routes.
+That independent-validation signal makes these tasks DELEGATE routes and sets
+the decision's verification requirement to `INDEPENDENT_REVIEW`.
 Dispatch a reviewer separate from the author/implementer to the highest suitable
 available model. Requested implementation must also have an implementation
 worker; dispatching only a reviewer does not fulfill a coding request. These
@@ -139,15 +160,19 @@ Objective and worker role (analysis / implementation / review / integration / va
 Dependencies:
 Allowed files or evidence and write ownership (or read-only):
 User intent, permissions, and workspace constraints:
+Resolved topology position and context-isolation claim:
 Acceptance criteria and required validation:
 Model and reasoning effort:
-Retry/stop limits:
+Depth, concurrency, retry, and stop limits:
 Return format: task ID, outcome, evidence, validation, risks or blockers.
 ```
 
-Evidence must identify inspected sources or changed artifacts. Validation must
+Packets contain only required context, but this does not claim inherited parent
+history was erased or that a sandbox exists. Evidence must identify inspected
+sources or changed artifacts. Validation must
 state checks and results, or explicitly say not run and why. The controller
 routes incomplete packets back to workers rather than filling the gaps itself.
+Results are compact receipts with artifact references, not raw working logs.
 
 ## Deterministic worker names
 
@@ -197,7 +222,8 @@ plugin cannot force the title of a native worker card in that case.
 ## Enforcement limit
 
 This is policy enforcement at the agent-instruction layer. The lifecycle hooks
-inject context; context injection cannot intercept tool calls and is not an
-OS/tool permission barrier. No tool denial, sandbox restriction, or dispatch
-guarantee is implemented. Compliance depends on the agent following these
-instructions; technical enforcement would require additional runtime controls.
+inject context; context injection cannot erase existing history, intercept tool
+calls, create a sandbox, or act as an OS/tool permission barrier. No tool denial,
+sandbox restriction, or dispatch guarantee is implemented. Compliance depends
+on the agent following these instructions; technical enforcement would require
+additional runtime controls.

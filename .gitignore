@@ -17,3 +17,6 @@ __pycache__/
 
 # Reproducible synthetic evaluation output (generate in a fresh directory)
 evals/generated/
+
+# Disposable nested Git workspaces used by opt-in live scenario campaigns
+evals/live/*/workspaces/

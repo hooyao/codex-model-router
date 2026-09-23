@@ -1,0 +1,1914 @@
+{
+  "acceptance": {
+    "activation_gate_pass": true,
+    "artifact_pass": false,
+    "campaign_pass": false,
+    "completed_runs": 4,
+    "identity_contract_pass": false,
+    "required_route_process_pass": false,
+    "scheduled_runs": 5
+  },
+  "activation_gate": {
+    "checks": [
+      {
+        "detail": "activation-probe-v3 exact schema",
+        "evidence_refs": [
+          "raw/activation-spec.json"
+        ],
+        "name": "formal-probe-spec",
+        "status": "pass"
+      },
+      {
+        "detail": "activation inputs use raw/ plus the canonical activation session index",
+        "evidence_refs": [
+          "raw/activation-spec.json"
+        ],
+        "name": "canonical-capture-layout",
+        "status": "pass"
+      },
+      {
+        "detail": "transcript, final, config, environment, provenance, CLI, manifest, and capabilities",
+        "evidence_refs": [
+          "raw/activation.jsonl",
+          "raw/activation-final.txt",
+          "raw/activation-routing.json",
+          "raw/activation-environment.json",
+          "raw/activation-hook-provenance.json",
+          "raw/codex-version.txt",
+          "raw/plugin-manifest.json",
+          "raw/spawn-schema.json",
+          "raw/model-catalog.json",
+          "session-evidence/activation/session-index.json",
+          "raw/activation-python-preflight.json",
+          "raw/activation-note-before.txt"
+        ],
+        "name": "required-capture-files",
+        "status": "pass"
+      },
+      {
+        "detail": "the controller message itself must begin with ROUTE: before business action",
+        "evidence_refs": [
+          "raw/activation.jsonl:6"
+        ],
+        "name": "hook-route-before-business",
+        "status": "pass"
+      },
+      {
+        "detail": "parsed routing schema, not file existence",
+        "evidence_refs": [
+          "raw/activation-routing.json"
+        ],
+        "name": "routing-config",
+        "status": "pass"
+      },
+      {
+        "detail": "resolved Python, import, sandbox, CLI, and manifest facts are complete and hash-bound",
+        "evidence_refs": [
+          "raw/activation-environment.json",
+          "raw/codex-version.txt",
+          "raw/plugin-manifest.json"
+        ],
+        "name": "environment-preflight",
+        "status": "pass"
+      },
+      {
+        "detail": "the configured hook command resolves and imports encodings in its launch environment",
+        "evidence_refs": [
+          "raw/activation-python-preflight.json",
+          "raw/activation-environment.json"
+        ],
+        "name": "configured-hook-python",
+        "status": "pass"
+      },
+      {
+        "detail": "hook provenance binds the live thread and original workspace config",
+        "evidence_refs": [
+          "raw/activation-hook-provenance.json",
+          "raw/activation-routing.json"
+        ],
+        "name": "source-bound-hook-artifact",
+        "status": "pass"
+      },
+      {
+        "detail": "transcript, index, metadata, workspace, and route agree",
+        "evidence_refs": [
+          "session-evidence/activation/session-index.json",
+          "raw/activation.jsonl"
+        ],
+        "name": "activation-session-binding",
+        "status": "pass"
+      },
+      {
+        "detail": "exact repository-controlled neutral user message, once, before routing",
+        "evidence_refs": [
+          "session-evidence/activation/session-index.json",
+          "raw/activation.jsonl"
+        ],
+        "name": "neutral-user-prompt",
+        "status": "pass"
+      },
+      {
+        "detail": "one context per firing lifecycle hook contains the exact contract/config before routing",
+        "evidence_refs": [
+          "session-evidence/activation/session-index.json",
+          "raw/activation.jsonl"
+        ],
+        "name": "actual-hook-context",
+        "status": "pass"
+      },
+      {
+        "detail": "fenced-with-explanatory-prose",
+        "evidence_refs": [
+          "session-evidence/activation/session-index.json",
+          "raw/activation.jsonl"
+        ],
+        "name": "activation-answer-format",
+        "status": "pass"
+      },
+      {
+        "detail": "successful note read, unchanged tree, matching final outputs, and completed turn",
+        "evidence_refs": [
+          "session-evidence/activation/session-index.json",
+          "raw/activation.jsonl"
+        ],
+        "name": "completed-probe-outcome",
+        "status": "pass"
+      },
+      {
+        "detail": "parsed capability sources are available before delegated cases",
+        "evidence_refs": [
+          "raw/spawn-schema.json",
+          "raw/model-catalog.json"
+        ],
+        "name": "dispatch-capabilities",
+        "status": "pass"
+      }
+    ],
+    "diagnostic_observations": [],
+    "evidence": {
+      "activation_session_index": {
+        "path": "session-evidence/activation/session-index.json",
+        "sha256": "f379c3f2597811cd10fb31fb038f52a21e834a0e74441c3f2ccd1e9243f91e52"
+      },
+      "codex_version": {
+        "path": "raw/codex-version.txt",
+        "sha256": "f4b6b7fad398e958b3a4de81a7702beb931fd0678a4cd9f28efce0b525285ab8"
+      },
+      "environment": {
+        "path": "raw/activation-environment.json",
+        "sha256": "1fe21da4953153c01cc0594d1159c67621ed258833062d071a4d9f03dcae37a3"
+      },
+      "final_output": {
+        "path": "raw/activation-final.txt",
+        "sha256": "c6051e0d08c45348783e71abe18818aab057363b6f7d5a5a7c8053751149b935"
+      },
+      "hook_provenance": {
+        "path": "raw/activation-hook-provenance.json",
+        "sha256": "7c92ee60600915a23ba7f8a0741689bc29c8312443adb23bf2e73551787a1836"
+      },
+      "model_catalog": {
+        "path": "raw/model-catalog.json",
+        "sha256": "5fa032b063542961bab173665a0213ab92e29aae646cb33915b7f636715f8b17"
+      },
+      "note_before": {
+        "path": "raw/activation-note-before.txt",
+        "sha256": "1cd263f1102656dd6b6cf1d626d1a96f9eba0406af3cb2a52560d473d4801052"
+      },
+      "plugin_manifest": {
+        "path": "raw/plugin-manifest.json",
+        "sha256": "0432eb79e439f86b04bbc75c0c206d167e75efbc18bf4754578a742c3ece552c"
+      },
+      "probe_spec": {
+        "path": "raw/activation-spec.json",
+        "sha256": "e5fd0fde692887013a52d7f38da6c021894a6b7ba98c0465611a72a8ed8c7151"
+      },
+      "python_preflight": {
+        "path": "raw/activation-python-preflight.json",
+        "sha256": "2d8d81d5eee115e4dcdf301516b84669903f9016f2a446cb95bc1a50e7920da7"
+      },
+      "routing_config": {
+        "path": "raw/activation-routing.json",
+        "sha256": "4d63e268182133062e29fbfc64252ddb0fa51257f86a2d146506ee4c0aacfb7c"
+      },
+      "spawn_schema": {
+        "path": "raw/spawn-schema.json",
+        "sha256": "4c2487e1e42273099d12aa2b2c10bddbffbce9c68e60dabf9720ddd76cd2c468"
+      },
+      "transcript": {
+        "path": "raw/activation.jsonl",
+        "sha256": "5f8076e70868698217cf7d2a8962c735418d5999f9fc90d99dc0c03283e776cd"
+      }
+    },
+    "root_cause": "unknown",
+    "status": "pass"
+  },
+  "analysis_version": "source-derived-v3",
+  "campaign_id": "router-scenarios-live-20260923T094343Z",
+  "claim_boundary": {
+    "automatic_hook_compliance_established": false,
+    "comparative_cost_or_latency_claim_supported": false,
+    "context_deletion_or_sandboxing_established": false,
+    "measured_usd_available": false
+  },
+  "data_origin": "observed",
+  "historical_result_preserved": false,
+  "observations": [
+    {
+      "artifact_validation": {
+        "actual_directories": [],
+        "actual_tree": {
+          "README.md": "55c4a68dd6c729919566e16fc243fa25723697eeaeaa78822c13dda210890e26"
+        },
+        "expected_directories": [],
+        "expected_tree": {
+          "README.md": "55c4a68dd6c729919566e16fc243fa25723697eeaeaa78822c13dda210890e26"
+        },
+        "status": "pass"
+      },
+      "case_id": "direct-small-control",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "usd": null
+      },
+      "evidence": {
+        "artifact_tree": {
+          "directories": [],
+          "files": {
+            "README.md": "55c4a68dd6c729919566e16fc243fa25723697eeaeaa78822c13dda210890e26"
+          },
+          "path": "results/direct-small-control",
+          "tree_sha256": "8eb5ca2d0badb62c8642abe90f254cfca01f5698e981082c94eaa6d525f2140d"
+        },
+        "oracle_tree": {
+          "directories": [],
+          "files": {
+            "README.md": "55c4a68dd6c729919566e16fc243fa25723697eeaeaa78822c13dda210890e26"
+          },
+          "path": "Q:\\MyProjects\\codex-model-router\\evals\\fixtures\\direct-small-control\\reference",
+          "tree_sha256": "8eb5ca2d0badb62c8642abe90f254cfca01f5698e981082c94eaa6d525f2140d"
+        },
+        "session_index": {
+          "path": "session-evidence/direct-small-control/session-index.json",
+          "sha256": "01e0438c452c27b6339b338224668fe80ee28cf024d1eec0191514b0ce6f551c"
+        },
+        "session_sources": [
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T17-52-54-01a0cdae-b4da-7ca2-98eb-bf1862d72090.jsonl",
+            "sha256": "3013add0b930c2cc52f151099fd3a13e85e2c2976d063b9f381feb8e1da4ebc5"
+          }
+        ],
+        "transcript": {
+          "path": "raw/direct-small-control.jsonl",
+          "sha256": "5bd53364eb57bdcbac02bbb9c9c461fcf8c4b2b7a574271770249c1d8d9a1d1a"
+        }
+      },
+      "identity_contract_validation": {
+        "status": "pass",
+        "workers": []
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "assignment_spans": [
+          {
+            "end_at": "2026-09-23T09:54:02.306Z",
+            "end_line": 65,
+            "start_at": "2026-09-23T09:52:54.908Z",
+            "start_line": 2,
+            "turn_id": "01a0cdae-b727-7b03-8bcf-c9b2bbc04e48"
+          }
+        ],
+        "final_echo": {
+          "native_task_name": null,
+          "task_id": null,
+          "worker_name": null
+        },
+        "final_echo_line": 65,
+        "final_text": "Corrected `plguin` to `plugin` in [README.md](Q:\\MyProjects\\codex-model-router\\evals\\live\\router-scenarios-live-20260923T094343Z\\workspaces\\direct-small-control\\README.md). Verified no other changes.",
+        "parent_thread_id": null,
+        "runtime": {
+          "evidence_line": 8,
+          "model": "gpt-5.6-sol",
+          "reasoning_effort": "high"
+        },
+        "session_end_at": "2026-09-23T09:54:02.306Z",
+        "session_start_at": "2026-09-23T09:52:54.468Z",
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T17-52-54-01a0cdae-b4da-7ca2-98eb-bf1862d72090.jsonl",
+        "source_sha256": "3013add0b930c2cc52f151099fd3a13e85e2c2976d063b9f381feb8e1da4ebc5",
+        "thread_id": "01a0cdae-b4da-7ca2-98eb-bf1862d72090"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "detail": "bounded direct route event",
+            "evidence_refs": [
+              "transcript:38"
+            ],
+            "name": "route",
+            "status": "pass"
+          },
+          {
+            "detail": "DIRECT route precedes controller business",
+            "evidence_refs": [
+              "transcript:38"
+            ],
+            "name": "route-before-controller-business",
+            "status": "pass"
+          },
+          {
+            "detail": "direct calibration must not delegate",
+            "evidence_refs": [],
+            "name": "no-worker-dispatch",
+            "status": "pass"
+          },
+          {
+            "detail": "one successful CLI terminal and matching parent task completion/final output",
+            "evidence_refs": [
+              "transcript:18",
+              "parent-session:2",
+              "parent-session:65"
+            ],
+            "name": "successful-terminal-outcome",
+            "status": "pass"
+          }
+        ],
+        "status": "pass"
+      },
+      "route_events": [
+        {
+          "line": 38,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DIRECT \u2014 bounded-direct-fast-path; all bounded direct requirements are explicitly satisfied. Decision: topology `NONE`, verification `SELF_CHECK`, exclusive write scope `README.md`, no reclassification trigger.",
+          "timestamp": "2026-09-23T09:53:36.434Z"
+        }
+      ],
+      "timing": {
+        "all_worker_assignment_overlap_ms": null,
+        "parent_session_lifetime_ms": 67838,
+        "session_lifetime_overlap_ms": 0
+      },
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cache_write_input_tokens": 23849,
+          "cached_input_tokens": 128917,
+          "input_tokens": 155924,
+          "output_tokens": 1817,
+          "reasoning_output_tokens": 696
+        }
+      },
+      "worker_sessions": []
+    },
+    {
+      "artifact_validation": {
+        "actual_directories": [
+          ".router-dispatch-evidence",
+          "app",
+          "docs",
+          "logs",
+          "notes"
+        ],
+        "actual_tree": {
+          "README.md": "b54dfc3f60705e186eaf92e7c9e7edc96332dc196b503239d8a75cda3dd7cbdd",
+          "app/settings.json": "83e83419f826cfbc9a49479ddd8a50fc74df3cab610300e625716e2c2a4b8db7",
+          "docs/ops.md": "4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756",
+          "logs/startup.log": "d691a86ab2a70e015a3195737974886c7f202e45358e73081dc8df117e3e4cc7",
+          "notes/archive.md": "794f2bddd12fdd512c05baca972ce12402b6220eb35285578cec1d60a80817f2"
+        },
+        "expected_directories": [
+          "app",
+          "docs",
+          "logs",
+          "notes"
+        ],
+        "expected_tree": {
+          "README.md": "b54dfc3f60705e186eaf92e7c9e7edc96332dc196b503239d8a75cda3dd7cbdd",
+          "app/settings.json": "83e83419f826cfbc9a49479ddd8a50fc74df3cab610300e625716e2c2a4b8db7",
+          "docs/ops.md": "4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756",
+          "logs/startup.log": "d691a86ab2a70e015a3195737974886c7f202e45358e73081dc8df117e3e4cc7",
+          "notes/archive.md": "794f2bddd12fdd512c05baca972ce12402b6220eb35285578cec1d60a80817f2"
+        },
+        "status": "fail"
+      },
+      "case_id": "investigation-reuse",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "usd": null
+      },
+      "evidence": {
+        "artifact_tree": {
+          "directories": [
+            ".router-dispatch-evidence",
+            "app",
+            "docs",
+            "logs",
+            "notes"
+          ],
+          "files": {
+            "README.md": "b54dfc3f60705e186eaf92e7c9e7edc96332dc196b503239d8a75cda3dd7cbdd",
+            "app/settings.json": "83e83419f826cfbc9a49479ddd8a50fc74df3cab610300e625716e2c2a4b8db7",
+            "docs/ops.md": "4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756",
+            "logs/startup.log": "d691a86ab2a70e015a3195737974886c7f202e45358e73081dc8df117e3e4cc7",
+            "notes/archive.md": "794f2bddd12fdd512c05baca972ce12402b6220eb35285578cec1d60a80817f2"
+          },
+          "path": "results/investigation-reuse",
+          "tree_sha256": "792d17668c1b144a97cb2d6b769453c5eb139a22bf172e839d46faeb7775bdaf"
+        },
+        "oracle_tree": {
+          "directories": [
+            "app",
+            "docs",
+            "logs",
+            "notes"
+          ],
+          "files": {
+            "README.md": "b54dfc3f60705e186eaf92e7c9e7edc96332dc196b503239d8a75cda3dd7cbdd",
+            "app/settings.json": "83e83419f826cfbc9a49479ddd8a50fc74df3cab610300e625716e2c2a4b8db7",
+            "docs/ops.md": "4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756",
+            "logs/startup.log": "d691a86ab2a70e015a3195737974886c7f202e45358e73081dc8df117e3e4cc7",
+            "notes/archive.md": "794f2bddd12fdd512c05baca972ce12402b6220eb35285578cec1d60a80817f2"
+          },
+          "path": "Q:\\MyProjects\\codex-model-router\\evals\\fixtures\\investigation-reuse\\reference",
+          "tree_sha256": "0bcee41bfe1e49fe542e4362755e5c61ef3f192abd8a85cd5b968f7e37615c4b"
+        },
+        "session_index": {
+          "path": "session-evidence/investigation-reuse/session-index.json",
+          "sha256": "1c05057e20eeb7907382271219a09fad0731ae7d82c37cd644cdb5c077e677a3"
+        },
+        "session_sources": [
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T17-54-43-01a0cdb0-5cc9-7991-909c-d324086ffa1e.jsonl",
+            "sha256": "63c93397cd593f349864cc15b35ab56d7c6cdc9b698a0528d5d12cc23228b465"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T17-56-16-01a0cdb1-cceb-7361-acd2-6a90e10b5457.jsonl",
+            "sha256": "0e30696887f1d49ec24a686e377b3cd4a4dd3c52c0eeaa1a1d6321867dec254e"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T17-57-20-01a0cdb2-c398-7e50-81ba-175ab39e61a6.jsonl",
+            "sha256": "5b6c92223d0b22d82ce1a0b032eafbce641764ac4da2cf568e0b5020c88b09b3"
+          }
+        ],
+        "transcript": {
+          "path": "raw/investigation-reuse.jsonl",
+          "sha256": "7ac91905380e97b892b1652d29d3f589187e9de32d21e42ea3b447e8dd4de871"
+        }
+      },
+      "identity_contract_validation": {
+        "status": "unknown",
+        "workers": [
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 30,
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "extract-cache-requirement-gpt-6-luna-low",
+                  "worker_name": "extract-cache-requirement-gpt-6-luna-low"
+                }
+              },
+              "native_transport": {
+                "status": "unknown",
+                "value": {
+                  "field": "task_name",
+                  "name": "extract_cache_requirement_gpt_6_luna_low",
+                  "spawn_line": 67
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 8,
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              },
+              "spawn_selection": {
+                "status": "pass",
+                "value": {
+                  "inheritance_verified": false,
+                  "mode": "explicit",
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              }
+            },
+            "status": "unknown",
+            "thread_id": "01a0cdb1-cceb-7361-acd2-6a90e10b5457"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 47,
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "apply-cache-ttl-gpt-6-luna-medium",
+                  "worker_name": "apply-cache-ttl-gpt-6-luna-medium"
+                }
+              },
+              "native_transport": {
+                "status": "unknown",
+                "value": {
+                  "field": "task_name",
+                  "name": "apply_cache_ttl_gpt_6_luna_medium",
+                  "spawn_line": 101
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 8,
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "medium"
+                }
+              },
+              "spawn_selection": {
+                "status": "pass",
+                "value": {
+                  "inheritance_verified": false,
+                  "mode": "explicit",
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "medium"
+                }
+              }
+            },
+            "status": "unknown",
+            "thread_id": "01a0cdb2-c398-7e50-81ba-175ab39e61a6"
+          }
+        ]
+      },
+      "outcome": "failed",
+      "parent_session": {
+        "agent_path": null,
+        "assignment_spans": [
+          {
+            "end_at": "2026-09-23T09:58:25.295Z",
+            "end_line": 123,
+            "start_at": "2026-09-23T09:54:43.487Z",
+            "start_line": 2,
+            "turn_id": "01a0cdb0-5f4a-7b33-8e23-bbcdcb2286c2"
+          }
+        ],
+        "final_echo": {
+          "native_task_name": null,
+          "task_id": null,
+          "worker_name": null
+        },
+        "final_echo_line": 123,
+        "final_text": "Updated [`app/settings.json`](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/investigation-reuse/app/settings.json) `cache_ttl_seconds`: `30` \u2192 `45`.\n\nAuthoritative source: `docs/ops.md`  \nHandoff SHA-256: `0d7f7f7dba5869a916684191eec6adbf043730c1c3ffa9582a2c4740526d9a46`\n\nValidation confirmed `region` remains `primary`; no other bytes or files were changed.",
+        "parent_thread_id": null,
+        "runtime": {
+          "evidence_line": 8,
+          "model": "gpt-5.6-sol",
+          "reasoning_effort": "high"
+        },
+        "session_end_at": "2026-09-23T09:58:25.295Z",
+        "session_start_at": "2026-09-23T09:54:43.045Z",
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T17-54-43-01a0cdb0-5cc9-7991-909c-d324086ffa1e.jsonl",
+        "source_sha256": "63c93397cd593f349864cc15b35ab56d7c6cdc9b698a0528d5d12cc23228b465",
+        "thread_id": "01a0cdb0-5cc9-7991-909c-d324086ffa1e"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "detail": "role-bounded route event",
+            "evidence_refs": [
+              "transcript:24"
+            ],
+            "name": "route",
+            "status": "pass"
+          },
+          {
+            "detail": "a role-bounded route must precede every worker dispatch",
+            "evidence_refs": [
+              "transcript:24",
+              "parent-session:67",
+              "parent-session:101"
+            ],
+            "name": "route-before-worker-business",
+            "status": "fail"
+          },
+          {
+            "detail": "persisted child metadata",
+            "evidence_refs": [
+              "parent-session:67",
+              "parent-session:101"
+            ],
+            "name": "two-distinct-workers",
+            "status": "pass"
+          },
+          {
+            "detail": "producer-authored receipt hash must be consumed by the dependent packet",
+            "evidence_refs": [
+              "parent-session:67",
+              "parent-session:101"
+            ],
+            "name": "receipt-result",
+            "status": "fail"
+          },
+          {
+            "detail": "native task names only",
+            "evidence_refs": [
+              "parent-session:67",
+              "parent-session:101"
+            ],
+            "name": "stage-ownership",
+            "status": "unknown"
+          },
+          {
+            "detail": "producer assignment ends before consumer begins",
+            "evidence_refs": [
+              "session-index:assignment_spans"
+            ],
+            "name": "dependency-stage-order",
+            "status": "fail"
+          },
+          {
+            "detail": "one successful CLI terminal and matching parent task completion/final output",
+            "evidence_refs": [
+              "transcript:32",
+              "parent-session:2",
+              "parent-session:123"
+            ],
+            "name": "successful-terminal-outcome",
+            "status": "pass"
+          }
+        ],
+        "status": "fail"
+      },
+      "route_events": [
+        {
+          "line": 24,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL / hard-delegate-or-unknown-signal / Luna / medium / prescribed dependent handoff with exclusive write ownership and self-check.",
+          "timestamp": "2026-09-23T09:55:08.559Z"
+        }
+      ],
+      "timing": {
+        "all_worker_assignment_overlap_ms": 0,
+        "parent_session_lifetime_ms": 222250,
+        "session_lifetime_overlap_ms": 0
+      },
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cache_write_input_tokens": 34696,
+          "cached_input_tokens": 341846,
+          "input_tokens": 380305,
+          "output_tokens": 6301,
+          "reasoning_output_tokens": 2329
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/extract_cache_requirement_gpt_6_luna_low",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T09:56:39.489Z",
+              "end_line": 30,
+              "start_at": "2026-09-23T09:56:17.352Z",
+              "start_line": 2,
+              "turn_id": "01a0cdb1-ce31-7d03-b5e6-3cda8c263ed5"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "extract-cache-requirement-gpt-6-luna-low",
+            "worker_name": "extract-cache-requirement-gpt-6-luna-low"
+          },
+          "final_echo_line": 30,
+          "final_text": "Worker name: extract-cache-requirement-gpt-6-luna-low  \nTask ID: extract-cache-requirement-gpt-6-luna-low\n\nOutcome: Extracted the required cache TTL.\n\nEvidence:\n- source_path: `docs/ops.md`\n- cache_ttl_seconds: `45`\n- source_sha256: `4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756`\n- handoff_sha256: `0d7f7f7dba5869a916684191eec6adbf043730c1c3ffa9582a2c4740526d9a46`\n\nValidation: `docs/ops.md` states \u201cThe authoritative production cache TTL is 45 seconds.\u201d No other source was consulted; no files were written.\n\nRisks or blockers: None.",
+          "parent_thread_id": "01a0cdb0-5cc9-7991-909c-d324086ffa1e",
+          "runtime": {
+            "evidence_line": 8,
+            "model": "gpt-6-luna",
+            "reasoning_effort": "low"
+          },
+          "session_end_at": "2026-09-23T09:56:39.489Z",
+          "session_start_at": "2026-09-23T09:56:16.994Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T17-56-16-01a0cdb1-cceb-7361-acd2-6a90e10b5457.jsonl",
+          "source_sha256": "0e30696887f1d49ec24a686e377b3cd4a4dd3c52c0eeaa1a1d6321867dec254e",
+          "thread_id": "01a0cdb1-cceb-7361-acd2-6a90e10b5457"
+        },
+        {
+          "agent_path": "/root/apply_cache_ttl_gpt_6_luna_medium",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T09:58:20.036Z",
+              "end_line": 47,
+              "start_at": "2026-09-23T09:57:20.534Z",
+              "start_line": 2,
+              "turn_id": "01a0cdb2-c4e8-7e62-9993-9fef23e7cd9a"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "apply-cache-ttl-gpt-6-luna-medium",
+            "worker_name": "apply-cache-ttl-gpt-6-luna-medium"
+          },
+          "final_echo_line": 47,
+          "final_text": "Worker name: apply-cache-ttl-gpt-6-luna-medium  \nTask ID: apply-cache-ttl-gpt-6-luna-medium\n\nOutcome: Updated only `cache_ttl_seconds` in `app/settings.json` from 30 to 45 using `apply_patch`.\n\nEvidence: The handoff SHA-256 matched: `0d7f7f7dba5869a916684191eec6adbf043730c1c3ffa9582a2c4740526d9a46`. Settings SHA-256 changed from `dce4678bf75058802bfa6f10b6d18b4ddf3cd7b5311448d949830fb4ffc26668` to `83e83419f826cfbc9a49479ddd8a50fc74df3cab610300e625716e2c2a4b8db7`. Exact byte diff: offsets 21\u201322, `30` \u2192 `45`.\n\nValidation: JSON parses; the unique key is integer 45; region remains `primary`; byte comparison confirms only the two numeric value bytes changed. Git status before showed only `?? .codex-model-router/`; afterward it showed ` M app/settings.json` plus the same pre-existing untracked directory.\n\nRisks or blockers: None. Git emitted permission warnings while reading the global ignore file, but status checks completed.",
+          "parent_thread_id": "01a0cdb0-5cc9-7991-909c-d324086ffa1e",
+          "runtime": {
+            "evidence_line": 8,
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "session_end_at": "2026-09-23T09:58:20.036Z",
+          "session_start_at": "2026-09-23T09:57:20.138Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T17-57-20-01a0cdb2-c398-7e50-81ba-175ab39e61a6.jsonl",
+          "source_sha256": "5b6c92223d0b22d82ce1a0b032eafbce641764ac4da2cf568e0b5020c88b09b3",
+          "thread_id": "01a0cdb2-c398-7e50-81ba-175ab39e61a6"
+        }
+      ]
+    },
+    {
+      "artifact_validation": {
+        "actual_directories": [
+          "src",
+          "tests"
+        ],
+        "actual_tree": {
+          "migration.md": "36b6f4549ab9e07a4aeebfcddc90c6f281e73e3c0edc66acb50d6298ead38585",
+          "request.md": "ef54629bb9c22d1e6b971ebc2d9630807853fc1e3f6be71d444ee78930b701e7",
+          "src/api.json": "332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993",
+          "src/schema.json": "40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d",
+          "tests/expected.json": "eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6"
+        },
+        "expected_directories": [
+          "src",
+          "tests"
+        ],
+        "expected_tree": {
+          "migration.md": "36b6f4549ab9e07a4aeebfcddc90c6f281e73e3c0edc66acb50d6298ead38585",
+          "request.md": "ef54629bb9c22d1e6b971ebc2d9630807853fc1e3f6be71d444ee78930b701e7",
+          "src/api.json": "332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993",
+          "src/schema.json": "40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d",
+          "tests/expected.json": "eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6"
+        },
+        "status": "pass"
+      },
+      "case_id": "serial-escalation",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "usd": null
+      },
+      "evidence": {
+        "artifact_tree": {
+          "directories": [
+            "src",
+            "tests"
+          ],
+          "files": {
+            "migration.md": "36b6f4549ab9e07a4aeebfcddc90c6f281e73e3c0edc66acb50d6298ead38585",
+            "request.md": "ef54629bb9c22d1e6b971ebc2d9630807853fc1e3f6be71d444ee78930b701e7",
+            "src/api.json": "332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993",
+            "src/schema.json": "40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d",
+            "tests/expected.json": "eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6"
+          },
+          "path": "results/serial-escalation",
+          "tree_sha256": "04997d540db59d4c4dd4c9aa6e662dc2effef9fb1d4c69f4f109b5525774b3bd"
+        },
+        "oracle_tree": {
+          "directories": [
+            "src",
+            "tests"
+          ],
+          "files": {
+            "migration.md": "36b6f4549ab9e07a4aeebfcddc90c6f281e73e3c0edc66acb50d6298ead38585",
+            "request.md": "ef54629bb9c22d1e6b971ebc2d9630807853fc1e3f6be71d444ee78930b701e7",
+            "src/api.json": "332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993",
+            "src/schema.json": "40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d",
+            "tests/expected.json": "eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6"
+          },
+          "path": "Q:\\MyProjects\\codex-model-router\\evals\\fixtures\\serial-escalation\\reference",
+          "tree_sha256": "04997d540db59d4c4dd4c9aa6e662dc2effef9fb1d4c69f4f109b5525774b3bd"
+        },
+        "session_index": {
+          "path": "session-evidence/serial-escalation/session-index.json",
+          "sha256": "53defb31a1a98f325486a8faa6b18030172735567149bd203038d2bde7f57d00"
+        },
+        "session_sources": [
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T17-58-53-01a0cdb4-2f1a-7291-b829-0833527eb18e.jsonl",
+            "sha256": "4f28e4305de3e3e3ca8d28285163238d0b6390c706ca193a134b28775e88ce34"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-01-00-01a0cdb6-20a7-7b80-ac03-46fb10109869.jsonl",
+            "sha256": "ec631ac02091164c33dc24e8b8eeef1c3ebb8d8eefca6c55e3309e8920cf7dec"
+          }
+        ],
+        "transcript": {
+          "path": "raw/serial-escalation.jsonl",
+          "sha256": "a3fb6231216f9fa8d2625fb43fbe85641a14fee4e017fef76261e6f3efe41951"
+        }
+      },
+      "identity_contract_validation": {
+        "status": "unknown",
+        "workers": [
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 109,
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "migrate-schema-version-gpt-6-luna-medium",
+                  "worker_name": "migrate-schema-version-gpt-6-luna-medium"
+                }
+              },
+              "native_transport": {
+                "status": "unknown",
+                "value": {
+                  "field": "task_name",
+                  "name": "migrate_schema_version_gpt_6_luna_medium",
+                  "spawn_line": 103
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 8,
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "medium"
+                }
+              },
+              "spawn_selection": {
+                "status": "pass",
+                "value": {
+                  "inheritance_verified": false,
+                  "mode": "explicit",
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "medium"
+                }
+              }
+            },
+            "status": "unknown",
+            "thread_id": "01a0cdb6-20a7-7b80-ac03-46fb10109869"
+          }
+        ]
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "assignment_spans": [
+          {
+            "end_at": "2026-09-23T10:03:19.106Z",
+            "end_line": 127,
+            "start_at": "2026-09-23T09:58:53.775Z",
+            "start_line": 2,
+            "turn_id": "01a0cdb4-3117-73e1-98f1-d0a99b1a9877"
+          }
+        ],
+        "final_echo": {
+          "native_task_name": null,
+          "task_id": null,
+          "worker_name": null
+        },
+        "final_echo_line": 127,
+        "final_text": "Updated in dependency order:\n\n1. [src/schema.json](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/serial-escalation/src/schema.json)\n2. [src/api.json](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/serial-escalation/src/api.json)\n3. [tests/expected.json](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/serial-escalation/tests/expected.json)\n\nAll requested fields are integer `2`. The worker confirmed valid JSON, `git diff --check` passed, and only these three tracked files changed. The required `DIRECT \u2192 DELEGATE` scope-expanded escalation was recorded after reading `migration.md`.",
+        "parent_thread_id": null,
+        "runtime": {
+          "evidence_line": 8,
+          "model": "gpt-5.6-sol",
+          "reasoning_effort": "high"
+        },
+        "session_end_at": "2026-09-23T10:03:19.106Z",
+        "session_start_at": "2026-09-23T09:58:53.222Z",
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T17-58-53-01a0cdb4-2f1a-7291-b829-0833527eb18e.jsonl",
+        "source_sha256": "4f28e4305de3e3e3ca8d28285163238d0b6390c706ca193a134b28775e88ce34",
+        "thread_id": "01a0cdb4-2f1a-7291-b829-0833527eb18e"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "detail": "ordered route events",
+            "evidence_refs": [
+              "transcript:38",
+              "transcript:56"
+            ],
+            "name": "direct-then-delegate",
+            "status": "pass"
+          },
+          {
+            "detail": "a role-bounded route must precede every worker dispatch",
+            "evidence_refs": [
+              "transcript:38",
+              "transcript:56",
+              "parent-session:103"
+            ],
+            "name": "route-before-worker-business",
+            "status": "fail"
+          },
+          {
+            "detail": "route trigger",
+            "evidence_refs": [
+              "transcript:38",
+              "transcript:56"
+            ],
+            "name": "scope-expanded",
+            "status": "pass"
+          },
+          {
+            "detail": "native task names only",
+            "evidence_refs": [
+              "parent-session:103"
+            ],
+            "name": "four-stages",
+            "status": "unknown"
+          },
+          {
+            "detail": "dependency stages use ordered assignment spans",
+            "evidence_refs": [
+              "session-index:assignment_spans"
+            ],
+            "name": "serial-assignment-timing",
+            "status": "fail"
+          },
+          {
+            "detail": "one successful CLI terminal and matching parent task completion/final output",
+            "evidence_refs": [
+              "transcript:34",
+              "parent-session:2",
+              "parent-session:127"
+            ],
+            "name": "successful-terminal-outcome",
+            "status": "pass"
+          }
+        ],
+        "status": "fail"
+      },
+      "route_events": [
+        {
+          "line": 38,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DIRECT \u2014 bounded-direct-fast-path/all bounded direct requirements explicitly satisfied",
+          "timestamp": "2026-09-23T09:59:34.426Z"
+        },
+        {
+          "line": 56,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL/hard-delegate-or-unknown-signal/gpt-6-luna/medium/scope-expanded into a dependent migration sequence",
+          "timestamp": "2026-09-23T09:59:51.657Z"
+        }
+      ],
+      "timing": {
+        "all_worker_assignment_overlap_ms": null,
+        "parent_session_lifetime_ms": 265884,
+        "session_lifetime_overlap_ms": 0
+      },
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cache_write_input_tokens": 33281,
+          "cached_input_tokens": 347860,
+          "input_tokens": 384623,
+          "output_tokens": 5074,
+          "reasoning_output_tokens": 1638
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/migrate_schema_version_gpt_6_luna_medium",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T10:03:13.513Z",
+              "end_line": 109,
+              "start_at": "2026-09-23T10:01:00.943Z",
+              "start_line": 2,
+              "turn_id": "01a0cdb6-21e7-75c3-9898-83760e878e80"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "migrate-schema-version-gpt-6-luna-medium",
+            "worker_name": "migrate-schema-version-gpt-6-luna-medium"
+          },
+          "final_echo_line": 109,
+          "final_text": "Worker name: migrate-schema-version-gpt-6-luna-medium  \nTask ID: migrate-schema-version-gpt-6-luna-medium\n\nOutcome: Set the requested version fields to integer `2` in the required order.\n\nEvidence: Updated [schema.json](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/serial-escalation/src/schema.json), [api.json](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/serial-escalation/src/api.json), and [expected.json](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/serial-escalation/tests/expected.json). Each diff changes only its requested scalar.\n\nValidation: All three JSON files parsed; each target field is integer `2`. `git diff --check` passed. Final diff/status shows only those three tracked files modified.\n\nRisks or blockers: `.codex-model-router/` was already untracked at initial inspection and remains untouched. Git also reported a permission warning for the global ignore file.",
+          "parent_thread_id": "01a0cdb4-2f1a-7291-b829-0833527eb18e",
+          "runtime": {
+            "evidence_line": 8,
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "session_end_at": "2026-09-23T10:03:13.513Z",
+          "session_start_at": "2026-09-23T10:01:00.563Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-01-00-01a0cdb6-20a7-7b80-ac03-46fb10109869.jsonl",
+          "source_sha256": "ec631ac02091164c33dc24e8b8eeef1c3ebb8d8eefca6c55e3309e8920cf7dec",
+          "thread_id": "01a0cdb6-20a7-7b80-ac03-46fb10109869"
+        }
+      ]
+    },
+    {
+      "artifact_validation": {
+        "actual_directories": [
+          "reports"
+        ],
+        "actual_tree": {
+          "reports/alpha.md": "11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2",
+          "reports/beta.md": "ef43ecf72af1579b7a10cc8ece75cbe40f63fe3f4760333f99e51867c5046fec",
+          "reports/gamma.md": "22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88"
+        },
+        "expected_directories": [
+          "reports"
+        ],
+        "expected_tree": {
+          "reports/alpha.md": "11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2",
+          "reports/beta.md": "ef43ecf72af1579b7a10cc8ece75cbe40f63fe3f4760333f99e51867c5046fec",
+          "reports/gamma.md": "22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88"
+        },
+        "status": "pass"
+      },
+      "case_id": "parallel-disjoint",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "usd": null
+      },
+      "evidence": {
+        "artifact_tree": {
+          "directories": [
+            "reports"
+          ],
+          "files": {
+            "reports/alpha.md": "11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2",
+            "reports/beta.md": "ef43ecf72af1579b7a10cc8ece75cbe40f63fe3f4760333f99e51867c5046fec",
+            "reports/gamma.md": "22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88"
+          },
+          "path": "results/parallel-disjoint",
+          "tree_sha256": "995082418e89e9c778b8a85692fa1505a5ffed0b77bbc7051b0f4a2857ab9c3b"
+        },
+        "oracle_tree": {
+          "directories": [
+            "reports"
+          ],
+          "files": {
+            "reports/alpha.md": "11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2",
+            "reports/beta.md": "ef43ecf72af1579b7a10cc8ece75cbe40f63fe3f4760333f99e51867c5046fec",
+            "reports/gamma.md": "22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88"
+          },
+          "path": "Q:\\MyProjects\\codex-model-router\\evals\\fixtures\\parallel-disjoint\\reference",
+          "tree_sha256": "995082418e89e9c778b8a85692fa1505a5ffed0b77bbc7051b0f4a2857ab9c3b"
+        },
+        "session_index": {
+          "path": "session-evidence/parallel-disjoint/session-index.json",
+          "sha256": "96ba71633800dc62533c33812d8c63c0add07e9fbe5ea895a897ae23e0d93d25"
+        },
+        "session_sources": [
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-03-44-01a0cdb8-a189-7f60-8e58-00d3af0178f2.jsonl",
+            "sha256": "3456c670eee66029f19c7c497306c20aa94e3aa1c0f990d5d531f7dd8a6ecf80"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-05-28-01a0cdba-38e8-75d2-8016-5a3db2ad3e66.jsonl",
+            "sha256": "8812f7a7c5f4372b8203fda3445f7cf97dc2709e57e46cde3aeff1207609cb54"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-05-35-01a0cdba-5170-7b63-8da9-c374457f5fd5.jsonl",
+            "sha256": "f5a71ae0fe6ed1c9ecd79fd1de5a9a3fa30995e1fb5a64e7d80a5ded661834b5"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-05-41-01a0cdba-6ae9-7d31-8980-4a7f110aee97.jsonl",
+            "sha256": "5c9b44777b3235ca55c74e0ceb8cd648dd73b451eb3fc13090100662792bfd4a"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-07-16-01a0cdbb-dc43-7331-aed6-2f0c42e668f3.jsonl",
+            "sha256": "487f614b842138a252b2f63a7e4fa8e26c74c49f92440849f6b2b0ce21d32dbe"
+          }
+        ],
+        "transcript": {
+          "path": "raw/parallel-disjoint.jsonl",
+          "sha256": "08b0c9aac4e4f6a6ac55fd453bc5ab9c725ef1d13917ac0a2393381027a06e7f"
+        }
+      },
+      "identity_contract_validation": {
+        "status": "unknown",
+        "workers": [
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 51,
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "replace-alpha-todo-gpt-6-luna-low",
+                  "worker_name": "replace-alpha-todo-gpt-6-luna-low"
+                }
+              },
+              "native_transport": {
+                "status": "unknown",
+                "value": {
+                  "field": "task_name",
+                  "name": "replace_alpha_todo_gpt_6_luna_low",
+                  "spawn_line": 81
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 8,
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              },
+              "spawn_selection": {
+                "status": "pass",
+                "value": {
+                  "inheritance_verified": false,
+                  "mode": "explicit",
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              }
+            },
+            "status": "unknown",
+            "thread_id": "01a0cdba-38e8-75d2-8016-5a3db2ad3e66"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 55,
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "replace-beta-todo-gpt-6-luna-low",
+                  "worker_name": "replace-beta-todo-gpt-6-luna-low"
+                }
+              },
+              "native_transport": {
+                "status": "unknown",
+                "value": {
+                  "field": "task_name",
+                  "name": "replace_beta_todo_gpt_6_luna_low",
+                  "spawn_line": 87
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 39,
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              },
+              "spawn_selection": {
+                "status": "pass",
+                "value": {
+                  "inheritance_verified": false,
+                  "mode": "explicit",
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              }
+            },
+            "status": "unknown",
+            "thread_id": "01a0cdba-5170-7b63-8da9-c374457f5fd5"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 39,
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "replace-gamma-todo-gpt-6-luna-low",
+                  "worker_name": "replace-gamma-todo-gpt-6-luna-low"
+                }
+              },
+              "native_transport": {
+                "status": "unknown",
+                "value": {
+                  "field": "task_name",
+                  "name": "replace_gamma_todo_gpt_6_luna_low",
+                  "spawn_line": 93
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 8,
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              },
+              "spawn_selection": {
+                "status": "pass",
+                "value": {
+                  "inheritance_verified": false,
+                  "mode": "explicit",
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              }
+            },
+            "status": "unknown",
+            "thread_id": "01a0cdba-6ae9-7d31-8980-4a7f110aee97"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 36,
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "validate-beta-bytes-gpt-6-luna-low",
+                  "worker_name": "validate-beta-bytes-gpt-6-luna-low"
+                }
+              },
+              "native_transport": {
+                "status": "unknown",
+                "value": {
+                  "field": "task_name",
+                  "name": "validate_beta_bytes_gpt_6_luna_low",
+                  "spawn_line": 160
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 8,
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              },
+              "spawn_selection": {
+                "status": "pass",
+                "value": {
+                  "inheritance_verified": false,
+                  "mode": "explicit",
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              }
+            },
+            "status": "unknown",
+            "thread_id": "01a0cdbb-dc43-7331-aed6-2f0c42e668f3"
+          }
+        ]
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "assignment_spans": [
+          {
+            "end_at": "2026-09-23T10:08:25.238Z",
+            "end_line": 187,
+            "start_at": "2026-09-23T10:03:45.278Z",
+            "start_line": 2,
+            "turn_id": "01a0cdb8-a3b2-7573-b1bd-9abd721929df"
+          }
+        ],
+        "final_echo": {
+          "native_task_name": null,
+          "task_id": null,
+          "worker_name": null
+        },
+        "final_echo_line": 187,
+        "final_text": "Updated and byte-verified:\n\n- [alpha.md](/Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/parallel-disjoint/reports/alpha.md): `verified-alpha`\n- [beta.md](/Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/parallel-disjoint/reports/beta.md): `verified-beta`\n- [gamma.md](/Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/parallel-disjoint/reports/gamma.md): `verified-gamma`\n\nHeadings, line endings, and all other bytes were preserved.",
+        "parent_thread_id": null,
+        "runtime": {
+          "evidence_line": 8,
+          "model": "gpt-5.6-sol",
+          "reasoning_effort": "high"
+        },
+        "session_end_at": "2026-09-23T10:08:25.238Z",
+        "session_start_at": "2026-09-23T10:03:44.838Z",
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-03-44-01a0cdb8-a189-7f60-8e58-00d3af0178f2.jsonl",
+        "source_sha256": "3456c670eee66029f19c7c497306c20aa94e3aa1c0f990d5d531f7dd8a6ecf80",
+        "thread_id": "01a0cdb8-a189-7f60-8e58-00d3af0178f2"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "detail": "role-bounded route event",
+            "evidence_refs": [
+              "transcript:40"
+            ],
+            "name": "route",
+            "status": "pass"
+          },
+          {
+            "detail": "a role-bounded route must precede every worker dispatch",
+            "evidence_refs": [
+              "transcript:40",
+              "parent-session:81",
+              "parent-session:87",
+              "parent-session:93",
+              "parent-session:160"
+            ],
+            "name": "route-before-worker-business",
+            "status": "fail"
+          },
+          {
+            "detail": "persisted child metadata",
+            "evidence_refs": [
+              "parent-session:81",
+              "parent-session:87",
+              "parent-session:93",
+              "parent-session:160"
+            ],
+            "name": "three-workers",
+            "status": "fail"
+          },
+          {
+            "detail": "first assignment span per worker",
+            "evidence_refs": [
+              "session-index:assignment_spans"
+            ],
+            "name": "assignment-overlap",
+            "status": "fail"
+          },
+          {
+            "detail": "each worker's own final result",
+            "evidence_refs": [
+              "worker-session:final_echo"
+            ],
+            "name": "disjoint-ownership-results",
+            "status": "pass"
+          },
+          {
+            "detail": "one successful CLI terminal and matching parent task completion/final output",
+            "evidence_refs": [
+              "transcript:47",
+              "parent-session:2",
+              "parent-session:187"
+            ],
+            "name": "successful-terminal-outcome",
+            "status": "pass"
+          }
+        ],
+        "status": "fail"
+      },
+      "route_events": [
+        {
+          "line": 40,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DELEGATE \u2014 PARALLEL / hard-delegate-or-unknown-signal / gpt-6-luna / low / three bounded, independent, dependency-free edits with disjoint write scopes.",
+          "timestamp": "2026-09-23T10:04:29.815Z"
+        }
+      ],
+      "timing": {
+        "all_worker_assignment_overlap_ms": 0,
+        "parent_session_lifetime_ms": 280400,
+        "session_lifetime_overlap_ms": 0
+      },
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cache_write_input_tokens": 37941,
+          "cached_input_tokens": 623441,
+          "input_tokens": 665967,
+          "output_tokens": 8292,
+          "reasoning_output_tokens": 3334
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/replace_alpha_todo_gpt_6_luna_low",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T10:06:17.135Z",
+              "end_line": 51,
+              "start_at": "2026-09-23T10:05:29.286Z",
+              "start_line": 2,
+              "turn_id": "01a0cdba-3a1d-7e80-a9e7-b82814176461"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "replace-alpha-todo-gpt-6-luna-low",
+            "worker_name": "replace-alpha-todo-gpt-6-luna-low"
+          },
+          "final_echo_line": 51,
+          "final_text": "Worker name: replace-alpha-todo-gpt-6-luna-low  \nTask ID: replace-alpha-todo-gpt-6-luna-low\n\nOutcome: Replaced `TODO` with `verified-alpha` in `reports/alpha.md`.\n\nEvidence: `reports/alpha.md`\n\nValidation: Confirmed one replacement and verified the remaining bytes and LF line endings match the original. Check passed.\n\nRisks or blockers: None.",
+          "parent_thread_id": "01a0cdb8-a189-7f60-8e58-00d3af0178f2",
+          "runtime": {
+            "evidence_line": 8,
+            "model": "gpt-6-luna",
+            "reasoning_effort": "low"
+          },
+          "session_end_at": "2026-09-23T10:06:17.135Z",
+          "session_start_at": "2026-09-23T10:05:28.907Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-05-28-01a0cdba-38e8-75d2-8016-5a3db2ad3e66.jsonl",
+          "source_sha256": "8812f7a7c5f4372b8203fda3445f7cf97dc2709e57e46cde3aeff1207609cb54",
+          "thread_id": "01a0cdba-38e8-75d2-8016-5a3db2ad3e66"
+        },
+        {
+          "agent_path": "/root/replace_beta_todo_gpt_6_luna_low",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T10:06:08.237Z",
+              "end_line": 37,
+              "start_at": "2026-09-23T10:05:35.603Z",
+              "start_line": 2,
+              "turn_id": "01a0cdba-52b7-7102-a90b-869f59f79a01"
+            },
+            {
+              "end_at": "2026-09-23T10:06:40.786Z",
+              "end_line": 55,
+              "start_at": "2026-09-23T10:06:23.127Z",
+              "start_line": 38,
+              "turn_id": "01a0cdbb-0d7b-78f0-8ae3-253da2429475"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "replace-beta-todo-gpt-6-luna-low",
+            "worker_name": "replace-beta-todo-gpt-6-luna-low"
+          },
+          "final_echo_line": 55,
+          "final_text": "Worker name: replace-beta-todo-gpt-6-luna-low  \nTask ID: replace-beta-todo-gpt-6-luna-low\n\nOutcome: Rechecked `reports/beta.md`; no edit needed.\n\nEvidence and validation: Current bytes are `# Beta\\n\\nstatus: verified-beta\\n`; the heading is intact, line endings are LF, `TODO` occurs zero times, and `verified-beta` occurs once. I cannot conclusively confirm byte-for-byte equality to the original with only the substitution because I did not retain the original raw bytes for comparison.\n\nRisks or blockers: Exact preservation of the original line-ending bytes remains unverified.",
+          "parent_thread_id": "01a0cdb8-a189-7f60-8e58-00d3af0178f2",
+          "runtime": {
+            "evidence_line": 39,
+            "model": "gpt-6-luna",
+            "reasoning_effort": "low"
+          },
+          "session_end_at": "2026-09-23T10:06:40.786Z",
+          "session_start_at": "2026-09-23T10:05:35.202Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-05-35-01a0cdba-5170-7b63-8da9-c374457f5fd5.jsonl",
+          "source_sha256": "f5a71ae0fe6ed1c9ecd79fd1de5a9a3fa30995e1fb5a64e7d80a5ded661834b5",
+          "thread_id": "01a0cdba-5170-7b63-8da9-c374457f5fd5"
+        },
+        {
+          "agent_path": "/root/replace_gamma_todo_gpt_6_luna_low",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T10:06:10.639Z",
+              "end_line": 39,
+              "start_at": "2026-09-23T10:05:42.141Z",
+              "start_line": 2,
+              "turn_id": "01a0cdba-6c3c-7220-a9b2-66acf9318393"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "replace-gamma-todo-gpt-6-luna-low",
+            "worker_name": "replace-gamma-todo-gpt-6-luna-low"
+          },
+          "final_echo_line": 39,
+          "final_text": "Worker name: replace-gamma-todo-gpt-6-luna-low  \nTask ID: replace-gamma-todo-gpt-6-luna-low  \nOutcome: Replaced `TODO` with `verified-gamma` in `reports/gamma.md`.  \nEvidence: `reports/gamma.md`  \nValidation: Confirmed the original contained `TODO`; byte comparison passed against the original content with exactly that substitution.  \nRisks or blockers: None.",
+          "parent_thread_id": "01a0cdb8-a189-7f60-8e58-00d3af0178f2",
+          "runtime": {
+            "evidence_line": 8,
+            "model": "gpt-6-luna",
+            "reasoning_effort": "low"
+          },
+          "session_end_at": "2026-09-23T10:06:10.639Z",
+          "session_start_at": "2026-09-23T10:05:41.729Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-05-41-01a0cdba-6ae9-7d31-8980-4a7f110aee97.jsonl",
+          "source_sha256": "5c9b44777b3235ca55c74e0ceb8cd648dd73b451eb3fc13090100662792bfd4a",
+          "thread_id": "01a0cdba-6ae9-7d31-8980-4a7f110aee97"
+        },
+        {
+          "agent_path": "/root/validate_beta_bytes_gpt_6_luna_low",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T10:07:51.739Z",
+              "end_line": 36,
+              "start_at": "2026-09-23T10:07:16.667Z",
+              "start_line": 2,
+              "turn_id": "01a0cdbb-dd98-77f3-9bb6-88d3d315ff7c"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "validate-beta-bytes-gpt-6-luna-low",
+            "worker_name": "validate-beta-bytes-gpt-6-luna-low"
+          },
+          "final_echo_line": 36,
+          "final_text": "Worker name: validate-beta-bytes-gpt-6-luna-low  \nTask ID: validate-beta-bytes-gpt-6-luna-low\n\nOutcome: Validation passed. `reports/beta.md` matches the Git baseline with exactly one `TODO` \u2192 `verified-beta` substitution.\n\nEvidence: Baseline had 21 bytes and exactly one `TODO`; current file has 30 bytes. The heading remains `# Beta`.\n\nValidation: Read the Git blob and current file as raw bytes, constructed the expected bytes using the single substitution, and confirmed exact equality. Baseline uses LF only; exact equality confirms line endings are preserved.\n\nRisks or blockers: None.",
+          "parent_thread_id": "01a0cdb8-a189-7f60-8e58-00d3af0178f2",
+          "runtime": {
+            "evidence_line": 8,
+            "model": "gpt-6-luna",
+            "reasoning_effort": "low"
+          },
+          "session_end_at": "2026-09-23T10:07:51.739Z",
+          "session_start_at": "2026-09-23T10:07:16.288Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-07-16-01a0cdbb-dc43-7331-aed6-2f0c42e668f3.jsonl",
+          "source_sha256": "487f614b842138a252b2f63a7e4fa8e26c74c49f92440849f6b2b0ce21d32dbe",
+          "thread_id": "01a0cdbb-dc43-7331-aed6-2f0c42e668f3"
+        }
+      ]
+    },
+    {
+      "artifact_validation": {
+        "actual_directories": [],
+        "actual_tree": {
+          "constraints.md": "807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368",
+          "current.md": "099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7",
+          "decision.json": "6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5"
+        },
+        "expected_directories": [],
+        "expected_tree": {
+          "constraints.md": "807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368",
+          "current.md": "099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7",
+          "decision.json": "6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5"
+        },
+        "status": "pass"
+      },
+      "case_id": "architecture-review",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "usd": null
+      },
+      "evidence": {
+        "artifact_tree": {
+          "directories": [],
+          "files": {
+            "constraints.md": "807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368",
+            "current.md": "099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7",
+            "decision.json": "6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5"
+          },
+          "path": "results/architecture-review",
+          "tree_sha256": "4eb7bc718c0e8c8807117779f33a04a60be774f987e04c14aba9a82961b3b3aa"
+        },
+        "oracle_tree": {
+          "directories": [],
+          "files": {
+            "constraints.md": "807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368",
+            "current.md": "099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7",
+            "decision.json": "6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5"
+          },
+          "path": "Q:\\MyProjects\\codex-model-router\\evals\\fixtures\\architecture-review\\reference",
+          "tree_sha256": "4eb7bc718c0e8c8807117779f33a04a60be774f987e04c14aba9a82961b3b3aa"
+        },
+        "session_index": {
+          "path": "session-evidence/architecture-review/session-index.json",
+          "sha256": "7c33a8c02d354b32a6dc8b46ce35f8661a5dcfa35cec1b2f37bbe00f0fdfec1d"
+        },
+        "session_sources": [
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-09-33-01a0cdbd-f458-7cf3-a1f2-ad8a73293a9b.jsonl",
+            "sha256": "7b69db4e7801d8a19312ffec33a46314ec8bdc92df879b6f21b943f2e4e29f6f"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-11-43-01a0cdbf-f138-7f40-ba3a-df3918b3f5b6.jsonl",
+            "sha256": "f2015e6ba5886c10ab20ebd2e309f7241d7066d9b240ebf03f15d0a4cfccc4c6"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-12-32-01a0cdc0-af29-7e21-832c-c2479166a9da.jsonl",
+            "sha256": "662e7557449f56652c77d5cae4a6799c34ace43e080da4d8de399f93bce1089f"
+          }
+        ],
+        "transcript": {
+          "path": "raw/architecture-review.jsonl",
+          "sha256": "d45e4621602190640250c73676ea271f6c711a1549a70652e21a98f5fc478eba"
+        }
+      },
+      "identity_contract_validation": {
+        "status": "unknown",
+        "workers": [
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 37,
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "author-decision-gpt-6-luna-low",
+                  "worker_name": "author-decision-gpt-6-luna-low"
+                }
+              },
+              "native_transport": {
+                "status": "unknown",
+                "value": {
+                  "field": "task_name",
+                  "name": "author_decision_gpt_6_luna_low",
+                  "spawn_line": 103
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 8,
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              },
+              "spawn_selection": {
+                "status": "pass",
+                "value": {
+                  "inheritance_verified": false,
+                  "mode": "explicit",
+                  "model": "gpt-6-luna",
+                  "reasoning_effort": "low"
+                }
+              }
+            },
+            "status": "unknown",
+            "thread_id": "01a0cdbf-f138-7f40-ba3a-df3918b3f5b6"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 42,
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "review-decision-gpt-6-astra-high",
+                  "worker_name": "review-decision-gpt-6-astra-high"
+                }
+              },
+              "native_transport": {
+                "status": "unknown",
+                "value": {
+                  "field": "task_name",
+                  "name": "review_decision_gpt_6_astra_high",
+                  "spawn_line": 130
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 8,
+                  "model": "gpt-6-astra",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "pass",
+                "value": {
+                  "inheritance_verified": false,
+                  "mode": "explicit",
+                  "model": "gpt-6-astra",
+                  "reasoning_effort": "high"
+                }
+              }
+            },
+            "status": "unknown",
+            "thread_id": "01a0cdc0-af29-7e21-832c-c2479166a9da"
+          }
+        ]
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "assignment_spans": [
+          {
+            "end_at": "2026-09-23T10:13:24.964Z",
+            "end_line": 170,
+            "start_at": "2026-09-23T10:09:35.606Z",
+            "start_line": 2,
+            "turn_id": "01a0cdbd-f78e-72c1-a0ae-66780cedca29"
+          }
+        ],
+        "final_echo": {
+          "native_task_name": null,
+          "task_id": null,
+          "worker_name": null
+        },
+        "final_echo_line": 170,
+        "final_text": "Created [decision.json](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/architecture-review/decision.json).\n\nA distinct read-only reviewer session independently validated it: **PASS**. Existing files were preserved.",
+        "parent_thread_id": null,
+        "runtime": {
+          "evidence_line": 8,
+          "model": "gpt-5.6-sol",
+          "reasoning_effort": "high"
+        },
+        "session_end_at": "2026-09-23T10:13:24.964Z",
+        "session_start_at": "2026-09-23T10:09:33.704Z",
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-09-33-01a0cdbd-f458-7cf3-a1f2-ad8a73293a9b.jsonl",
+        "source_sha256": "7b69db4e7801d8a19312ffec33a46314ec8bdc92df879b6f21b943f2e4e29f6f",
+        "thread_id": "01a0cdbd-f458-7cf3-a1f2-ad8a73293a9b"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "detail": "role-bounded route event",
+            "evidence_refs": [
+              "transcript:31"
+            ],
+            "name": "route",
+            "status": "pass"
+          },
+          {
+            "detail": "a role-bounded route must precede every worker dispatch",
+            "evidence_refs": [
+              "transcript:31",
+              "parent-session:103",
+              "parent-session:130"
+            ],
+            "name": "route-before-worker-business",
+            "status": "fail"
+          },
+          {
+            "detail": "route evidence only",
+            "evidence_refs": [
+              "transcript:31"
+            ],
+            "name": "independent-review-required",
+            "status": "unknown"
+          },
+          {
+            "detail": "persisted child metadata",
+            "evidence_refs": [
+              "session-index:thread_ids"
+            ],
+            "name": "distinct-author-reviewer",
+            "status": "pass"
+          },
+          {
+            "detail": "assignment chronology",
+            "evidence_refs": [
+              "session-index:assignment_spans"
+            ],
+            "name": "review-after-author",
+            "status": "pass"
+          },
+          {
+            "detail": "exact Verdict: PASS line; missing, failing, or contradictory verdicts fail closed",
+            "evidence_refs": [
+              "worker-session:final_echo"
+            ],
+            "name": "review-result",
+            "status": "fail"
+          },
+          {
+            "detail": "one successful CLI terminal and matching parent task completion/final output",
+            "evidence_refs": [
+              "transcript:40",
+              "parent-session:2",
+              "parent-session:170"
+            ],
+            "name": "successful-terminal-outcome",
+            "status": "pass"
+          }
+        ],
+        "status": "fail"
+      },
+      "route_events": [
+        {
+          "line": 31,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL / hard-delegate-or-unknown-signal / Terra / medium / independent review is required; review depends on completed authorship.",
+          "timestamp": "2026-09-23T10:10:06.313Z"
+        }
+      ],
+      "timing": {
+        "all_worker_assignment_overlap_ms": 0,
+        "parent_session_lifetime_ms": 231260,
+        "session_lifetime_overlap_ms": 0
+      },
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cache_write_input_tokens": 35870,
+          "cached_input_tokens": 565137,
+          "input_tokens": 604980,
+          "output_tokens": 6010,
+          "reasoning_output_tokens": 1574
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/author_decision_gpt_6_luna_low",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T10:12:13.613Z",
+              "end_line": 37,
+              "start_at": "2026-09-23T10:11:44.168Z",
+              "start_line": 2,
+              "turn_id": "01a0cdbf-f283-7090-9a56-3ca6993e0bc9"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "author-decision-gpt-6-luna-low",
+            "worker_name": "author-decision-gpt-6-luna-low"
+          },
+          "final_echo_line": 37,
+          "final_text": "Worker name: author-decision-gpt-6-luna-low  \nTask ID: author-decision-gpt-6-luna-low\n\nOutcome: Created the requested compact JSON object.\n\nEvidence: [decision.json](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T094343Z/workspaces/architecture-review/decision.json)\n\nValidation: Parsed the file and confirmed the five keys, their order, exact values, and single-line format. Workspace status shows `decision.json` as the only new artifact; the pre-existing untracked `.codex-model-router/` directory remains untouched.\n\nRisks or blockers: None.",
+          "parent_thread_id": "01a0cdbd-f458-7cf3-a1f2-ad8a73293a9b",
+          "runtime": {
+            "evidence_line": 8,
+            "model": "gpt-6-luna",
+            "reasoning_effort": "low"
+          },
+          "session_end_at": "2026-09-23T10:12:13.613Z",
+          "session_start_at": "2026-09-23T10:11:43.783Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-11-43-01a0cdbf-f138-7f40-ba3a-df3918b3f5b6.jsonl",
+          "source_sha256": "f2015e6ba5886c10ab20ebd2e309f7241d7066d9b240ebf03f15d0a4cfccc4c6",
+          "thread_id": "01a0cdbf-f138-7f40-ba3a-df3918b3f5b6"
+        },
+        {
+          "agent_path": "/root/review_decision_gpt_6_astra_high",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T10:13:20.824Z",
+              "end_line": 42,
+              "start_at": "2026-09-23T10:12:32.791Z",
+              "start_line": 2,
+              "turn_id": "01a0cdc0-b057-71d0-809f-b1b3a4b30c2c"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "review-decision-gpt-6-astra-high",
+            "worker_name": "review-decision-gpt-6-astra-high"
+          },
+          "final_echo_line": 42,
+          "final_text": "Worker name: review-decision-gpt-6-astra-high  \nTask ID: review-decision-gpt-6-astra-high  \nOutcome: PASS.\n\nEvidence: Independently read and parsed `decision.json`; inspected workspace status and tracked/staged diffs.\n\nValidation: All nine assertions passed: exactly five required keys, exact types and values, required array ordering, and one compact JSON object with optional terminal newline. No tracked or staged changes. Untracked entries are `decision.json` and the controller-confirmed pre-existing `.codex-model-router/` infrastructure. No unexpected author modifications identified.\n\nRisks or blockers: None. Git reported an optional global ignore-file access warning; status and diff commands completed successfully. No files edited.",
+          "parent_thread_id": "01a0cdbd-f458-7cf3-a1f2-ad8a73293a9b",
+          "runtime": {
+            "evidence_line": 8,
+            "model": "gpt-6-astra",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T10:13:20.824Z",
+          "session_start_at": "2026-09-23T10:12:32.394Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T18-12-32-01a0cdc0-af29-7e21-832c-c2479166a9da.jsonl",
+          "source_sha256": "662e7557449f56652c77d5cae4a6799c34ace43e080da4d8de399f93bce1089f",
+          "thread_id": "01a0cdc0-af29-7e21-832c-c2479166a9da"
+        }
+      ]
+    }
+  ],
+  "original_result": null,
+  "schema_version": 3
+}

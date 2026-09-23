@@ -1,0 +1,847 @@
+{
+  "acceptance": {
+    "artifact_pass": true,
+    "campaign_pass": false,
+    "completed_runs": 4,
+    "identity_contract_pass": false,
+    "required_route_process_pass": true,
+    "scheduled_runs": 4
+  },
+  "activation_gate": {
+    "observed_failures": [
+      "plugin hook manifest ignored by CLI",
+      "no automatic routing config or pre-action route event",
+      "workspace-write Windows sandbox CreateProcessWithLogonW failed"
+    ],
+    "passed": false,
+    "transcript": {
+      "path": "raw/activation.jsonl",
+      "sha256": "f5ebb07913206768c88e41132d8a039ef2aa820aa49913d0516c595e79dc630b"
+    }
+  },
+  "campaign_id": "router-scenarios-live-20260923T031600Z",
+  "claim_boundary": {
+    "automatic_hook_compliance_established": false,
+    "comparative_cost_or_latency_claim_supported": false,
+    "context_deletion_or_sandboxing_established": false,
+    "measured_usd_available": false
+  },
+  "data_origin": "observed",
+  "observations": [
+    {
+      "artifact_validation": {
+        "actual_tree": {
+          "README.md": "b54dfc3f60705e186eaf92e7c9e7edc96332dc196b503239d8a75cda3dd7cbdd",
+          "app/settings.json": "83e83419f826cfbc9a49479ddd8a50fc74df3cab610300e625716e2c2a4b8db7",
+          "docs/ops.md": "4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756",
+          "logs/startup.log": "d691a86ab2a70e015a3195737974886c7f202e45358e73081dc8df117e3e4cc7",
+          "notes/archive.md": "794f2bddd12fdd512c05baca972ce12402b6220eb35285578cec1d60a80817f2"
+        },
+        "expected_tree": {
+          "README.md": "b54dfc3f60705e186eaf92e7c9e7edc96332dc196b503239d8a75cda3dd7cbdd",
+          "app/settings.json": "83e83419f826cfbc9a49479ddd8a50fc74df3cab610300e625716e2c2a4b8db7",
+          "docs/ops.md": "4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756",
+          "logs/startup.log": "d691a86ab2a70e015a3195737974886c7f202e45358e73081dc8df117e3e4cc7",
+          "notes/archive.md": "794f2bddd12fdd512c05baca972ce12402b6220eb35285578cec1d60a80817f2"
+        },
+        "passed": true,
+        "result_path": "results/investigation-reuse"
+      },
+      "case_id": "investigation-reuse",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "reason": "runtime emitted tokens but no measured USD billing",
+        "usd": null
+      },
+      "evidence": {
+        "session_index": {
+          "path": "session-evidence/investigation-reuse/session-index.json",
+          "sha256": "4e3659ad0f2ee0379d10168d342b3de50d4ae6ca14cd3395f3b3b96b67da54bb"
+        },
+        "transcript": {
+          "path": "raw/investigation-reuse.jsonl",
+          "sha256": "8da9f6349744c004216db9fd37b5767293043dd9f5275ab78885bfbe0611f447"
+        }
+      },
+      "identity_contract_validation": {
+        "passed": false,
+        "workers": [
+          {
+            "native_task_name": null,
+            "passed": false,
+            "task_id": "investigate-authoritative-ttl-gpt-5-medium",
+            "thread_id": "01a0cc44-101a-7d00-9540-72a56a8b61de",
+            "worker_name": "investigate-authoritative-ttl-gpt-5-medium"
+          },
+          {
+            "native_task_name": null,
+            "passed": false,
+            "task_id": "implement-cache-ttl-gpt-5-medium",
+            "thread_id": "01a0cc44-cbfb-7372-be9b-912f437d0080",
+            "worker_name": "implement-cache-ttl-gpt-5-medium"
+          }
+        ]
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "duration_ms": 146804,
+        "end_at": "2026-09-23T03:18:36.657Z",
+        "identity": {
+          "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+          "task_id": "the identical canonical purpose-model-effort name.",
+          "worker_name": "<canonical purpose-model-effort name>"
+        },
+        "model": "gpt-5.6-sol",
+        "parent_thread_id": null,
+        "reasoning_effort": "high",
+        "source_evidence_lines": [
+          4,
+          11,
+          16,
+          30,
+          41,
+          45,
+          56,
+          60,
+          69,
+          74
+        ],
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-16-09-01a0cc43-7862-7272-a436-c02bce690354.jsonl",
+        "source_sha256": "87856b858b7a436394c55e4f91c8f5db307bce6aabbc16074df08ebd5fb2130a",
+        "start_at": "2026-09-23T03:16:09.559Z",
+        "thread_id": "01a0cc43-7862-7272-a436-c02bce690354"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "name": "route",
+            "passed": true
+          },
+          {
+            "name": "two-distinct-workers",
+            "passed": true
+          },
+          {
+            "name": "receipt-reuse",
+            "passed": true
+          },
+          {
+            "name": "stage-ownership",
+            "passed": true
+          }
+        ],
+        "passed": true
+      },
+      "raw_log_bytes": 43279,
+      "route_events": [
+        "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL/hard-delegate-or-unknown-signal/gpt-5/medium/named multi-step investigation with a required implementation dependency"
+      ],
+      "run_id": "router-scenarios-live-20260923T031600Z-investigation-reuse-selective-1",
+      "timing": {
+        "all_worker_overlap_ms": 0,
+        "parent_duration_ms": 146804
+      },
+      "tool_failures": 0,
+      "treatment": "selective",
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cached_input_tokens": 210100,
+          "input_tokens": 236107,
+          "output_tokens": 5780,
+          "reasoning_output_tokens": 2911
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/investigate_authoritative_ttl_gpt_5_medium",
+          "duration_ms": 7090,
+          "end_at": "2026-09-23T03:17:25.366Z",
+          "identity": {
+            "native_task_name": null,
+            "task_id": "investigate-authoritative-ttl-gpt-5-medium",
+            "worker_name": "investigate-authoritative-ttl-gpt-5-medium"
+          },
+          "model": "gpt-5.6-sol",
+          "parent_thread_id": "01a0cc43-7862-7272-a436-c02bce690354",
+          "reasoning_effort": "high",
+          "source_evidence_lines": [
+            4,
+            24,
+            25,
+            27,
+            38,
+            39,
+            41
+          ],
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-16-48-01a0cc44-101a-7d00-9540-72a56a8b61de.jsonl",
+          "source_sha256": "fce644975261c696bf761b13d495beeb0ca01637298faa7a59f615dc9db33d2f",
+          "start_at": "2026-09-23T03:16:48.055Z",
+          "thread_id": "01a0cc44-101a-7d00-9540-72a56a8b61de"
+        },
+        {
+          "agent_path": "/root/implement_cache_ttl_gpt_5_medium",
+          "duration_ms": 52783,
+          "end_at": "2026-09-23T03:18:29.038Z",
+          "identity": {
+            "native_task_name": null,
+            "task_id": "implement-cache-ttl-gpt-5-medium",
+            "worker_name": "implement-cache-ttl-gpt-5-medium"
+          },
+          "model": "gpt-5.6-sol",
+          "parent_thread_id": "01a0cc43-7862-7272-a436-c02bce690354",
+          "reasoning_effort": "high",
+          "source_evidence_lines": [
+            4,
+            43,
+            44,
+            46
+          ],
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-17-36-01a0cc44-cbfb-7372-be9b-912f437d0080.jsonl",
+          "source_sha256": "e806815d18b5d9779d90cb5a1dc862a6f72b23bfa79957269ed0cb8a91613ae5",
+          "start_at": "2026-09-23T03:17:36.166Z",
+          "thread_id": "01a0cc44-cbfb-7372-be9b-912f437d0080"
+        }
+      ]
+    },
+    {
+      "artifact_validation": {
+        "actual_tree": {
+          "migration.md": "36b6f4549ab9e07a4aeebfcddc90c6f281e73e3c0edc66acb50d6298ead38585",
+          "request.md": "ef54629bb9c22d1e6b971ebc2d9630807853fc1e3f6be71d444ee78930b701e7",
+          "src/api.json": "332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993",
+          "src/schema.json": "40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d",
+          "tests/expected.json": "eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6"
+        },
+        "expected_tree": {
+          "migration.md": "36b6f4549ab9e07a4aeebfcddc90c6f281e73e3c0edc66acb50d6298ead38585",
+          "request.md": "ef54629bb9c22d1e6b971ebc2d9630807853fc1e3f6be71d444ee78930b701e7",
+          "src/api.json": "332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993",
+          "src/schema.json": "40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d",
+          "tests/expected.json": "eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6"
+        },
+        "passed": true,
+        "result_path": "results/serial-escalation"
+      },
+      "case_id": "serial-escalation",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "reason": "runtime emitted tokens but no measured USD billing",
+        "usd": null
+      },
+      "evidence": {
+        "session_index": {
+          "path": "session-evidence/serial-escalation/session-index.json",
+          "sha256": "3504ceba7dd405b36500dba34e985da7984ac68ed2eaad09da9a41a064999a01"
+        },
+        "transcript": {
+          "path": "raw/serial-escalation.jsonl",
+          "sha256": "ef58724533f4bde9b831f303577fe17e317352c3b36e1cd1bd5ea22385619925"
+        }
+      },
+      "identity_contract_validation": {
+        "passed": false,
+        "workers": [
+          {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "passed": false,
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "thread_id": "01a0cc47-0b21-70e2-8781-e80f1899ced3",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "passed": false,
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "thread_id": "01a0cc47-56f8-7f20-a598-83151165e798",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "passed": false,
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "thread_id": "01a0cc47-cbef-7393-9a71-3e98922adb69",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "passed": false,
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "thread_id": "01a0cc48-567a-77a0-96ac-0514c1577af7",
+            "worker_name": "<canonical purpose-model-effort name>"
+          }
+        ]
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "duration_ms": 178162,
+        "end_at": "2026-09-23T03:22:12.712Z",
+        "identity": {
+          "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+          "task_id": "the identical canonical purpose-model-effort name.",
+          "worker_name": "<canonical purpose-model-effort name>"
+        },
+        "model": "gpt-5.6-sol",
+        "parent_thread_id": null,
+        "reasoning_effort": "high",
+        "source_evidence_lines": [
+          4,
+          11,
+          16,
+          44,
+          55,
+          59,
+          68,
+          72,
+          80,
+          84,
+          92,
+          97
+        ],
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-19-14-01a0cc46-4b8e-7813-8cbf-91450da29f66.jsonl",
+        "source_sha256": "96af8f148e6d9b7a46a75b83376c3f3ccf218ae0bbed8f5d1add9decb8372997",
+        "start_at": "2026-09-23T03:19:14.378Z",
+        "thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "name": "direct-then-delegate",
+            "passed": true
+          },
+          {
+            "name": "scope-expanded",
+            "passed": true
+          },
+          {
+            "name": "four-stages",
+            "passed": true
+          },
+          {
+            "name": "serial-timing",
+            "passed": true
+          }
+        ],
+        "passed": true
+      },
+      "raw_log_bytes": 62645,
+      "route_events": [
+        "ROUTE: DIRECT \u2014 bounded-direct-fast-path/all bounded direct requirements are explicitly satisfied",
+        "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL/hard-delegate-or-unknown-signal/model-unavailable/effort-unavailable/scope-expanded with dependent schema, API, and contract consumers"
+      ],
+      "run_id": "router-scenarios-live-20260923T031600Z-serial-escalation-selective-1",
+      "timing": {
+        "all_worker_overlap_ms": 0,
+        "parent_duration_ms": 178162
+      },
+      "tool_failures": 0,
+      "treatment": "selective",
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cached_input_tokens": 321743,
+          "input_tokens": 343445,
+          "output_tokens": 7397,
+          "reasoning_output_tokens": 2547
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/plan_migration_unavailable_unavailable",
+          "duration_ms": 8936,
+          "end_at": "2026-09-23T03:20:12.855Z",
+          "identity": {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          "model": "gpt-5.6-sol",
+          "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+          "reasoning_effort": "high",
+          "source_evidence_lines": [
+            11,
+            22,
+            34,
+            35,
+            37
+          ],
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-03-01a0cc47-0b21-70e2-8781-e80f1899ced3.jsonl",
+          "source_sha256": "b5ba5be72c41abc06fdbdb395115ddff12c03c4672d4c652a8758a910d3ff561",
+          "start_at": "2026-09-23T03:20:03.408Z",
+          "thread_id": "01a0cc47-0b21-70e2-8781-e80f1899ced3"
+        },
+        {
+          "agent_path": "/root/update_schema_unavailable_unavailable",
+          "duration_ms": 19177,
+          "end_at": "2026-09-23T03:20:42.731Z",
+          "identity": {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          "model": "gpt-5.6-sol",
+          "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+          "reasoning_effort": "high",
+          "source_evidence_lines": [
+            11,
+            27,
+            48,
+            49,
+            51
+          ],
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-22-01a0cc47-56f8-7f20-a598-83151165e798.jsonl",
+          "source_sha256": "f324ecabd031446eddb0db38387a32a46f2e63a15aca9c89fcc9845da89399fa",
+          "start_at": "2026-09-23T03:20:22.883Z",
+          "thread_id": "01a0cc47-56f8-7f20-a598-83151165e798"
+        },
+        {
+          "agent_path": "/root/update_api_unavailable_unavailable",
+          "duration_ms": 23361,
+          "end_at": "2026-09-23T03:21:16.580Z",
+          "identity": {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          "model": "gpt-5.6-sol",
+          "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+          "reasoning_effort": "high",
+          "source_evidence_lines": [
+            11,
+            31,
+            52,
+            53,
+            55
+          ],
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-52-01a0cc47-cbef-7393-9a71-3e98922adb69.jsonl",
+          "source_sha256": "8278371144a687db4506db6ddd950fab020649e893a0f80eb7a0923ca903a5c7",
+          "start_at": "2026-09-23T03:20:52.738Z",
+          "thread_id": "01a0cc47-cbef-7393-9a71-3e98922adb69"
+        },
+        {
+          "agent_path": "/root/update_contract_test_unavailable_unavailable",
+          "duration_ms": 35838,
+          "end_at": "2026-09-23T03:22:04.498Z",
+          "identity": {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          "model": "gpt-5.6-sol",
+          "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+          "reasoning_effort": "high",
+          "source_evidence_lines": [
+            11,
+            35,
+            61,
+            62,
+            64
+          ],
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-21-28-01a0cc48-567a-77a0-96ac-0514c1577af7.jsonl",
+          "source_sha256": "08625aa0ed1dc27c7253cd45c1a7b4992ab612f95747461e31b7581bb5b73683",
+          "start_at": "2026-09-23T03:21:28.229Z",
+          "thread_id": "01a0cc48-567a-77a0-96ac-0514c1577af7"
+        }
+      ]
+    },
+    {
+      "artifact_validation": {
+        "actual_tree": {
+          "reports/alpha.md": "11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2",
+          "reports/beta.md": "ef43ecf72af1579b7a10cc8ece75cbe40f63fe3f4760333f99e51867c5046fec",
+          "reports/gamma.md": "22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88"
+        },
+        "expected_tree": {
+          "reports/alpha.md": "11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2",
+          "reports/beta.md": "ef43ecf72af1579b7a10cc8ece75cbe40f63fe3f4760333f99e51867c5046fec",
+          "reports/gamma.md": "22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88"
+        },
+        "passed": true,
+        "result_path": "results/parallel-disjoint"
+      },
+      "case_id": "parallel-disjoint",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "reason": "runtime emitted tokens but no measured USD billing",
+        "usd": null
+      },
+      "evidence": {
+        "session_index": {
+          "path": "session-evidence/parallel-disjoint/session-index.json",
+          "sha256": "34bb26406c8dcad57de2bdb00f67577b642402eafdb3de6d2857934dc354ad59"
+        },
+        "transcript": {
+          "path": "raw/parallel-disjoint.jsonl",
+          "sha256": "2da29e8e5dfeb650a7dea54972e918ae01fe9d7685e11c94fcd0322be3643ede"
+        }
+      },
+      "identity_contract_validation": {
+        "passed": false,
+        "workers": [
+          {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "passed": false,
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "thread_id": "01a0cc49-d7c1-7310-997d-4b3d4392adcb",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "passed": false,
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "thread_id": "01a0cc49-f19f-7702-a081-d5484c9d1180",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "passed": false,
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "thread_id": "01a0cc4a-0efc-7842-896f-e8ddd3558af5",
+            "worker_name": "<canonical purpose-model-effort name>"
+          }
+        ]
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "duration_ms": 141897,
+        "end_at": "2026-09-23T03:24:44.492Z",
+        "identity": {
+          "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+          "task_id": "the identical canonical purpose-model-effort name.",
+          "worker_name": "<canonical purpose-model-effort name>"
+        },
+        "model": "gpt-5.6-sol",
+        "parent_thread_id": null,
+        "reasoning_effort": "high",
+        "source_evidence_lines": [
+          4,
+          11,
+          16,
+          30,
+          34,
+          38,
+          53,
+          57,
+          63,
+          80,
+          89
+        ],
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-22-22-01a0cc49-283c-7f32-9232-e629f8c81fcd.jsonl",
+        "source_sha256": "37e85c6c5a6e0ce26344c13b3c6828a16987b8a8123cccc68e1b37b6a48e433b",
+        "start_at": "2026-09-23T03:22:22.025Z",
+        "thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "name": "route",
+            "passed": true
+          },
+          {
+            "name": "three-workers",
+            "passed": true
+          },
+          {
+            "name": "real-overlap",
+            "passed": true
+          },
+          {
+            "name": "disjoint-ownership",
+            "passed": true
+          }
+        ],
+        "passed": true
+      },
+      "raw_log_bytes": 58722,
+      "route_events": [
+        "ROUTE: DELEGATE \u2014 PARALLEL / hard-delegate-or-unknown-signal / runtime model and effort unexposed / named multi-step runbook with three bounded, independent, dependency-free, write-disjoint tasks.",
+        "ROUTE: DELEGATE \u2014 PARALLEL / hard-delegate-or-unknown-signal / model-effort unexposed / three independent, dependency-free, write-disjoint tasks."
+      ],
+      "run_id": "router-scenarios-live-20260923T031600Z-parallel-disjoint-selective-1",
+      "timing": {
+        "all_worker_overlap_ms": 16915,
+        "parent_duration_ms": 141897
+      },
+      "tool_failures": 0,
+      "treatment": "selective",
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cached_input_tokens": 327319,
+          "input_tokens": 348481,
+          "output_tokens": 6822,
+          "reasoning_output_tokens": 2708
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/replace_alpha_unexposed_unexposed",
+          "duration_ms": 30546,
+          "end_at": "2026-09-23T03:23:37.929Z",
+          "identity": {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          "model": "gpt-5.6-sol",
+          "parent_thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd",
+          "reasoning_effort": "high",
+          "source_evidence_lines": [
+            11,
+            17,
+            48,
+            49,
+            51
+          ],
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-06-01a0cc49-d7c1-7310-997d-4b3d4392adcb.jsonl",
+          "source_sha256": "b1b291010e81565014df3607408174597891d59e9182f17eebef084c25b7dbad",
+          "start_at": "2026-09-23T03:23:06.873Z",
+          "thread_id": "01a0cc49-d7c1-7310-997d-4b3d4392adcb"
+        },
+        {
+          "agent_path": "/root/replace_beta_unexposed_unexposed",
+          "duration_ms": 29673,
+          "end_at": "2026-09-23T03:24:27.631Z",
+          "identity": {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          "model": "gpt-5.6-sol",
+          "parent_thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd",
+          "reasoning_effort": "high",
+          "source_evidence_lines": [
+            11,
+            19,
+            40,
+            41,
+            43,
+            62,
+            63,
+            65
+          ],
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-13-01a0cc49-f19f-7702-a081-d5484c9d1180.jsonl",
+          "source_sha256": "c0425ffcc197ba90343273483977fbd4d38260b5ee26f92af11fddef645f30a3",
+          "start_at": "2026-09-23T03:23:13.461Z",
+          "thread_id": "01a0cc49-f19f-7702-a081-d5484c9d1180"
+        },
+        {
+          "agent_path": "/root/replace_gamma_unexposed_unexposed",
+          "duration_ms": 19924,
+          "end_at": "2026-09-23T03:23:41.442Z",
+          "identity": {
+            "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+            "task_id": "the identical canonical purpose-model-effort name.",
+            "worker_name": "<canonical purpose-model-effort name>"
+          },
+          "model": "gpt-5.6-sol",
+          "parent_thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd",
+          "reasoning_effort": "high",
+          "source_evidence_lines": [
+            11,
+            21,
+            42,
+            43,
+            45
+          ],
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-21-01a0cc4a-0efc-7842-896f-e8ddd3558af5.jsonl",
+          "source_sha256": "c3ca92bd736afe97481da801a54d754726d575329594fba3c13afb4c160781e7",
+          "start_at": "2026-09-23T03:23:21.014Z",
+          "thread_id": "01a0cc4a-0efc-7842-896f-e8ddd3558af5"
+        }
+      ]
+    },
+    {
+      "artifact_validation": {
+        "actual_tree": {
+          "constraints.md": "807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368",
+          "current.md": "099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7",
+          "decision.json": "6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5"
+        },
+        "expected_tree": {
+          "constraints.md": "807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368",
+          "current.md": "099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7",
+          "decision.json": "6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5"
+        },
+        "passed": true,
+        "result_path": "results/architecture-review"
+      },
+      "case_id": "architecture-review",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "reason": "runtime emitted tokens but no measured USD billing",
+        "usd": null
+      },
+      "evidence": {
+        "session_index": {
+          "path": "session-evidence/architecture-review/session-index.json",
+          "sha256": "658ba119214dfc01ccc732a3611b86dab9e67b1faee305bbbed302ec6d354b69"
+        },
+        "transcript": {
+          "path": "raw/architecture-review-rerun.jsonl",
+          "sha256": "e115ad0dec864f7cc26057b5a875e1bf82161b0f3e134ff7a37c5c3f823a6b9d"
+        }
+      },
+      "identity_contract_validation": {
+        "passed": false,
+        "workers": [
+          {
+            "native_task_name": null,
+            "passed": false,
+            "task_id": "architecture-author-unexposed-unexposed",
+            "thread_id": "01a0cc54-d64a-7c92-97bd-aa50d719e578",
+            "worker_name": "architecture-author-unexposed-unexposed"
+          },
+          {
+            "native_task_name": null,
+            "passed": false,
+            "task_id": "architecture-reviewer-unexposed-unexposed",
+            "thread_id": "01a0cc55-83ba-77c1-9328-9ce987094fc7",
+            "worker_name": "architecture-reviewer-unexposed-unexposed"
+          }
+        ]
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "duration_ms": 139050,
+        "end_at": "2026-09-23T03:36:38.272Z",
+        "identity": {
+          "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+          "task_id": "the identical canonical purpose-model-effort name.",
+          "worker_name": "<canonical purpose-model-effort name>"
+        },
+        "model": "gpt-5.6-sol",
+        "parent_thread_id": null,
+        "reasoning_effort": "high",
+        "source_evidence_lines": [
+          4,
+          11,
+          16,
+          34,
+          49,
+          55,
+          63,
+          70,
+          80
+        ],
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-34-18-01a0cc54-17ae-7bf1-a435-31437ae691af.jsonl",
+        "source_sha256": "a9a0338d1db961f35f2832c05fae1471910a1306e31c838b978ccf67db5b841f",
+        "start_at": "2026-09-23T03:34:18.945Z",
+        "thread_id": "01a0cc54-17ae-7bf1-a435-31437ae691af"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "name": "route",
+            "passed": true
+          },
+          {
+            "name": "independent-review-required",
+            "passed": true
+          },
+          {
+            "name": "distinct-author-reviewer",
+            "passed": true
+          },
+          {
+            "name": "review-after-author",
+            "passed": true
+          },
+          {
+            "name": "review-pass",
+            "passed": true
+          }
+        ],
+        "passed": true
+      },
+      "raw_log_bytes": 59067,
+      "route_events": [
+        "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL / hard-delegate-or-unknown-signal / model and effort unexposed / named multi-step runbook plus mandatory independent review; parallel safety requirements are not all satisfied.",
+        "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL / hard-delegate-or-unknown-signal / named runbook and independent review."
+      ],
+      "run_id": "router-scenarios-live-20260923T031600Z-architecture-review-selective-1",
+      "timing": {
+        "all_worker_overlap_ms": 0,
+        "parent_duration_ms": 139050
+      },
+      "tool_failures": 0,
+      "treatment": "selective",
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cached_input_tokens": 321805,
+          "input_tokens": 345518,
+          "output_tokens": 7108,
+          "reasoning_output_tokens": 3462
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/architecture_author_unexposed_unexposed",
+          "duration_ms": 24326,
+          "end_at": "2026-09-23T03:35:31.865Z",
+          "identity": {
+            "native_task_name": null,
+            "task_id": "architecture-author-unexposed-unexposed",
+            "worker_name": "architecture-author-unexposed-unexposed"
+          },
+          "model": "gpt-5.6-sol",
+          "parent_thread_id": "01a0cc54-17ae-7bf1-a435-31437ae691af",
+          "reasoning_effort": "high",
+          "source_evidence_lines": [
+            4,
+            29,
+            30,
+            32
+          ],
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-35-07-01a0cc54-d64a-7c92-97bd-aa50d719e578.jsonl",
+          "source_sha256": "440b7d29aa7ace8b5a2281b81d748dad8dcfbd25b8a13a1b9c240ded98954bf2",
+          "start_at": "2026-09-23T03:35:07.403Z",
+          "thread_id": "01a0cc54-d64a-7c92-97bd-aa50d719e578"
+        },
+        {
+          "agent_path": "/root/architecture_reviewer_unexposed_unexposed",
+          "duration_ms": 21105,
+          "end_at": "2026-09-23T03:36:13.007Z",
+          "identity": {
+            "native_task_name": null,
+            "task_id": "architecture-reviewer-unexposed-unexposed",
+            "worker_name": "architecture-reviewer-unexposed-unexposed"
+          },
+          "model": "gpt-5.6-sol",
+          "parent_thread_id": "01a0cc54-17ae-7bf1-a435-31437ae691af",
+          "reasoning_effort": "high",
+          "source_evidence_lines": [
+            4,
+            18,
+            19,
+            21
+          ],
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-35-51-01a0cc55-83ba-77c1-9328-9ce987094fc7.jsonl",
+          "source_sha256": "a960876477359b5071269613c34d5cf5d40b9919c22abc27c7efe024cf1816fd",
+          "start_at": "2026-09-23T03:35:51.768Z",
+          "thread_id": "01a0cc55-83ba-77c1-9328-9ce987094fc7"
+        }
+      ]
+    }
+  ],
+  "runtime": {
+    "codex_cli": "codex-cli 0.144.1",
+    "controller_model": "gpt-5.6-sol",
+    "controller_reasoning_effort": "high"
+  },
+  "schema_version": 1,
+  "treatment": "selective"
+}

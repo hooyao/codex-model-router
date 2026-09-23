@@ -1,234 +1,286 @@
 #!/usr/bin/env python3
-"""Strict schema-v2 offline evaluation; no live models or release claims."""
+"""Validate and summarize router scenario campaigns without performance claims."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import math
-import random
 import statistics
-import subprocess
-import sys
 from pathlib import Path
-from typing import Any
+from typing import Optional
 
 try:
     from . import contract as c
-    from .fixture import fixture_for_case, grade, load_fixture, tree_digest, tree_snapshot
+    from .fixture import fixture_for_case, grade, load_fixture
 except ImportError:
     import contract as c
-    from fixture import fixture_for_case, grade, load_fixture, tree_digest, tree_snapshot
+    from fixture import fixture_for_case, grade, load_fixture
 
 
-def bootstrap_interval(pairs: list[tuple[float, float]], statistic: Any,
-                       seed: int = 17, samples: int = 2000) -> dict:
-    """Resample whole pairs. Any undefined resample makes the interval undefined."""
-    estimate, reason = statistic(pairs)
-    if reason:
-        return {"estimate": None, "bootstrap_95": None, "reason": reason}
-    rng = random.Random(seed)
-    estimates = []
-    for _ in range(samples):
-        value, reason = statistic([pairs[rng.randrange(len(pairs))] for _ in pairs])
-        if reason:
-            return {"estimate": estimate, "bootstrap_95": None, "reason": f"undefined bootstrap resample: {reason}"}
-        estimates.append(value)
-    estimates.sort()
-    return {"estimate": estimate,
-            "bootstrap_95": [estimates[int(samples * .025)], estimates[int(samples * .975)]],
-            "reason": None}
+SEMANTIC_ROUTE_FIELDS = (
+    "initial_ownership",
+    "final_ownership",
+    "delegate_topology",
+    "verification_requirement",
+    "escalation_trigger",
+)
 
 
-def mean_difference(pairs: list[tuple[float, float]]) -> tuple[float, None]:
-    return statistics.mean(r - b for b, r in pairs), None
-
-
-def ratio_of_means(pairs: list[tuple[float, float]]) -> tuple[float | None, str | None]:
-    baseline = statistics.mean(b for b, _ in pairs)
-    if baseline == 0:
-        return None, "baseline mean is zero"
-    ratio = statistics.mean(r for _, r in pairs) / baseline
-    if not math.isfinite(ratio):
-        return None, "ratio is non-finite"
-    return ratio, None
-
-
-def load_experiment(manifest_path: Path) -> tuple[dict, list[dict], dict]:
-    manifest, cases = c.load_manifest(manifest_path)
-    cases_root = c.safe_path(manifest_path.parent, manifest["cases_file"]).parent
-    fixtures = {case["id"]: fixture_for_case(cases_root, case) for case in cases}
-    for fixture_path in fixtures.values():
-        if fixture_path:
-            initial = load_fixture(fixture_path)["initial"]["tree"]
-            c.require(manifest["controls"]["repository_revision"] == tree_digest(initial),
-                      "fixture initial tree/repository_revision provenance mismatch")
-    return manifest, cases, fixtures
+def semantic_route(value: dict) -> dict:
+    return {field: value[field] for field in SEMANTIC_ROUTE_FIELDS}
 
 
 def validate_campaign(records_path: Path, manifest_path: Path) -> tuple[dict, list[dict], dict]:
-    manifest, cases, fixtures = load_experiment(manifest_path)
+    manifest, cases = c.load_manifest(manifest_path)
     records = c.load_records(records_path)
-    expected = {(case["id"], rep, variant) for case in cases
-                for rep in range(1, manifest["repetitions_per_case"] + 1) for variant in c.VARIANTS}
-    actual = {(r["case_id"], r["repetition"], r["variant"]) for r in records}
+    case_map = {case["id"]: case for case in cases}
+    expected = {(case["id"], repetition, treatment) for case in cases
+                for repetition in range(1, manifest["repetitions"] + 1) for treatment in c.TREATMENTS}
+    actual = {(record["case_id"], record["repetition"], record["treatment"]) for record in records}
     c.require(actual == expected,
               f"scheduled records mismatch: missing={len(expected - actual)}, extra={len(actual - expected)}")
-    manifest_hash, sessions, conventions, grades = c.sha256(manifest_path), set(), set(), {}
+    manifest_hash = c.sha256(manifest_path)
+    pair_slots: dict[str, tuple[str, int]] = {}
+    results = {}
     for record in records:
-        c.require(record["experiment_id"] == manifest["experiment_id"], "experiment_id mismatch")
+        c.require(record["benchmark_id"] == manifest["benchmark_id"], "benchmark_id mismatch")
         c.require(record["manifest_sha256"] == manifest_hash, "manifest hash mismatch")
-        c.require(record["environment"] == manifest["controls"], "environment provenance mismatch")
-        inventory = c.session_inventory(record["route_trace"])
-        c.require(not sessions.intersection(inventory), "session reused across runs")
-        sessions.update(inventory)
+        slot = (record["case_id"], record["repetition"])
+        c.require(record["pair_id"] not in pair_slots or pair_slots[record["pair_id"]] == slot,
+                  "pair_id reused across case/repetition")
+        pair_slots[record["pair_id"]] = slot
         for evidence in record["evidence"]:
-            c.hash_ref(manifest_path.parent, evidence, "run evidence")
-        convention = c.validate_accounting(manifest_path.parent, record, manifest)
-        if convention:
-            conventions.add(convention)
-        fixture = fixtures[record["case_id"]]
-        candidate = record["result_tree"]
-        if fixture and record["outcome"] == "completed":
-            c.require(candidate is not None, "completed fixture run requires result_tree")
-        if candidate:
-            path = c.safe_path(manifest_path.parent, candidate["path"])
-            if fixture:
-                grades[record["run_id"]] = grade(fixture, path, candidate["sha256"])
-            else:
-                c.require(tree_digest(tree_snapshot(path)) == candidate["sha256"], "candidate tree hash mismatch")
-    c.require(len(conventions) <= 1, "incompatible accounting conventions")
-    return manifest, records, grades
+            evidence_path = c.hash_ref(manifest_path.parent, evidence, "run evidence")
+            evidence_value = c.read_json(evidence_path)
+            c.object_fields(evidence_value, "data_origin run_id note", "run evidence payload")
+            c.require(evidence_value["data_origin"] == manifest["data_origin"], "evidence data_origin mismatch")
+            c.require(evidence_value["run_id"] == record["run_id"], "evidence run_id mismatch")
+            c.nonempty(evidence_value["note"], "run evidence note")
+        case = case_map[record["case_id"]]
+        actual_span_ids = {span["id"] for span in record["execution"]["spans"]}
+        expected_span_ids = set(case["required_span_ids"][record["treatment"]])
+        actual_dependency_edges = {f"{dependency}->{span['id']}"
+                                   for span in record["execution"]["spans"]
+                                   for dependency in span["depends_on"]}
+        expected_dependency_edges = set(case["required_dependency_edges"][record["treatment"]])
+        actual_receipt_edges = {f"{receipt['producer_span_id']}->{consumer}"
+                                for receipt in record["receipts"]
+                                for consumer in receipt["consumer_span_ids"]}
+        expected_receipt_edges = set(case["required_receipt_edges"][record["treatment"]])
+        if record["outcome"] == "completed":
+            c.require(actual_span_ids == expected_span_ids, "completed span inventory does not match frozen case")
+            c.require(actual_dependency_edges == expected_dependency_edges,
+                      "record dependency edges do not match frozen case")
+            c.require(actual_receipt_edges == expected_receipt_edges,
+                      "record receipt edges do not match frozen case")
+        else:
+            c.require(actual_span_ids.issubset(expected_span_ids), "failed run contains impossible downstream span")
+            c.require(actual_dependency_edges.issubset(expected_dependency_edges),
+                      "failed run contains non-frozen dependency edge")
+            c.require(actual_receipt_edges.issubset(expected_receipt_edges),
+                      "failed run contains non-frozen receipt edge")
+            for edge in expected_dependency_edges:
+                producer, consumer = edge.split("->", 1)
+                if consumer in actual_span_ids:
+                    c.require(producer in actual_span_ids and edge in actual_dependency_edges,
+                              "failed run span prefix omits prerequisite dependency")
+            for edge in expected_receipt_edges:
+                producer, consumer = edge.split("->", 1)
+                if consumer in actual_span_ids:
+                    c.require(producer in actual_span_ids and edge in actual_receipt_edges,
+                              "failed run span prefix omits required receipt consumption")
+        expected_route = case["route_expectations"][record["treatment"]]
+        record["_route_adherent"] = semantic_route(record["route_trace"]) == semantic_route(expected_route)
+        if record["result_tree"] is not None:
+            candidate = c.safe_path(manifest_path.parent, record["result_tree"]["path"])
+            fixture_path = fixture_for_case(manifest_path.parent, case)
+            results[record["run_id"]] = grade(fixture_path, candidate, record["result_tree"]["sha256"])
+        elif record["outcome"] == "completed":
+            raise c.ContractError("completed run requires result tree")
+        effective_quality, process_compliance = derive_results(case, record, results.get(record["run_id"]))
+        record["_effective_quality"] = effective_quality
+        record["_process_compliance"] = process_compliance
+        record["_claimed_quality_disagrees"] = (
+            record["quality"]["passed"] != record["_effective_quality"]["passed"]
+            or record["quality"]["score"] != record["_effective_quality"]["score"]
+            or {check["name"] for check in record["quality"]["checks"]} != set(case["required_quality_checks"])
+        )
+    c.require(all(set(c.TREATMENTS) == {record["treatment"] for record in records if record["pair_id"] == pair_id}
+                  for pair_id in pair_slots), "pair treatment inventory mismatch")
+    return manifest, records, results
+
+
+def derive_results(case: dict, record: dict, grading: Optional[dict]) -> tuple[dict, dict]:
+    spans = record["execution"]["spans"]
+    by_id = {span["id"]: span for span in spans}
+    artifact_writers = [span for span in spans if span["artifact_paths"]]
+    artifact_paths = [path for span in artifact_writers for path in span["artifact_paths"]]
+    linked_receipts = [receipt for receipt in record["receipts"] if receipt["consumer_span_ids"]]
+    preserved_facts = {fact for receipt in linked_receipts for fact in receipt["content"]["facts"]}
+    linked_consumer_tokens = sum(by_id[consumer]["input_tokens"] for receipt in linked_receipts
+                                 for consumer in receipt["consumer_span_ids"])
+    expected_route = case["route_expectations"][record["treatment"]]
+    review = record["review"]
+    quality_values = {"artifact-exact": grading is not None and grading["passed"]}
+    process_values = {
+        "route-adherent": semantic_route(record["route_trace"]) == semantic_route(expected_route),
+        "receipt-preserved-facts": set(case["required_receipt_facts"]).issubset(preserved_facts)
+                                   and bool(linked_receipts) and linked_consumer_tokens > 0,
+        "scope-transition-safe": record["route_trace"]["initial_ownership"] == "DELEGATE"
+                                 or (record["route_trace"]["initial_ownership"] == "DIRECT"
+                                     and record["route_trace"]["final_ownership"] == "DELEGATE"
+                                     and record["route_trace"]["escalation_trigger"] == "scope-expanded"),
+        "dependency-order": {f"{dependency}->{span['id']}" for span in spans
+                             for dependency in span["depends_on"]}
+                            == set(case["required_dependency_edges"][record["treatment"]]),
+        "artifact-path-coverage": set(artifact_paths) == set(case["required_artifact_paths"]),
+        "disjoint-write-ownership": len(artifact_paths) == len(set(artifact_paths)),
+        "independent-review": review is not None and review["passed"],
+    }
+    quality_checks = [{"name": name, "passed": quality_values[name],
+                       "evidence": "recomputed from frozen artifact acceptance"}
+                      for name in case["required_quality_checks"]]
+    process_checks = [{"name": name, "passed": process_values[name],
+                       "evidence": "recomputed from frozen treatment process"}
+                      for name in case["required_process_checks"][record["treatment"]]]
+    quality_passed = record["outcome"] == "completed" and all(check["passed"] for check in quality_checks)
+    quality_score = 0 if record["outcome"] != "completed" else round(
+        100 * sum(check["passed"] for check in quality_checks) / len(quality_checks), 2)
+    process_passed = all(check["passed"] for check in process_checks)
+    return ({"passed": quality_passed, "score": quality_score, "checks": quality_checks},
+            {"passed": process_passed, "checks": process_checks})
+
+
+def mean(records: list[dict], getter) -> float:
+    return statistics.mean(getter(record) for record in records)
+
+
+def treatment_summary(records: list[dict], grades: dict) -> dict:
+    def effective_pass(record: dict) -> bool:
+        return record["_effective_quality"]["passed"]
+
+    measured = [record["cost"]["usd"] for record in records
+                if record["cost"]["kind"] == "measured" and record["cost"]["complete"]]
+    estimated = [record["cost"]["usd"] for record in records
+                 if record["cost"]["kind"] == "estimated" and record["cost"]["complete"]]
+    return {
+        "runs": len(records),
+        "completion_rate": mean(records, lambda record: float(record["outcome"] == "completed")),
+        "quality_pass_rate": mean(records, lambda record: float(effective_pass(record))),
+        "mean_quality_score": mean(records, lambda record: record["_effective_quality"]["score"]),
+        "process_compliance_rate": mean(records, lambda record: float(record["_process_compliance"]["passed"])),
+        "route_adherence_rate": mean(records, lambda record: float(record["_route_adherent"])),
+        "mean_wall_time_ms": mean(records, lambda record: record["execution"]["wall_time_ms"]),
+        "mean_critical_path_ms": mean(records, lambda record: record["execution"]["critical_path_ms"]),
+        "mean_controller_input_tokens": mean(records, lambda record: record["context"]["controller_input_tokens"]),
+        "mean_worker_input_tokens": mean(records, lambda record: record["context"]["worker_input_tokens"]),
+        "mean_receipt_tokens": mean(records, lambda record: record["context"]["receipt_tokens"]),
+        "mean_receipt_links": mean(records, lambda record: sum(
+            len(receipt["consumer_span_ids"]) for receipt in record["receipts"])),
+        "mean_tool_calls": mean(records, lambda record: record["execution"]["tool_calls"]),
+        "mean_raw_log_bytes": mean(records, lambda record: record["execution"]["raw_log_bytes"]),
+        "retries": sum(record["retries"] for record in records),
+        "conflicts": sum(record["conflicts"] for record in records),
+        "measured_cost": {"complete_runs": len(measured),
+                          "mean_usd": statistics.mean(measured) if measured else None},
+        "estimated_cost": {"complete_runs": len(estimated),
+                           "mean_usd": statistics.mean(estimated) if estimated else None},
+    }
 
 
 def analyze(manifest: dict, records: list[dict], grades: dict) -> dict:
-    pairs = {}
-    for record in records:
-        pairs.setdefault((record["case_id"], record["repetition"]), {})[record["variant"]] = record
-    paired = [pairs[key] for key in sorted(pairs)]
-    baseline = [pair["baseline"] for pair in paired]
-    router = [pair["router"] for pair in paired]
-
-    def passed(record: dict) -> bool:
-        return record["passed"] and grades.get(record["run_id"], {"passed": True})["passed"]
-
-    quality = bootstrap_interval([(float(passed(b)), float(passed(r))) for b, r in zip(baseline, router)], mean_difference)
-    latency = bootstrap_interval([(b["duration_ms"], r["duration_ms"]) for b, r in zip(baseline, router)], ratio_of_means)
-    complete = all(r["cost"]["complete"] for r in records)
-    cost = (bootstrap_interval([(b["cost"]["cost_usd"], r["cost"]["cost_usd"]) for b, r in zip(baseline, router)], ratio_of_means)
-            if complete else {"estimate": None, "bootstrap_95": None, "reason": "incomplete accounting"})
-    safety = {field: {variant: sum(r[field] for r in records if r["variant"] == variant)
-                      for variant in c.VARIANTS} for field in c.SAFETY_FIELDS}
-    policy_failures = sum(r["route_trace"]["controller_business_actions"] > 0 or
-                         (r["outcome"] == "completed" and
-                          (not r["route_trace"]["worker_sessions"] or r["route_trace"]["worker_business_actions"] == 0))
-                         for r in router)
-    pass_rates = {variant: statistics.mean(float(passed(r)) for r in records if r["variant"] == variant)
-                  for variant in c.VARIANTS}
-    analysis = manifest["analysis"]
-
-    def upper_gate(measurement: dict, threshold: float) -> bool | None:
-        return None if measurement["bootstrap_95"] is None else measurement["bootstrap_95"][1] <= threshold
-
-    gates = {
-        "complete_planned_pairs": True,
-        "quality_non_inferior": quality["bootstrap_95"][0] >= analysis["quality_margin"],
-        "critical_quality_floor": pass_rates["router"] >= analysis["minimum_router_quality"],
-        "no_critical_safety_failure": all(safety[field]["router"] == 0 for field in c.SAFETY_FIELDS),
-        "pure_orchestrator": policy_failures == 0,
-        "cost_threshold": upper_gate(cost, analysis["maximum_cost_ratio"]),
-        "latency_not_regressed": upper_gate(latency, analysis["maximum_latency_ratio"]),
-    }
-    failed = [name for name, value in gates.items() if value is False]
-    missing = [name for name, value in gates.items() if value is None]
-    release_reasons = ["statistical release gate is not implemented in this integrity slice"]
-    if manifest["status"] == "draft":
-        release_reasons.append("draft campaign")
-    if manifest["data_origin"] == "synthetic":
-        release_reasons.append("synthetic observations")
+    by_treatment = {treatment: [record for record in records if record["treatment"] == treatment]
+                    for treatment in c.TREATMENTS}
+    case_results = {}
+    for case_id in sorted({record["case_id"] for record in records}):
+        rows = {treatment: [record for record in records
+                            if record["case_id"] == case_id and record["treatment"] == treatment]
+                for treatment in c.TREATMENTS}
+        summaries = {treatment: treatment_summary(values, grades) for treatment, values in rows.items()}
+        mandatory = summaries["mandatory_delegate"]["mean_critical_path_ms"]
+        selective = summaries["selective"]["mean_critical_path_ms"]
+        selective_links = [(record, receipt, consumer)
+                           for record in rows["selective"] for receipt in record["receipts"]
+                           for consumer in receipt["consumer_span_ids"]]
+        case_results[case_id] = {
+            "treatments": summaries,
+            "critical_path_ratio_selective_over_mandatory": selective / mandatory if mandatory else None,
+            "selective_receipt_links": len(selective_links),
+            "selective_linked_consumer_input_tokens": sum(
+                next(span["input_tokens"] for span in record["execution"]["spans"] if span["id"] == consumer)
+                for record, _receipt, consumer in selective_links),
+        }
+    route_failures = [record["run_id"] for record in records if not record["_route_adherent"]]
+    artifact_failures = [run_id for run_id, result in grades.items() if not result["passed"]]
     return {
-        "schema_version": c.VERSION, "experiment_id": manifest["experiment_id"],
-        "status": "fail" if failed else "inconclusive", "release_pass": False,
-        "release_blockers": release_reasons, "failed_gates": failed, "missing_gates": missing,
-        "pairs": len(paired), "quality_pass_rate": pass_rates,
-        "quality_difference_router_minus_baseline": quality,
-        "latency_ratio_router_over_baseline": latency,
-        "cost_ratio_router_over_baseline": cost, "cost_complete": complete,
-        "safety_by_category": safety, "router_policy_failures": policy_failures,
-        "oracle_results": grades, "gates": gates,
+        "schema_version": c.VERSION,
+        "benchmark_id": manifest["benchmark_id"],
+        "data_origin": manifest["data_origin"],
+        "release_claim_supported": False,
+        "limitations": [
+            "Synthetic observations do not establish live-model quality, savings, or latency.",
+            "Estimated costs are reported separately from measured costs and are not interchangeable.",
+            "Receipt links and linked-consumer context are synthetic harness observations, not live savings estimates.",
+        ],
+        "scheduled_runs": len(records),
+        "failures_by_outcome": {outcome: sum(record["outcome"] == outcome for record in records)
+                                for outcome in c.OUTCOMES if outcome != "completed"},
+        "route_failures": route_failures,
+        "process_failures": [record["run_id"] for record in records
+                             if not record["_process_compliance"]["passed"]],
+        "artifact_failures": artifact_failures,
+        "claimed_quality_disagreements": [record["run_id"] for record in records
+                                          if record["_claimed_quality_disagrees"]],
+        "treatments": {treatment: treatment_summary(values, grades)
+                       for treatment, values in by_treatment.items()},
+        "cases": case_results,
     }
 
 
 def compare(records_path: Path, manifest_path: Path) -> dict:
-    manifest, records, grades = validate_campaign(records_path, manifest_path)
-    return analyze(manifest, records, grades)
-
-
-def collect_ccusage(thread_ids: list[str], output: Path) -> dict:
-    c.string_list(thread_ids, "thread_ids")
-    sessions = []
-    for thread_id in thread_ids:
-        completed = subprocess.run(["ccusage", "session", "--id", thread_id, "--json", "--offline"],
-                                   capture_output=True, text=True, timeout=30, check=False)
-        c.require(completed.returncode == 0, f"ccusage failed for {thread_id}")
-        raw = c.parse_json(completed.stdout)
-        c.require(type(raw) is dict and type(raw.get("sessions")) is list, "ccusage sessions must be an array")
-        matches = [row for row in raw["sessions"] if type(row) is dict and row.get("sessionId") == thread_id]
-        c.require(len(matches) == 1, f"ccusage must return exactly one matching session for {thread_id}")
-        c.number(matches[0].get("totalCost"), "observed totalCost")
-        sessions.append({"session_id": thread_id, "observed_cost_usd": matches[0]["totalCost"]})
-    result = {"schema_version": c.VERSION, "source": "ccusage", "verified": False,
-              "cost_complete": False, "cost_usd": None, "observations": sessions,
-              "reason": "provider identity and complete descendant accounting are unverified"}
-    output.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n", encoding="utf-8")
-    return result
+    return analyze(*validate_campaign(records_path, manifest_path))
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    cases = sub.add_parser("validate-cases", aliases=["validate"])
+    cases = sub.add_parser("validate-cases")
     cases.add_argument("--cases", type=Path, required=True)
     manifest = sub.add_parser("validate-manifest")
     manifest.add_argument("--manifest", type=Path, required=True)
     records = sub.add_parser("validate-records")
     records.add_argument("--records", type=Path, required=True)
-    records.add_argument("--manifest", type=Path, required=True, help="Required to check schedule, hashes, and provenance.")
+    records.add_argument("--manifest", type=Path, required=True)
     comparison = sub.add_parser("compare")
     comparison.add_argument("--records", type=Path, required=True)
     comparison.add_argument("--manifest", type=Path, required=True)
     grader = sub.add_parser("grade")
     grader.add_argument("--fixture", type=Path, required=True)
     grader.add_argument("--candidate", type=Path, required=True)
-    grader.add_argument("--sha256", required=True, help="Expected canonical candidate tree digest.")
-    usage = sub.add_parser("ccusage", aliases=["collect-cost"])
-    usage.add_argument("--thread-id", action="append", required=True)
-    usage.add_argument("--output", type=Path, required=True)
+    grader.add_argument("--sha256")
     args = parser.parse_args()
     try:
-        if args.command in ("validate-cases", "validate"):
-            cases = c.load_cases(args.cases)
-            for case in cases:
-                fixture_for_case(args.cases.parent, case)
-            result, code = {"validated_cases": len(cases)}, 0
+        if args.command == "validate-cases":
+            loaded = c.load_cases(args.cases)
+            for case in loaded:
+                load_fixture(fixture_for_case(args.cases.parent, case))
+            result = {"validated_cases": len(loaded)}
         elif args.command == "validate-manifest":
-            manifest, _, _ = load_experiment(args.manifest)
-            result, code = {"validated_manifest": manifest["experiment_id"]}, 0
+            loaded, case_list = c.load_manifest(args.manifest)
+            for case in case_list:
+                load_fixture(fixture_for_case(args.manifest.parent, case))
+            result = {"validated_manifest": loaded["benchmark_id"]}
         elif args.command == "validate-records":
-            _, records, _ = validate_campaign(args.records, args.manifest)
-            result, code = {"validated_records": len(records)}, 0
+            _, loaded, _ = validate_campaign(args.records, args.manifest)
+            result = {"validated_records": len(loaded)}
         elif args.command == "compare":
             result = compare(args.records, args.manifest)
-            code = 2
-        elif args.command == "grade":
-            result = grade(args.fixture, args.candidate, args.sha256)
-            code = 0 if result["passed"] else 2
         else:
-            result, code = collect_ccusage(args.thread_id, args.output), 2
+            result = grade(args.fixture, args.candidate, args.sha256)
         print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
-        return code
-    except (OSError, ValueError, OverflowError, subprocess.TimeoutExpired) as error:
-        print(f"ERROR: {error}", file=sys.stderr)
+        return 0
+    except (OSError, ValueError, OverflowError) as error:
+        print(f"ERROR: {error}")
         return 1
 
 

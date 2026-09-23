@@ -1,0 +1,3 @@
+INFO region=primary
+WARN stale dashboard mentioned cache_ttl_seconds=90
+INFO settings loaded from app/settings.json

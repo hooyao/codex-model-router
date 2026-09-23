@@ -44,7 +44,7 @@ SEMVER_PATTERN = re.compile(
     r"(?:-(?P<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?"
     r"(?:\+(?P<build>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$"
 )
-WINDOWS_HOOK_COMMAND = 'python "%PLUGIN_ROOT%\\hooks\\router_hook.py"'
+WINDOWS_HOOK_COMMAND = 'cmd.exe /d /c python "%PLUGIN_ROOT%\\hooks\\router_hook.py"'
 POSIX_HOOK_COMMAND = 'python3 "$PLUGIN_ROOT/hooks/router_hook.py"'
 MINIMUM_CONTEXT_LIMIT = MAX_SERIALIZED_CONFIG_BYTES + 8_192
 VERSION_BUMP_IGNORED_PATH_PARTS = {"__pycache__", ".pytest_cache"}
@@ -210,17 +210,21 @@ def validate_hook_configuration(plugin_root: Path, errors: list[str]) -> None:
         errors.append("hook program is missing: hooks/router_hook.py")
     if not (plugin_root / "hooks" / "routing_config.py").is_file():
         errors.append("shared routing config module is missing: hooks/routing_config.py")
+    if not (plugin_root / "hooks" / "execution_decision.py").is_file():
+        errors.append("routing decision contract is missing: hooks/execution_decision.py")
 
 
 def validate_policy_files(plugin_root: Path, errors: list[str]) -> None:
     skill_path = plugin_root / "skills" / "model-router" / "SKILL.md"
     init_skill_path = plugin_root / "skills" / "initialize-router" / "SKILL.md"
     policy_path = plugin_root / "skills" / "model-router" / "references" / "routing-policy.md"
+    decision_contract_path = plugin_root / "skills" / "model-router" / "references" / "decision-contract.md"
     naming_path = plugin_root / "hooks" / "subagent_naming.py"
     for path, label in (
         (skill_path, "model-router Skill"),
         (init_skill_path, "initialize-router Skill"),
         (policy_path, "routing policy"),
+        (decision_contract_path, "routing decision contract"),
         (naming_path, "worker naming helper"),
         (plugin_root / "scripts" / "init_router.py", "router init script"),
     ):

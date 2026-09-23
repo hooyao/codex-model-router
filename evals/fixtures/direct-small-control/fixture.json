@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "direct-small-control",
+  "grader_version": "exact-tree-v2",
+  "prompt": "Correct the single typo 'plguin' to 'plugin' in README.md and preserve every other byte.",
+  "initial": {
+    "path": "initial",
+    "tree": {"files": {"README.md": "160f0886b1fa3c4b36aae0abe7861e74a9e483c5a723a0a70d8651766bedbd64"}, "directories": []}
+  },
+  "reference": {
+    "path": "reference",
+    "tree": {"files": {"README.md": "55c4a68dd6c729919566e16fc243fa25723697eeaeaa78822c13dda210890e26"}, "directories": []}
+  }
+}

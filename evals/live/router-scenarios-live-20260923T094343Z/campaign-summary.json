@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "campaign_id": "router-scenarios-live-20260923T094343Z",
+  "generated_at": "2026-09-23T10:23:35.4188485Z",
+  "source_commit": "763e21f",
+  "plugin": {
+    "name": "codex-model-router",
+    "version": "1.0.5",
+    "manifest_sha256": "0432eb79e439f86b04bbc75c0c206d167e75efbc18bf4754578a742c3ece552c"
+  },
+  "runtime": {
+    "codex_version": "codex-cli 0.155.0-alpha.16",
+    "controller_model": "gpt-5.6-sol",
+    "controller_reasoning_effort": "high",
+    "sandbox_mode": "workspace-write"
+  },
+  "trusted_hooks": [
+    {"event": "SessionStart", "sha256": "358081920e9cbe4ef259ea048891ed884a61c0c35f78960b1b86f88fd9f49738"},
+    {"event": "UserPromptSubmit", "sha256": "303a53cc211acc4c71b2bab72424f557455821b52dfb821823ff8bf8d4676659"},
+    {"event": "SubagentStart", "sha256": "cdf685a22f7a63aac0f9948d20dbf40f1d89ddd7f2f09fdcdf37541cf13cf74f"}
+  ],
+  "activation": {
+    "status": "pass",
+    "thread_id": "01a0cda6-b756-7b53-894f-89e95be13d17",
+    "normal_hook_trust": true,
+    "bypass_hook_trust": false,
+    "route": "DIRECT",
+    "answer_format": "fenced-with-explanatory-prose",
+    "artifact_unchanged": true
+  },
+  "acceptance": {
+    "scheduled_runs": 5,
+    "completed_runs": 5,
+    "activation_gate_pass": true,
+    "artifact_pass": true,
+    "required_route_process_pass": false,
+    "identity_contract_pass": false,
+    "campaign_pass": false
+  },
+  "scenarios": [
+    {"id": "direct-small-control", "artifact": "pass", "process": "pass", "identity": "pass", "workers": 0},
+    {"id": "investigation-reuse", "artifact": "pass", "process": "unknown", "identity": "unknown", "workers": 2, "limitation": "receipt consumption and packet identity are encrypted in persisted parent evidence"},
+    {"id": "serial-escalation", "artifact": "pass", "process": "fail", "identity": "unknown", "workers": 1, "limitation": "one combined migration worker replaced four required dependent stages"},
+    {"id": "parallel-disjoint", "artifact": "pass", "process": "pass", "identity": "unknown", "workers": 4, "primary_worker_overlap_ms": 26096, "limitation": "three primary workers overlapped; one later validation worker was also dispatched"},
+    {"id": "architecture-review", "artifact": "pass", "process": "fail", "identity": "unknown", "workers": 2, "limitation": "distinct Astra reviewer passed substantively but omitted the required exact Verdict: PASS line"}
+  ],
+  "controls": {
+    "supported_selection": "pass",
+    "negative_capability": "pass",
+    "source": "dispatch-controls.json"
+  },
+  "measured_usage": {
+    "scenario_parent_duration_ms_sum": 1067632,
+    "input_tokens": 2191799,
+    "cached_input_tokens": 2007201,
+    "cache_write_input_tokens": 165637,
+    "output_tokens": 27494,
+    "reasoning_output_tokens": 9571
+  },
+  "cost": {
+    "kind": "estimated_api_standard_short_context",
+    "rate_card_url": "https://developers.openai.com/api/docs/pricing",
+    "rate_card_checked_on": "2026-09-23",
+    "billing_verified": false,
+    "selected_scenario_sessions": 14,
+    "selected_scenario_input_tokens": 3193668,
+    "selected_scenario_cached_input_tokens": 2832916,
+    "selected_scenario_cache_write_input_tokens": 311803,
+    "selected_scenario_output_tokens": 43896,
+    "selected_scenario_usd": 2.715472525,
+    "activation_probe_usd": 0.149307,
+    "failed_activation_attempts_usd": 0.18108077,
+    "all_identified_attempts_usd": 3.045860295,
+    "scenario_usd": {
+      "direct-small-control": 0.2197838,
+      "investigation-reuse": 0.46046463,
+      "serial-escalation": 0.42967305,
+      "parallel-disjoint": 0.634925185,
+      "architecture-review": 0.97062586
+    },
+    "rates_usd_per_million": {
+      "gpt-5.6-sol": { "input": 4.0, "cached_input": 0.4, "cache_write_input": 5.0, "output": 20.0 },
+      "gpt-6-luna": { "input": 0.1, "cached_input": 0.01, "cache_write_input": 0.125, "output": 0.5 },
+      "gpt-6-astra": { "input": 10.0, "cached_input": 1.0, "cache_write_input": 12.5, "output": 50.0 }
+    },
+    "method": "Sum each distinct parent and child session's ordinary, cached, cache-write, and output tokens at its observed model's Standard short-context API rate; ordinary=input-cached-cache_write."
+  },
+  "validated_result": {
+    "path": "live-results-final.json",
+    "sha256": "aeff49f0e763c60f063392507f17411dcc4a9f4f17b260a3cc2db11a274af6e0"
+  }
+}

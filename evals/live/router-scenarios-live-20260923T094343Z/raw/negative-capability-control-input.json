@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "dispatch_id": "supported-selection-gpt-6-luna-low",
+  "purpose": "supported-selection",
+  "canonical_name": "supported-selection-gpt-6-luna-low",
+  "packet": {
+    "worker_name": "supported-selection-gpt-6-luna-low",
+    "task_id": "supported-selection-gpt-6-luna-low",
+    "native_task_name": "supported_selection_gpt_6_luna_low"
+  },
+  "native_dispatch": {
+    "tool": "spawn_agent",
+    "naming_field": "task_name",
+    "native_name": "supported_selection_gpt_6_luna_low",
+    "schema_evidence_ref": "spawn-current"
+  },
+  "selection": {
+    "mode": "explicit",
+    "model": "not-a-runtime-model",
+    "reasoning_effort": "low",
+    "evidence_refs": [
+      "spawn-current",
+      "catalog-current"
+    ]
+  },
+  "capability_evidence": [
+    {
+      "id": "spawn-current",
+      "kind": "spawn_schema",
+      "source": "Q:\\MyProjects\\codex-model-router\\evals\\live\\router-scenarios-live-20260923T094343Z\\raw\\spawn-schema.json",
+      "sha256": "4c2487e1e42273099d12aa2b2c10bddbffbce9c68e60dabf9720ddd76cd2c468",
+      "captured_at": "2026-09-23T10:14:48.203380+00:00"
+    },
+    {
+      "id": "catalog-current",
+      "kind": "model_catalog",
+      "source": "Q:\\MyProjects\\codex-model-router\\evals\\live\\router-scenarios-live-20260923T094343Z\\raw\\model-catalog.json",
+      "sha256": "5fa032b063542961bab173665a0213ab92e29aae646cb33915b7f636715f8b17",
+      "captured_at": "2026-09-23T10:14:48.203380+00:00"
+    }
+  ]
+}

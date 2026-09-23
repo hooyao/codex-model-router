@@ -13,13 +13,15 @@ or start subagents. Report actual task/tool/permission blockers to the controlle
 
 ## Execution ownership gate
 
-Before its first business action, the controller records one explicit line:
+Before its first business action, the controller validates and records a
+decision-contract version 1 result, then records one explicit line:
 `ROUTE: DIRECT — <rule/reason>` or
-`ROUTE: DELEGATE — <rule/model/effort/reason>`. Skills define HOW work is
+`ROUTE: DELEGATE — <topology/rule/model/effort/reason>`. Skills define HOW work is
 performed, not WHO performs it, so loading or selecting a Skill cannot replace
-this decision. Static config and keyword matching cannot fully classify an
-arbitrary natural-language request; the controller applies the complete
-request to the policy signals.
+this decision. The result separates `ownership`, `delegate_topology`, and
+`verification_requirement`, and carries matched rule, reasons, limits, and any
+reclassification trigger. Static keyword matching does not replace structured
+signal classification.
 
 DIRECT is eligible only when every condition is true:
 
@@ -29,7 +31,14 @@ DIRECT is eligible only when every condition is true:
 - no long-running work or monitoring;
 - no failure or recovery workflow;
 - no substantive research or investigation; and
-- no independent review or validation.
+- no independent review or high-risk validation;
+- confirmed permissions and known safety constraints; and
+- a known write scope and declared self-check plan.
+
+Every required fact must be explicit. A false or unknown signal cannot qualify
+for the bounded direct fast path. DIRECT performs its own implementation and
+required self-check; it does not bypass review, permission, safety,
+write-ownership, or verification obligations.
 
 DELEGATE is required when any signal exists: multiple repositories, systems,
 or sources; a named multi-step runbook; network access or synchronization;
@@ -47,14 +56,29 @@ If multiple matching routes disagree, fail closed to DELEGATE. A `direct`
 result from either level is only eligibility and never waives a direct
 criterion.
 
-If direct work reveals a delegate signal or otherwise ceases to meet every
-direct criterion, the controller emits the DELEGATE line and must reroute before
-the next business action. It does not continue directly through the escalation.
-Re-evaluate after every direct tool result. Failed validation, a tool result
-naming another repository/system/source, or a recovery instruction is a hard
-barrier: before any inspection or repair, emit DELEGATE, resolve capability and
-model, and dispatch. The controller does not diagnose the expanded scope or
-perform recovery itself.
+If direct work exceeds an approved bound, the controller stops before the next
+business action and records `reclassified_from: DIRECT` with one explicit
+`escalation_trigger`. Triggers cover scope or outcome expansion, network,
+monitoring, recovery, research, review, dependency or overlap discovery,
+failed validation, and permission/safety changes. The controller then emits the
+DELEGATE line. Reclassification is never an implicit fallback.
+
+## Delegate topology and context boundary
+
+DELEGATE resolves to `PARALLEL` only when all four signals are explicitly true:
+multiple bounded tasks, independent tasks, no dependencies, and disjoint write
+scopes. Any false or unknown topology signal resolves to `ISOLATED_SERIAL`.
+Dependencies, overlapping writes, and shared mutable state prohibit parallel
+topology even when latency would improve.
+
+`ISOLATED_SERIAL` describes bounded packet flow, not a technical sandbox. Send
+only the context needed for the task and collect a compact result receipt with
+artifact references. Do not claim that inherited parent history was erased or
+that OS/tool isolation exists unless the runtime exposes and verifies it. Both
+topologies inherit the configured depth, concurrency, retry, safety,
+permission, write-ownership, and verification constraints. Configured numeric
+limits are ceilings: lower them to the actual capability exposed by the runtime,
+and never invent slots or APIs when the runtime does not report them.
 
 Only after choosing DELEGATE does the controller discover native spawn,
 wait/collect, and supported model/effort options and apply model routing. If
@@ -64,6 +88,15 @@ user-facing threads to simulate workers. If dispatch fails, use the declared
 retry/escalation limit and then report the blocker; controller execution is
 never the fallback. Model preferences below do not establish availability.
 
+Before each native spawn, validate the structured dispatch preflight described
+in `dispatch-contract.md`. Keep its dimensions separate: planned packet
+identity, native naming transport, actual selector arguments, capability
+evidence, later runtime metadata, and final worker echo. Explicit selection
+requires observed model and reasoning-effort arguments plus a current runtime
+catalog. Inheritance is allowed only when the runtime contract is captured and
+hash-bound; omitted arguments alone do not prove inheritance. Placeholder or
+unresolved model/effort values block dispatch.
+
 ## Meta-task routing
 
 Router self-improvement, routing-policy review, evaluation design, benchmark
@@ -71,7 +104,8 @@ selection, and auditing routing decisions require an independent review
 worker separate from the author/implementer before finalization. Use the
 highest suitable available model for that review, such as Astra/high when
 supported. Resolve the actual model and effort from the runtime catalog.
-The independent-review signal makes these DELEGATE routes.
+The independent-review signal makes these DELEGATE routes and resolves their
+verification requirement to `INDEPENDENT_REVIEW`.
 
 Assign requested business analysis and implementation to workers as well.
 A review-only worker does not fulfill an implementation request. The controller
@@ -123,8 +157,10 @@ not truncate it or silently use bundled defaults.
 
 Use stable task IDs and a directed acyclic graph. Wait for dependencies before
 dispatch. Supply the worker packet defined in the Skill, including scope,
-acceptance criteria, permissions, and retry/stop limits. Parallelize independent
-work only; serialize overlapping write scopes and shared mutable state.
+acceptance criteria, permissions, topology position, write ownership, and all
+depth/concurrency/retry/stop limits. Parallelize only when the resolver returns
+`PARALLEL`; serialize dependencies, overlapping write scopes, and shared mutable
+state.
 
 Worker-packet validation checks identity, completeness, consistency, evidence
 references, and reported status. It must not turn into repository inspection,
@@ -176,6 +212,6 @@ platform-generated title; instruction-layer policy cannot change that UI.
 ## Platform boundary
 
 The controller/worker distinction is an agent-instruction policy. The current
-plugin only injects context; it cannot technically intercept tool calls or
-provide an OS/tool permission barrier. Packet checks and runtime compliance
-are not mechanically enforced by these hooks.
+plugin only injects context; it cannot erase history, technically intercept tool
+calls, create a sandbox, or provide an OS/tool permission barrier. Packet checks
+and runtime compliance are not mechanically enforced by these hooks.
