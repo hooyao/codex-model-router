@@ -1,0 +1,15 @@
+Implemented and validated.
+
+- Parent session: `01a0c7e8-eeba-7b93-98bf-07720d23f894`
+- Route/topology: `DELEGATE / ISOLATED_SERIAL`
+- Workers:
+  - `investigate-authoritative-ttl-gpt-5-medium`
+  - `implement-cache-ttl-gpt-5-medium`
+- Worker sessions: runtime exposed the same session ID as parent for both workers
+- Model/effort: `gpt-5 / medium`
+- Receipt: `docs/ops.md` → TTL `45`; source SHA-256 `4a564075…f2756`; receipt SHA-256 `3374b86e…c9109`
+- Consumer: `implement-cache-ttl-gpt-5-medium`
+- Change: [app/settings.json](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T031600Z/workspaces/investigation-reuse/app/settings.json:1), `30 → 45`
+- Validation: exact integer `45`; region remains `primary`; only the two TTL bytes changed; final diff names only `app/settings.json`; `git diff --check` clean
+- Failures/retries: investigator had one local command retry; implementation and dispatch had none
+- Cost: unavailable; runtime exposed no measured USD cost

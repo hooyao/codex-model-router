@@ -46,8 +46,28 @@ regressions only. They do not establish live quality, cost savings, latency
 improvement, or routing accuracy. The runner uses frozen route expectations and
 does not invoke the plugin resolver. Costs labeled `estimated` remain separate
 from `measured`. Receipt reuse comes from hash-bound producer/consumer links,
-not a self-reported savings counter. A future opt-in live collector should produce the same record
-schema and retain all terminal failures.
+not a self-reported savings counter.
+
+## Observed live evidence
+
+Live execution remains an explicit operator action; the repository never starts
+paid model calls from the offline runner. After an operator has retained the
+four required selective-treatment CLI transcripts, disposable workspaces, and
+persisted Codex sessions under one evidence root, derive and validate the
+observed record with:
+
+```powershell
+python evals/scripts/live_evidence.py collect --root <evidence-root> --sessions-root "$env:CODEX_HOME\sessions"
+python evals/scripts/live_evidence.py validate --results <evidence-root>\live-results.json
+```
+
+The collector uses persisted parent/child session metadata for identity,
+model/effort, and timing instead of trusting controller self-report. It grades
+business trees while reporting hook-created `.codex-model-router` state
+separately, hashes every transcript and session source, retains terminal
+failures in the denominator, and records USD cost as unavailable unless the
+runtime exposes measured billing. Its selective-only observed schema is kept
+separate from the frozen three-treatment synthetic comparison contract.
 
 See [CONTRACT.md](CONTRACT.md) for exact invariants and [DESIGN.md](DESIGN.md)
 for the measurement rationale.

@@ -1,0 +1,20 @@
+ROUTE: DELEGATE — PARALLEL / hard-delegate-or-unknown-signal / model-effort unexposed / three independent, dependency-free, write-disjoint tasks.
+
+- Topology: `/root` → three depth-1 native workers, concurrency 3.
+- Dispatch: alpha, beta, gamma dispatched before the first wait.
+- Identities:
+  - `/root/replace_alpha_unexposed_unexposed`
+  - `/root/replace_beta_unexposed_unexposed`
+  - `/root/replace_gamma_unexposed_unexposed`
+- Ownership: each worker exclusively owned its corresponding report file.
+- Timing:
+  - Alpha: `03:23:12.405Z–03:23:32.754Z`
+  - Beta: `03:23:19.722Z–03:23:31.558Z`
+  - Gamma: `03:23:26.434Z–03:23:37.299Z`
+  - All three overlapped for approximately 5.12 seconds.
+- Results: all three exact replacements succeeded; headings and all other bytes were preserved.
+- Validation: the reused beta worker performed read-only exact-tree validation. Exactly the three expected files exist, each expected hash/length matched, each verified token occurs once, and no `TODO` remains.
+- Retries: alpha had one no-change patch attempt, then succeeded within the retry ceiling. Validation corrected one telemetry expression; no artifact impact.
+- Failures/conflicts: none.
+- Model/effort and measured USD cost: not exposed, so none claimed.
+- The controller neither inspected nor edited business artifacts.

@@ -1,0 +1,22 @@
+{
+  "name": "codex-model-router",
+  "version": "1.0.0",
+  "description": "Choose direct execution or route bounded Codex worker tasks by complexity and risk.",
+  "author": {
+    "name": "Codex Model Router contributors"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Model Router",
+    "shortDescription": "Choose direct work or the right worker model.",
+    "longDescription": "Injects execution-ownership, model-routing, and worker-contract context so a primary Codex agent can execute simple local work directly and delegate nontrivial work appropriately.",
+    "developerName": "Codex Model Router contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "defaultPrompt": [
+      "Choose direct or delegated execution before acting, then route delegated tasks to suitable workers."
+    ]
+  }
+}

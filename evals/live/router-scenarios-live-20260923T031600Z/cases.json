@@ -87,7 +87,7 @@
     "id": "architecture-review",
     "category": "architecture-review",
     "prompt": "Create decision.json as one compact JSON object with exactly: schema_version=1; decision='separate-ownership-and-topology'; ownership_first=true; parallel_requires=['independent-tasks','no-dependencies','disjoint-write-scopes']; verification='independent-review'. Preserve existing files. Require a passing reviewer session distinct from controller and artifact author.",
-    "fixture": {"path": "fixtures/architecture-review/fixture.json", "sha256": "a54d73227804ca0d308d83332b2919729098e242dc7d656609e29c34788e3919"},
+    "fixture": {"path": "fixtures/architecture-review/fixture.json", "sha256": "495c36a24cdda6f45616f14e342e64c70af090f4b184dc82e5e98ec0e8f839bc"},
     "treatments": ["direct", "mandatory_delegate", "selective"],
     "route_expectations": {
       "direct": {"initial_ownership": "DIRECT", "final_ownership": "DIRECT", "delegate_topology": "NONE", "verification_requirement": "SELF_CHECK", "escalation_trigger": null, "first_delegation_ms": null},

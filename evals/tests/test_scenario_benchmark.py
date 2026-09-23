@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from evals.scripts import contract as c, evaluate, fixture, runner
+from evals.scripts import contract as c, evaluate, fixture, live_evidence, runner
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -448,6 +448,36 @@ class ScenarioBenchmarkTests(unittest.TestCase):
         )
         self.assertEqual(0, compare.returncode, compare.stdout + compare.stderr)
         self.assertFalse(json.loads(compare.stdout)["release_claim_supported"])
+
+    def test_live_evidence_uses_observed_intervals_and_ignores_router_state(self) -> None:
+        workspace = Path(self.temp.name) / "live-workspace"
+        (workspace / ".codex-model-router").mkdir(parents=True)
+        (workspace / ".codex-model-router" / "routing.json").write_text("{}", encoding="utf-8")
+        (workspace / "reports").mkdir()
+        (workspace / "reports" / "alpha.md").write_text("verified-alpha\n", encoding="utf-8")
+        self.assertEqual({"reports/alpha.md": c.sha256(workspace / "reports" / "alpha.md")},
+                         live_evidence.snapshot(workspace))
+
+        sessions = [
+            {"thread_id": "alpha", "start_at": "2026-09-23T03:00:00Z", "end_at": "2026-09-23T03:00:10Z"},
+            {"thread_id": "beta", "start_at": "2026-09-23T03:00:02Z", "end_at": "2026-09-23T03:00:08Z"},
+            {"thread_id": "gamma", "start_at": "2026-09-23T03:00:04Z", "end_at": "2026-09-23T03:00:12Z"},
+        ]
+        self.assertEqual(4000, live_evidence.overlap_ms(sessions))
+        self.assertFalse(live_evidence.ordered_without_overlap(sessions))
+
+    def test_live_identity_contract_rejects_placeholder_model_names(self) -> None:
+        valid = {"thread_id": "worker-1", "model": "gpt-5.6-sol", "reasoning_effort": "high", "identity": {
+            "worker_name": "edit-gpt-5-6-sol-high", "task_id": "edit-gpt-5-6-sol-high",
+            "native_task_name": "edit_gpt_5_6_sol_high",
+        }}
+        placeholder = {"thread_id": "worker-2", "model": "gpt-5.6-sol", "reasoning_effort": "high", "identity": {
+            "worker_name": "edit-model-unexposed-effort-unexposed",
+            "task_id": "edit-model-unexposed-effort-unexposed",
+            "native_task_name": "edit_model_unexposed_effort_unexposed",
+        }}
+        self.assertTrue(live_evidence.identity_checks([valid])[0]["passed"])
+        self.assertFalse(live_evidence.identity_checks([placeholder])[0]["passed"])
 
 
 if __name__ == "__main__":
