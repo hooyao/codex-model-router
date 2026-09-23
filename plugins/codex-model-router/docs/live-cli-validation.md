@@ -141,6 +141,9 @@ probe exit code, Codex version, and plugin-manifest SHA-256. A missing value is
 The formal gate compares the spec byte-for-byte to the repository version. It
 also reads the actual user-message event and user-role prompt in the persisted
 session; editing the spec or adding a Skill/route hint invalidates activation.
+An auxiliary `<environment_context>` message is accepted only under its exact
+metadata schema. A timezone value must be an identifier in the repository-pinned
+IANA catalog; instruction-shaped or merely syntax-shaped values fail closed.
 The session metadata ID, index metadata, CLI thread ID, workspace config source,
 and full injected controller/config content must agree. An injected marker and
 a matching path alone do not establish activation.

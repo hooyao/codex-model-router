@@ -35,6 +35,10 @@ SHA256 = re.compile(r"\b[0-9a-f]{64}\b")
 ACTIVATION_SPEC = "raw/activation-spec.json"
 BUSINESS_ITEM_TYPES = {"command_execution", "file_change", "mcp_tool_call", "web_search", "image_generation"}
 REPO_ROOT = Path(__file__).resolve().parents[2]
+IANA_TIMEZONES = frozenset(
+    line for line in (REPO_ROOT / "evals" / "data" / "iana-timezones.txt").read_text(encoding="utf-8").splitlines()
+    if line and not line.startswith("#")
+)
 sys.path.insert(0, str(REPO_ROOT / "plugins" / "codex-model-router" / "hooks"))
 from routing_config import validate_config, serialized_config  # noqa: E402
 from router_hook import CONTROLLER_CONTRACT  # noqa: E402
@@ -193,7 +197,7 @@ def environment_metadata(text: str, cwd: str) -> bool:
             return False
     if "timezone" in fields:
         zone = leaf(fields["timezone"])
-        if not zone or re.fullmatch(r"[A-Za-z_+-]+(?:/[A-Za-z0-9_+-]+)*", zone) is None:
+        if zone not in IANA_TIMEZONES:
             return False
     if "filesystem" in fields:
         filesystem = fields["filesystem"]

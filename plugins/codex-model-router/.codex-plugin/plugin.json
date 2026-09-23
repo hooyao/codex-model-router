@@ -1,6 +1,6 @@
 {
   "name": "codex-model-router",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Choose direct execution or route bounded Codex worker tasks by complexity and risk.",
   "author": {
     "name": "Codex Model Router contributors"
