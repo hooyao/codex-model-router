@@ -72,12 +72,14 @@ class LiveEvidenceTests(unittest.TestCase):
         shutil.copytree(workspace, self.root / "results" / case)
         self.actual[case] = workspace
         session_dir = self.root / "session-evidence" / case
-        names = {"investigation-reuse": ["investigate", "implement"],
+        names = {"direct-small-control": [],
+                 "investigation-reuse": ["investigate", "implement"],
                  "serial-escalation": ["plan", "schema", "api", "contract"],
                  "parallel-disjoint": ["alpha", "beta", "gamma"],
                  "architecture-review": ["author", "review"]}[case]
         topology = "PARALLEL" if case == "parallel-disjoint" else "ISOLATED_SERIAL"
-        route_text = "ROUTE: DELEGATE — " + topology
+        route_text = "ROUTE: DIRECT — bounded" if case == "direct-small-control" else \
+            "ROUTE: DELEGATE — " + topology
         if case == "architecture-review":
             route_text += " INDEPENDENT_REVIEW"
         parent_id = case + "-parent"
@@ -216,11 +218,11 @@ class LiveEvidenceTests(unittest.TestCase):
         self.assertIn(check, [item["name"] for item in observation["process_validation"]["checks"]
                               if item["status"] == "fail"])
         self.assertFalse(report["acceptance"]["campaign_pass"])
-        self.assertEqual(4, report["acceptance"]["scheduled_runs"])
+        self.assertEqual(len(live.CASES), report["acceptance"]["scheduled_runs"])
         if terminal_failure:
             self.assertEqual("pass", observation["artifact_validation"]["status"])
             self.assertEqual("failed", observation["outcome"])
-            self.assertEqual(3, report["acceptance"]["completed_runs"])
+            self.assertEqual(len(live.CASES) - 1, report["acceptance"]["completed_runs"])
         self.assertFalse(self.validate_report(report)["campaign_pass"])
         return report
 
@@ -324,8 +326,31 @@ class LiveEvidenceTests(unittest.TestCase):
         routes.append({"line": 22, "text": "ROUTE: DIRECT — resumed"})
         self.assertFalse(live.routes_precede_spawns(routes, [{"line": 23}], 3, "ISOLATED_SERIAL"))
 
+    def test_bundled_decision_resolver_is_routing_transport(self):
+        resolver = r'python C:\plugin\hooks\execution_decision.py --config C:\work\routing.json'
+        items = [
+            (1, event("response_item", {"type": "custom_tool_call", "name": "exec", "input": resolver})),
+            (2, route("ROUTE: DIRECT — bounded")),
+            (3, event("response_item", {"type": "custom_tool_call", "name": "exec",
+                                         "input": "Get-Content note.txt"})),
+        ]
+        self.assertEqual([3], live.parent_business_lines(items))
+        transcript = self.root / "routing-transport.jsonl"
+        write_lines(transcript, [
+            {"type": "item.completed", "item": {"type": "command_execution", "command": resolver,
+                                                   "status": "completed", "exit_code": 0}},
+            {"type": "item.completed", "item": {"type": "agent_message",
+                                                   "text": "ROUTE: DIRECT — bounded"}},
+            {"type": "item.completed", "item": {"type": "command_execution",
+                                                   "command": "Get-Content note.txt",
+                                                   "status": "completed", "exit_code": 0}},
+        ])
+        observed = live.transcript_observations(transcript)
+        self.assertEqual(2, observed["route_events"][0]["line"])
+        self.assertEqual(3, observed["first_business_line"])
+
     def test_delegation_cannot_return_controller_business_to_direct(self):
-        for case in live.CASES:
+        for case in (item for item in live.CASES if item != "direct-small-control"):
             original = [value for _line, value in live.json_lines(self.pairs[case][0][0])]
             compact = [value for _line, value in live.json_lines(self.transcripts[case])]
             for action in (False, True):
@@ -554,6 +579,18 @@ class LiveEvidenceTests(unittest.TestCase):
                     (self.workspace / "note.txt").write_text("changed", encoding="utf-8")
                 write_lines(raw / "activation.jsonl", compact)
                 self.assert_activation_fails("completed-probe-outcome")
+
+    def test_activation_accepts_exact_fenced_contents_with_separate_prose(self):
+        final = "The exact contents are:\n\n```text\nunchanged\n```\n\nThe file ends with LF."
+        self.activation_items[-1]["payload"]["last_agent_message"] = final
+        self.write_activation_session()
+        self.activation_transcript[-2]["item"]["text"] = final
+        write_lines(self.root / "raw" / "activation.jsonl", self.activation_transcript)
+        (self.root / "raw" / "activation-final.txt").write_text(final, encoding="utf-8")
+        report = live.activation_diagnostics(self.root)
+        checks = {item["name"]: item["status"] for item in report["checks"]}
+        self.assertEqual("pass", checks["activation-answer-format"])
+        self.assertEqual("pass", checks["completed-probe-outcome"])
 
     def test_preflight_uses_actual_hook_command_and_preserves_broken_python(self):
         broken = subprocess.CompletedProcess([], 1, "", "ModuleNotFoundError: No module named 'encodings'")

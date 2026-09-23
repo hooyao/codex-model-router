@@ -30,7 +30,7 @@ def digest(path: Path) -> str:
 def configured_command(platform: str) -> str:
     config = json.loads(HOOK_CONFIG.read_text(encoding="utf-8"))
     key = "commandWindows" if platform == "win32" else "command"
-    expected = 'python "%PLUGIN_ROOT%\\hooks\\router_hook.py"' if platform == "win32" else \
+    expected = 'cmd.exe /d /c python "%PLUGIN_ROOT%\\hooks\\router_hook.py"' if platform == "win32" else \
         'python3 "$PLUGIN_ROOT/hooks/router_hook.py"'
     commands = [handler[key] for groups in config["hooks"].values() for group in groups for handler in group["hooks"]]
     if not commands or any(command != expected for command in commands):

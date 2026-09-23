@@ -28,8 +28,8 @@ except ImportError:
     import fixture
 
 
-CASES = ("investigation-reuse", "serial-escalation", "parallel-disjoint", "architecture-review")
-IGNORED_WORKSPACE_NAMES = {".git", ".codex-model-router"}
+CASES = ("direct-small-control", "investigation-reuse", "serial-escalation", "parallel-disjoint", "architecture-review")
+IGNORED_WORKSPACE_NAMES = {".git", ".codex-model-router", ".router-dispatch-evidence"}
 PLACEHOLDER = re.compile(r"(?:^|[-_])(unknown|unavailable|unexposed|unresolved|placeholder)(?:$|[-_])", re.I)
 SHA256 = re.compile(r"\b[0-9a-f]{64}\b")
 ACTIVATION_SPEC = "raw/activation-spec.json"
@@ -208,10 +208,33 @@ def environment_metadata(text: str, cwd: str) -> bool:
         if not container(roots, "workspace_roots", {}) or len(roots) != 1 or \
                 roots[0].tag != "root" or leaf(roots[0]) != cwd:
             return False
-        if not container(profile, "permission_profile", {"type": "disabled"}) or len(profile) != 1:
+        if len(profile) != 1 or profile.tag != "permission_profile":
             return False
         permission = profile[0]
-        if not container(permission, "file_system", {"type": "unrestricted"}) or len(permission):
+        if profile.attrib == {"type": "disabled"}:
+            if not container(permission, "file_system", {"type": "unrestricted"}) or len(permission):
+                return False
+        elif profile.attrib == {"type": "managed"}:
+            if not container(permission, "file_system", {"type": "restricted"}):
+                return False
+            entries = []
+            for entry in permission:
+                if entry.tag != "entry" or set(entry.attrib) != {"access"} or len(entry) != 1 or \
+                        (entry.text or "").strip() or (entry[0].tail or "").strip():
+                    return False
+                target = entry[0]
+                value = leaf(target)
+                if entry.attrib["access"] not in ("read", "write") or \
+                        target.tag not in ("path", "special") or value is None:
+                    return False
+                entries.append((entry.attrib["access"], target.tag, value))
+            required = {("read", "special", ":root"), ("write", "path", cwd),
+                        ("write", "special", ":slash_tmp"), ("write", "special", ":tmpdir")}
+            optional = {("read", "path", str(Path(cwd) / name)) for name in (".git", ".agents", ".codex")}
+            if len(entries) != len(set(entries)) or not required.issubset(entries) or \
+                    not set(entries).issubset(required | optional):
+                return False
+        else:
             return False
     return True
 
@@ -367,13 +390,31 @@ def first_parent_business_line(items: list[tuple[int, dict[str, Any]]]) -> Optio
     return lines[0] if lines else None
 
 
+def is_routing_preflight_command(value: Any) -> bool:
+    """Recognize only the bundled decision resolver transport, never arbitrary commands."""
+    if not isinstance(value, str):
+        return False
+    normalized = re.sub(r"[\\/]+", "/", value).lower()
+    resolver = "/hooks/execution_decision.py" in normalized and "--config" in normalized
+    installed_policy = "/codex-model-router/" in normalized and any(path in normalized for path in (
+        "/skills/model-router/skill.md", "/skills/model-router/references",
+        "/hooks/dispatch_contract.py"))
+    capability_source = ".codex-model-router" in normalized or \
+        ".router-dispatch-evidence/" in normalized or \
+        ".router-spawn-schema.json" in normalized or ".router-model-catalog.json" in normalized
+    return resolver or installed_policy or capability_source
+
+
 def parent_business_lines(items: list[tuple[int, dict[str, Any]]]) -> list[int]:
-    transport = {"spawn_agent", "wait_agent", "wait_threads", "send_message", "send_message_to_thread"}
+    transport = {"spawn_agent", "followup_task", "wait_agent", "wait_threads", "send_message",
+                 "send_message_to_thread"}
     lines = []
     for line, value in items:
         payload = value.get("payload")
         if value.get("type") == "response_item" and isinstance(payload, dict) and \
-                payload.get("type") == "function_call" and payload.get("name") not in transport:
+                payload.get("type") in ("function_call", "custom_tool_call") and \
+                payload.get("name") not in transport and \
+                not is_routing_preflight_command(payload.get("arguments") or payload.get("input")):
             lines.append(line)
     return lines
 
@@ -382,9 +423,13 @@ def route_events_from_items(items: list[tuple[int, dict[str, Any]]]) -> list[dic
     result = []
     for line, value in items:
         payload = value.get("payload")
-        if value.get("type") != "event_msg" or not isinstance(payload, dict) or payload.get("type") != "agent_message":
+        if value.get("type") != "event_msg" or not isinstance(payload, dict):
             continue
-        message = payload.get("message")
+        message = payload.get("message") if payload.get("type") == "agent_message" else None
+        item = payload.get("item")
+        if payload.get("type") == "item_completed" and isinstance(item, dict) and \
+                item.get("type") == "AgentMessage":
+            message = content_text(item.get("content"))
         if not isinstance(message, str):
             continue
         # Quoted examples and later prose do not constitute a routing decision.
@@ -416,7 +461,9 @@ def transcript_observations(path: Path) -> dict[str, Any]:
     for line, value in items:
         item = value.get("item")
         if value.get("type") in ("item.started", "item.completed") and isinstance(item, dict) and \
-                item.get("type") in BUSINESS_ITEM_TYPES:
+                item.get("type") in BUSINESS_ITEM_TYPES and \
+                not (item.get("type") == "command_execution" and
+                     is_routing_preflight_command(item.get("command"))):
             business_lines.append(line)
     return {"route_events": routes, "warnings": warnings, "usage": usage, "failed_tool_events": failed,
             "first_business_line": min(business_lines) if business_lines else None,
@@ -425,13 +472,17 @@ def transcript_observations(path: Path) -> dict[str, Any]:
 
 def session_record(path: Path, meta: dict[str, Any]) -> dict[str, Any]:
     items = json_lines(path)
+    source = meta.get("source")
+    subagent_session = isinstance(source, dict) and isinstance(source.get("subagent"), dict)
+    session_id = meta.get("session_id", meta.get("id"))
+    session_binding = session_id == meta.get("id") or (subagent_session and
+        session_id == meta.get("parent_thread_id"))
     require(sum(value.get("type") == "session_meta" for _line, value in items) == 1 and
             isinstance(meta.get("id"), str) and bool(meta["id"]) and
-            meta.get("session_id", meta["id"]) == meta["id"], "missing or contradictory session metadata")
+            session_binding, "missing or contradictory session metadata")
     context = turn_context(items)
     spans = assignment_spans(items)
     echo, echo_line, echo_text = final_echo(items)
-    source = meta.get("source")
     agent_path = meta.get("agent_path")
     if isinstance(source, dict):
         ancestry = source.get("subagent", {}).get("thread_spawn", {})
@@ -649,6 +700,33 @@ def reviewer_verdict(text: str) -> str:
     return "pass" if verdicts == ["PASS"] else "fail"
 
 
+def exact_content_report(text: str, expected: str) -> Optional[str]:
+    """Classify an exact reported value while allowing clearly separate prose."""
+    stripped = text.strip()
+    value = expected.rstrip("\n")
+    if stripped in {value, f"```\n{value}\n```", f"```text\n{value}\n```"}:
+        return "exact-only"
+    fences = re.findall(r"(?ms)^```(?:text)?\r?\n(.*?)\r?\n```$", stripped)
+    return "fenced-with-explanatory-prose" if len(fences) == 1 and fences[0] == value else None
+
+
+def exact_note_read_output(output: Any, expected: str, expected_sha256: str) -> bool:
+    if not isinstance(output, str):
+        return False
+    if output.strip() == expected.strip():
+        return True
+    try:
+        value = json.loads(output)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(value, dict) and set(value) == {
+        "path", "byte_length", "sha256", "stable_second_read", "text"} and \
+        isinstance(value["path"], str) and Path(value["path"]).name == "note.txt" and \
+        value["byte_length"] == len(expected.encode("utf-8")) and \
+        value["sha256"] == expected_sha256 and value["stable_second_read"] is True and \
+        value["text"] == expected
+
+
 def process_checks(case_id: str, routes: list[dict[str, Any]], children: list[dict[str, Any]],
                    spawns: list[dict[str, Any]], results: list[dict[str, Any]],
                    first_business_line: Optional[int | list[int]] = None) -> list[dict[str, Any]]:
@@ -659,19 +737,35 @@ def process_checks(case_id: str, routes: list[dict[str, Any]], children: list[di
         routes, spawns, first_business_line,
         "PARALLEL" if case_id == "parallel-disjoint" else "ISOLATED_SERIAL") else "fail",
                         route_refs + spawn_refs, "a role-bounded route must precede every worker dispatch")
+    if case_id == "direct-small-control":
+        direct = bool(routes and all(route_decision(route["text"]) == ("DIRECT", None) for route in routes))
+        return [
+            status("route", "pass" if direct else "fail", route_refs, "bounded direct route event"),
+            status("route-before-controller-business", "pass" if direct and routes_precede_spawns(
+                routes, [], first_business_line) else "fail", route_refs,
+                   "DIRECT route precedes controller business"),
+            status("no-worker-dispatch", "pass" if not children and not spawns else "fail", spawn_refs,
+                   "direct calibration must not delegate"),
+        ]
     if case_id == "investigation-reuse":
-        producer = child_for_name(children, "investigat")
-        consumer = next((item for item in spawns if "implement" in
-                         (item["arguments"].get("task_name") or item["arguments"].get("name") or "")), None)
+        producer = child_for_name(children, "investigat") or child_for_name(children, "extract")
+        consumer = next((item for item in spawns if any(fragment in
+            (item["arguments"].get("task_name") or item["arguments"].get("name") or "")
+            for fragment in ("implement", "apply"))), None)
         receipt_link = bool(producer and consumer and linked_result(results, producer, consumer))
+        receipt_state = "pass" if receipt_link else "unknown" if consumer and \
+            consumer.get("packet_visibility") == "encrypted-or-unavailable" else "fail"
         return [
             status("route", "pass" if route_contains(routes, "DELEGATE", "ISOLATED_SERIAL") else "fail", route_refs, "role-bounded route event"),
             chronology,
             status("two-distinct-workers", "pass" if len({item["thread_id"] for item in children}) >= 2 else "fail", spawn_refs, "persisted child metadata"),
-            status("receipt-result", "pass" if receipt_link else "fail", spawn_refs,
+            status("receipt-result", receipt_state, spawn_refs,
                    "producer-authored receipt hash must be consumed by the dependent packet"),
-            status("stage-ownership", "pass" if any("investigat" in item for item in names) and any("implement" in item for item in names) else "unknown", spawn_refs, "native task names only"),
-            status("dependency-stage-order", "pass" if stage_ordered(children, ("investigat", "implement")) else "fail",
+            status("stage-ownership", "pass" if any(any(part in item for part in ("investigat", "extract")) for item in names) and
+                   any(any(part in item for part in ("implement", "apply")) for item in names) else "unknown", spawn_refs, "native task names only"),
+            status("dependency-stage-order", "pass" if len(children) >= 2 and
+                   parse_iso(children[0]["assignment_spans"][-1]["end_at"]) <=
+                   parse_iso(children[1]["assignment_spans"][0]["start_at"]) else "fail",
                    ["session-index:assignment_spans"], "producer assignment ends before consumer begins"),
         ]
     if case_id == "serial-escalation":
@@ -684,7 +778,8 @@ def process_checks(case_id: str, routes: list[dict[str, Any]], children: list[di
             status("serial-assignment-timing", "pass" if serial and stage_ordered(children, ("plan", "schema", "api", "contract")) else "fail", ["session-index:assignment_spans"], "dependency stages use ordered assignment spans"),
         ]
     if case_id == "parallel-disjoint":
-        implementation = [child for child in children if any(part in (child.get("agent_path") or "") for part in ("alpha", "beta", "gamma"))]
+        implementation = [child for child in children if re.match(
+            r"(?:replace_)?(?:alpha|beta|gamma)(?:_|-)", (child.get("agent_path") or "").rsplit("/", 1)[-1])]
         spans = [child["assignment_spans"][0] for child in implementation if child["assignment_spans"]]
         ownership = []
         for label in ("alpha", "beta", "gamma"):
@@ -706,7 +801,8 @@ def process_checks(case_id: str, routes: list[dict[str, Any]], children: list[di
     return [
         status("route", "pass" if route_contains(routes, "DELEGATE", "ISOLATED_SERIAL") else "fail", route_refs, "role-bounded route event"),
         chronology,
-        status("independent-review-required", "pass" if route_contains(routes, "INDEPENDENT_REVIEW") else "unknown", route_refs, "route evidence only"),
+        status("independent-review-required", "pass" if any(re.search(
+            r"independent[-_ ]review", route["text"], re.I) for route in routes) else "unknown", route_refs, "route evidence only"),
         status("distinct-author-reviewer", "pass" if distinct else "fail", ["session-index:thread_ids"], "persisted child metadata"),
         status("review-after-author", "pass" if ordered else "fail", ["session-index:assignment_spans"], "assignment chronology"),
         status("review-result", "pass" if review_pass else "fail", ["worker-session:final_echo"],
@@ -883,6 +979,11 @@ def activation_session_checks(root: Path, spec: dict[str, Any], resolved: dict[s
         prompts = [(line, value["payload"].get("message")) for line, value in items if
                    value.get("type") == "event_msg" and isinstance(value.get("payload"), dict) and
                    value["payload"].get("type") == "user_message"]
+        prompts += [(line, content_text(value["payload"]["item"].get("content"))) for line, value in items if
+                    value.get("type") == "event_msg" and isinstance(value.get("payload"), dict) and
+                    value["payload"].get("type") == "item_completed" and
+                    isinstance(value["payload"].get("item"), dict) and
+                    value["payload"]["item"].get("type") == "UserMessage"]
         prompt_ok = len(prompts) == 1 and prompts[0][1] == spec["prompt"] and prompts[0][0] < routes[0]["line"]
         user_messages = [(line, value["payload"].get("content")) for line, value in items if
                          value.get("type") == "response_item" and isinstance(value.get("payload"), dict) and
@@ -913,9 +1014,9 @@ def activation_session_checks(root: Path, spec: dict[str, Any], resolved: dict[s
                 block = text.split("ROUTING_CONFIG_BEGIN\n", 1)[-1].split("\nROUTING_CONFIG_END", 1)[0]
                 if block.startswith(f"Workspace routing config: {source}\n") and block.endswith("\n" + config_json):
                     hook_lines.append(line)
-        hook_ok = len(hook_lines) == 1 and hook_lines[0] < routes[0]["line"]
+        hook_ok = 1 <= len(hook_lines) <= 2 and all(line < routes[0]["line"] for line in hook_lines)
         checks.append(status("actual-hook-context", "pass" if hook_ok else "fail", refs,
-                             "complete controller contract and exact config content injected before routing"))
+                             "one context per firing lifecycle hook contains the exact contract/config before routing"))
 
         expected_note = spec["expected_note_contents"]
         note_before = resolved["note_before"]
@@ -933,15 +1034,17 @@ def activation_session_checks(root: Path, spec: dict[str, Any], resolved: dict[s
                  isinstance(value.get("item"), dict) and value["item"].get("type") == "command_execution" and
                  "note.txt" in value["item"].get("command", "") and value["item"].get("exit_code") == 0 and
                  value["item"].get("status") == "completed" and
-                 value["item"].get("aggregated_output", "").strip() == expected_note.strip()]
+                 exact_note_read_output(value["item"].get("aggregated_output"), expected_note,
+                                        sha256(note_before))]
         edits = [value for _line, value in compact if isinstance(value.get("item"), dict) and
                  value["item"].get("type") == "file_change"]
-        allowed_finals = {expected_note.strip(), "```\n" + expected_note.rstrip("\n") + "\n```",
-                          "```text\n" + expected_note.rstrip("\n") + "\n```"}
+        answer_format = exact_content_report(captured_final, expected_note)
+        checks.append(status("activation-answer-format", "pass" if answer_format else "fail", refs,
+                             answer_format or "no unique exact-content report was found"))
         completed = bool(note_ok and terminal["status"] == "pass" and
                          final_line and final_line > business and messages and
                          final_text.strip() == captured_final == messages[-1].strip() and
-                         captured_final in allowed_finals and reads and not edits and observed["failed_tool_events"] == 0)
+                         answer_format and reads and not edits and observed["failed_tool_events"] == 0)
         checks.append(status("completed-probe-outcome", "pass" if completed else "fail", refs,
                              "successful note read, unchanged tree, matching final outputs, and completed turn"))
     except (LiveEvidenceError, OSError, ValueError, KeyError, TypeError) as error:
@@ -973,6 +1076,7 @@ def observation(case_id: str, root: Path, repo_root: Path, transcript_path: Path
     terminal = successful_terminal_check(json_lines(transcript_path), parent_items)
     checks.append(terminal)
     identities = identity_checks(children, spawns)
+    identity_status = "pass" if case_id == "direct-small-control" and not children and not spawns else aggregate(identities)
     published = artifact_publish_path or result_path
     artifact_ref = {"path": published.relative_to(root).as_posix(), "files": actual_tree,
                     "directories": actual_directories,
@@ -992,7 +1096,7 @@ def observation(case_id: str, root: Path, repo_root: Path, transcript_path: Path
                                 "actual_directories": actual_directories,
                                 "expected_directories": oracle_snapshot["directories"]},
         "process_validation": {"status": aggregate(checks), "checks": checks},
-        "identity_contract_validation": {"status": aggregate(identities), "workers": identities},
+        "identity_contract_validation": {"status": identity_status, "workers": identities},
         "usage": {"kind": "observed", "scope": "codex-exec-terminal-event", "tokens": compact["usage"]},
         "cost": {"kind": "unavailable", "complete": False, "usd": None},
         "evidence": {
@@ -1067,7 +1171,8 @@ def collect(root: Path, repo_root: Path, sessions_root: Path,
         matched = catalog[parent_id]
         parents = [(path, meta) for path, meta in matched if meta.get("id") == parent_id]
         children = [(path, meta) for path, meta in matched if meta.get("parent_thread_id") == parent_id]
-        require(len(parents) == 1 and children, f"incomplete persisted session set for {case}")
+        require(len(parents) == 1 and (case == "direct-small-control" or children),
+                f"incomplete persisted session set for {case}")
         pairs[case] = (parents[0], children)
     actual = {case: root / "workspaces" / (f"{case}-rerun" if transcripts[case].stem.endswith("-rerun") else case)
               for case in CASES}
@@ -1211,7 +1316,10 @@ def _derived_observation(root: Path, authored: dict[str, Any]) -> dict[str, Any]
     parent_path = Path(parent["source_path"])
     parent_items = json_lines(parent_path)
     spawns = spawn_events(parent_items)
-    validate_session_ancestry(parent, children, parent_items, spawns)
+    if case_id == "direct-small-control":
+        require(not children and not spawns, "direct calibration must not dispatch workers")
+    else:
+        validate_session_ancestry(parent, children, parent_items, spawns)
     results = result_events(parent_items)
     compact = transcript_observations(transcript_path)
     routes = route_events_from_items(parent_items)
@@ -1222,6 +1330,7 @@ def _derived_observation(root: Path, authored: dict[str, Any]) -> dict[str, Any]
     terminal = successful_terminal_check(json_lines(transcript_path), parent_items)
     checks.append(terminal)
     identities = identity_checks(children, spawns)
+    identity_status = "pass" if case_id == "direct-small-control" and not children and not spawns else aggregate(identities)
 
     artifact = evidence["artifact_tree"]
     artifact_path = canonical_path(root, artifact["path"], f"results/{case_id}")
@@ -1259,7 +1368,7 @@ def _derived_observation(root: Path, authored: dict[str, Any]) -> dict[str, Any]
                                 "actual_directories": actual_directories,
                                 "expected_directories": frozen_snapshot["directories"]},
         "process_validation": {"status": aggregate(checks), "checks": checks},
-        "identity_contract_validation": {"status": aggregate(identities), "workers": identities},
+        "identity_contract_validation": {"status": identity_status, "workers": identities},
         "usage": {"kind": "observed", "scope": "codex-exec-terminal-event", "tokens": compact["usage"]},
         "cost": {"kind": "unavailable", "complete": False, "usd": None},
     }
