@@ -1,0 +1,9 @@
+{
+  "blocker_kind": "runtime-capability-evidence",
+  "dispatch_id": "supported-selection-gpt-6-luna-low",
+  "errors": [
+    "selected model is absent from model catalog: not-a-runtime-model"
+  ],
+  "schema_version": 1,
+  "status": "blocked"
+}

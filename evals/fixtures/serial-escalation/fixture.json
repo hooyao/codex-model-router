@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": "serial-escalation",
+  "grader_version": "exact-tree-v2",
+  "prompt": "Set schema_version, response_schema_version, and the expected schema_version to integer 2 in src/schema.json, src/api.json, and tests/expected.json. Preserve all other values/files. Start from the bounded schema request, read migration.md, record scope-expanded direct-to-delegate escalation, then update schema, API, and expected fixture in that dependency order.",
+  "initial": {
+    "path": "initial",
+    "tree": {
+      "files": {
+        "migration.md": "36b6f4549ab9e07a4aeebfcddc90c6f281e73e3c0edc66acb50d6298ead38585",
+        "request.md": "ef54629bb9c22d1e6b971ebc2d9630807853fc1e3f6be71d444ee78930b701e7",
+        "src/api.json": "980002b8f169660737ad062ab3b56029bf236cfe80484c231f71a027f13ebcc5",
+        "src/schema.json": "91600aaf82b1eed56f4ccbeec166cb3e00e1be3c2d7e01da422fef33284285df",
+        "tests/expected.json": "166acb61f8c6dbf746358894959a82b86602abda460f44b20f0a53b4cb5e4ce7"
+      },
+      "directories": ["src", "tests"]
+    }
+  },
+  "reference": {
+    "path": "reference",
+    "tree": {
+      "files": {
+        "migration.md": "36b6f4549ab9e07a4aeebfcddc90c6f281e73e3c0edc66acb50d6298ead38585",
+        "request.md": "ef54629bb9c22d1e6b971ebc2d9630807853fc1e3f6be71d444ee78930b701e7",
+        "src/api.json": "332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993",
+        "src/schema.json": "40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d",
+        "tests/expected.json": "eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6"
+      },
+      "directories": ["src", "tests"]
+    }
+  }
+}

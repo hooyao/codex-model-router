@@ -28,7 +28,7 @@ from routing_config import (  # noqa: E402
 
 
 SUPPORTED_EVENTS = ("SessionStart", "UserPromptSubmit", "SubagentStart")
-WINDOWS_HOOK_COMMAND = 'python "%PLUGIN_ROOT%\\hooks\\router_hook.py"'
+WINDOWS_HOOK_COMMAND = 'cmd.exe /d /c python "%PLUGIN_ROOT%\\hooks\\router_hook.py"'
 POSIX_HOOK_COMMAND = 'python3 "$PLUGIN_ROOT/hooks/router_hook.py"'
 MINIMUM_PYTHON = (3, 9)
 
@@ -90,7 +90,7 @@ def _python_runtime() -> tuple[Path, str]:
         )
     try:
         probe = subprocess.run(
-            [runtime, "-c", "import json, pathlib, sys; print('.'.join(map(str, sys.version_info[:3])))"],
+            [runtime, "-c", "import encodings, json, pathlib, sys; print('.'.join(map(str, sys.version_info[:3])))"],
             text=True,
             capture_output=True,
             timeout=10,
@@ -100,7 +100,9 @@ def _python_runtime() -> tuple[Path, str]:
         raise PreflightError(f"could not launch configured Python runtime {runtime}: {error}") from error
     if probe.returncode != 0:
         raise PreflightError(
-            f"configured Python runtime {runtime} exited {probe.returncode}: {probe.stderr.strip()}"
+            f"configured Python runtime {runtime} exited {probe.returncode}: {probe.stderr.strip()}. "
+            "Install a complete Python 3.9+ runtime, put it first on PATH before Codex starts, "
+            "and restart Codex. Running this script with another interpreter does not repair hook PATH."
         )
     version = probe.stdout.strip()
     try:
@@ -162,11 +164,9 @@ def _smoke_hook(
             environment = os.environ.copy()
             environment["PLUGIN_ROOT"] = str(PLUGIN_ROOT)
             label = f"Windows lifecycle smoke command for {event_name} ({command!r})"
-            # Passing a sequence would make subprocess escape the hook path's
-            # quotes while building the Windows command line. This raw command
-            # line preserves the configured command exactly. It remains safe
-            # because _configured_handlers accepts only the bundled literal.
-            cmd_command = f"cmd.exe /d /s /c {command}"
+            # Exercise the exact commandWindows value used by Codex. The
+            # explicit cmd.exe wrapper expands PLUGIN_ROOT on Windows.
+            cmd_command = command
             try:
                 result = subprocess.run(
                     cmd_command,

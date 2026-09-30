@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "benchmark": {
+    "suite": "SWE-bench Pro V2 HARD-51",
+    "upstream_commit": "66f92766bba642462d4bbe5479e83f91f9211862",
+    "task_id": "instance_flipt-io__flipt-c188284ff0c094a4ee281afebebd849555ebee59",
+    "image_index_digest": "sha256:b6a9cbf8ec8a1a250524433f3fcaa3afa8634bb1299880aac54b808948ef5bfa",
+    "linux_amd64_manifest_digest": "sha256:8e2458836acf6d14616949c3573584a86449c29eb4a0bb09fab9a9b5ec8b53e9",
+    "source_layer": "assets/source-layer.tar.gz",
+    "source_layer_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
+    "instruction": "assets/instruction.md",
+    "instruction_sha256": "2118c192eb59efef24b7b009d85e34a0b5dc3ce7cc11222446901d0325dbe556",
+    "task_spec": "assets/task.toml",
+    "task_spec_sha256": "ee3beaad7b161072cc51eeb549a47e9630d79c9083c7528005be1e6be0d66209",
+    "oracle_patch": "assets/hidden-test.patch",
+    "oracle_patch_sha256": "b32fa3b601051584a419624459df7f96dcd7edd57ff0efb80a3449d89a75f268",
+    "oracle_config": "assets/test-config.json",
+    "oracle_config_sha256": "0327174f5a9e2e7a021aeaa06b0c3b6bf66fbbab8a5240e4cc20d508180bf800",
+    "oracle_packages": ["./internal/config", "./internal/oci", "./internal/oci/ecr"]
+  },
+  "fixture": {
+    "initial_tree": "20121a7049c58571664b87989d1fc7bab8562884",
+    "working_tree_must_be_clean": true
+  },
+  "prompt": {
+    "environment_note": "environment-note.md",
+    "environment_note_sha256": "2a77f23c930e134e2a48c66e3826211d29bc92cc05c903df96c410a61cf90cac",
+    "combined_sha256": "c9f04f806b5f1b43aa9b60ada5a0121e5af22061b28ffaff452a2823d8145c32"
+  },
+  "plugin": {
+    "name": "codex-model-router",
+    "version": "1.2.2+codex.20260928032924",
+    "installed_manifest_sha256": "93fe5e44662ed973bf7fef3edd860bb10bc1fa3ec8312cf1fbd9b6689bcc6300",
+    "installed_hooks_sha256": "9cf09fb63c6e3c208f83796ebb51f2425b70a7f528dde3fc77efdfff1a0aa7f2",
+    "process_local_audit_trust": [
+      {"key": "codex-model-router@personal:hooks/hooks.json:pre_tool_use:0:0",
+       "event": "preToolUse",
+       "current_hash": "sha256:4fadcc93db5f6b143fbecdfb0a5c5953f0822c3a04fca88a16376d7fe6f40b05"},
+      {"key": "codex-model-router@personal:hooks/hooks.json:post_tool_use:0:0",
+       "event": "postToolUse",
+       "current_hash": "sha256:0bd6433353822ddb51cf5c07e44a3cc66e93f1ace78a602d9676835384e2435e"}
+    ]
+  },
+  "dispatch_runtime": {
+    "cli": "C:\\Users\\yahu2\\AppData\\Local\\OpenAI\\Codex\\bin\\faa963e871dd422c\\codex.exe",
+    "cli_version": "codex-cli 0.158.0-alpha.2.1",
+    "cli_sha256": "8f0554ede25bbc5450921897c468b2e84635aa513c5017457997af0954581f49",
+    "schema_capture": {"path": "evals/live/router-hook-canary-20260929/schema-desktop-explicit-provider-pin.json",
+                       "sha256": "e7ab622cd3f825cbead1fa314b8d375001c78245881480950f8a1f88bd3dbf47"},
+    "spawn_schema": {"path": "evals/live/router-hook-canary-20260929/explicit-schema.json",
+                     "sha256": "951957772e68cfb48f418117c2b26abba609b9248a08f04d50cd5a918caf9816"},
+    "model_catalog": {"path": "evals/live/router-hook-canary-20260929/explicit-catalog.json",
+                     "sha256": "85aa93be9af7ae9fde35ef959bc80f3cd66c54996cadb450e6099690ef3d113f"},
+    "dispatch_validator_sha256": "e965f93174963798287c2dad233f4ca77630cde44d8d710dd0c1b7766efae795"
+  },
+  "arms": {
+    "baseline": {"model": "gpt-6-astra", "effort": "xhigh", "delegation": "disabled"},
+    "treatment": {
+      "controller_candidates": [
+        {"model": "gpt-6-luna", "effort": "medium"},
+        {"model": "gpt-6-sol", "effort": "low"}
+      ],
+      "required_hard_worker": {"model": "gpt-6-astra", "effort": "xhigh",
+                               "role_file": "astra-hard-kernel-role.toml",
+                               "role_sha256": "cb5ae4d38b859b51b9429fe199606acaeb181d6428fbb53b67ff8083d965fcb0"},
+      "allowed_easy_worker_selectors": [
+        {"model": "gpt-6-luna", "effort": "low"},
+        {"model": "gpt-6-luna", "effort": "medium"},
+        {"model": "gpt-6-sol", "effort": "low"}
+      ]
+    }
+  },
+  "limits": {"timeout_seconds": 3000, "astra_budget_usd": 10.0, "stop_margin_usd": 1.0,
+             "max_retries_per_stage": 1},
+  "pricing": {
+    "as_of": "2026-09-24",
+    "source": "https://developers.openai.com/api/docs/pricing",
+    "tier": "Standard",
+    "long_context_threshold_input_tokens": 272000,
+    "per_million": {
+      "gpt-6-astra": [10.0, 1.0, 12.5, 50.0],
+      "gpt-6-sol": [2.0, 0.2, 2.5, 10.0],
+      "gpt-6-luna": [0.1, 0.01, 0.125, 0.5]
+    }
+  }
+}

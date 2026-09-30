@@ -1,0 +1,529 @@
+{
+  "artifact_failures": [],
+  "benchmark_id": "router-scenarios-v1",
+  "cases": {
+    "architecture-review": {
+      "critical_path_ratio_selective_over_mandatory": 0.8490566037735849,
+      "selective_linked_consumer_input_tokens": 3800,
+      "selective_receipt_links": 2,
+      "treatments": {
+        "direct": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.0026
+          },
+          "mean_controller_input_tokens": 5200,
+          "mean_critical_path_ms": 250,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 12000,
+          "mean_receipt_links": 0,
+          "mean_receipt_tokens": 0,
+          "mean_tool_calls": 7,
+          "mean_wall_time_ms": 260,
+          "mean_worker_input_tokens": 0,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        },
+        "mandatory_delegate": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.003125
+          },
+          "mean_controller_input_tokens": 0,
+          "mean_critical_path_ms": 265,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 9500,
+          "mean_receipt_links": 1,
+          "mean_receipt_tokens": 250,
+          "mean_tool_calls": 8,
+          "mean_wall_time_ms": 285,
+          "mean_worker_input_tokens": 6000,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        },
+        "selective": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.003125
+          },
+          "mean_controller_input_tokens": 0,
+          "mean_critical_path_ms": 225,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 9500,
+          "mean_receipt_links": 1,
+          "mean_receipt_tokens": 250,
+          "mean_tool_calls": 8,
+          "mean_wall_time_ms": 245,
+          "mean_worker_input_tokens": 6000,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        }
+      }
+    },
+    "direct-small-control": {
+      "critical_path_ratio_selective_over_mandatory": 0.72,
+      "selective_linked_consumer_input_tokens": 0,
+      "selective_receipt_links": 0,
+      "treatments": {
+        "direct": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.00045
+          },
+          "mean_controller_input_tokens": 900,
+          "mean_critical_path_ms": 90,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 300,
+          "mean_receipt_links": 0,
+          "mean_receipt_tokens": 0,
+          "mean_tool_calls": 2,
+          "mean_wall_time_ms": 100,
+          "mean_worker_input_tokens": 0,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        },
+        "mandatory_delegate": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.000585
+          },
+          "mean_controller_input_tokens": 0,
+          "mean_critical_path_ms": 125,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 400,
+          "mean_receipt_links": 0,
+          "mean_receipt_tokens": 70,
+          "mean_tool_calls": 2,
+          "mean_wall_time_ms": 145,
+          "mean_worker_input_tokens": 1100,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        },
+        "selective": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.00045
+          },
+          "mean_controller_input_tokens": 900,
+          "mean_critical_path_ms": 90,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 300,
+          "mean_receipt_links": 0,
+          "mean_receipt_tokens": 0,
+          "mean_tool_calls": 2,
+          "mean_wall_time_ms": 100,
+          "mean_worker_input_tokens": 0,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        }
+      }
+    },
+    "investigation-reuse": {
+      "critical_path_ratio_selective_over_mandatory": 0.7903225806451613,
+      "selective_linked_consumer_input_tokens": 1800,
+      "selective_receipt_links": 2,
+      "treatments": {
+        "direct": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.0041
+          },
+          "mean_controller_input_tokens": 8200,
+          "mean_critical_path_ms": 420,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 32000,
+          "mean_receipt_links": 0,
+          "mean_receipt_tokens": 0,
+          "mean_tool_calls": 10,
+          "mean_wall_time_ms": 430,
+          "mean_worker_input_tokens": 0,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        },
+        "mandatory_delegate": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.00365
+          },
+          "mean_controller_input_tokens": 0,
+          "mean_critical_path_ms": 310,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 22800,
+          "mean_receipt_links": 1,
+          "mean_receipt_tokens": 300,
+          "mean_tool_calls": 11,
+          "mean_wall_time_ms": 330,
+          "mean_worker_input_tokens": 7000,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        },
+        "selective": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.00272
+          },
+          "mean_controller_input_tokens": 0,
+          "mean_critical_path_ms": 245,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 15900,
+          "mean_receipt_links": 1,
+          "mean_receipt_tokens": 240,
+          "mean_tool_calls": 9,
+          "mean_wall_time_ms": 265,
+          "mean_worker_input_tokens": 5200,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        }
+      }
+    },
+    "parallel-disjoint": {
+      "critical_path_ratio_selective_over_mandatory": 0.3114754098360656,
+      "selective_linked_consumer_input_tokens": 0,
+      "selective_receipt_links": 0,
+      "treatments": {
+        "direct": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.0018
+          },
+          "mean_controller_input_tokens": 3600,
+          "mean_critical_path_ms": 330,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 9000,
+          "mean_receipt_links": 0,
+          "mean_receipt_tokens": 0,
+          "mean_tool_calls": 9,
+          "mean_wall_time_ms": 340,
+          "mean_worker_input_tokens": 0,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        },
+        "mandatory_delegate": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.0014175
+          },
+          "mean_controller_input_tokens": 0,
+          "mean_critical_path_ms": 305,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 2100,
+          "mean_receipt_links": 0,
+          "mean_receipt_tokens": 135,
+          "mean_tool_calls": 6,
+          "mean_wall_time_ms": 325,
+          "mean_worker_input_tokens": 2700,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        },
+        "selective": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.0013425
+          },
+          "mean_controller_input_tokens": 0,
+          "mean_critical_path_ms": 95,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 1950,
+          "mean_receipt_links": 0,
+          "mean_receipt_tokens": 135,
+          "mean_tool_calls": 6,
+          "mean_wall_time_ms": 115,
+          "mean_worker_input_tokens": 2550,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        }
+      }
+    },
+    "serial-escalation": {
+      "critical_path_ratio_selective_over_mandatory": 0.9298245614035088,
+      "selective_linked_consumer_input_tokens": 4600,
+      "selective_receipt_links": 6,
+      "treatments": {
+        "direct": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.0031
+          },
+          "mean_controller_input_tokens": 6200,
+          "mean_critical_path_ms": 480,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 18000,
+          "mean_receipt_links": 0,
+          "mean_receipt_tokens": 0,
+          "mean_tool_calls": 12,
+          "mean_wall_time_ms": 490,
+          "mean_worker_input_tokens": 0,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        },
+        "mandatory_delegate": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.002335
+          },
+          "mean_controller_input_tokens": 0,
+          "mean_critical_path_ms": 285,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 3700,
+          "mean_receipt_links": 3,
+          "mean_receipt_tokens": 270,
+          "mean_tool_calls": 8,
+          "mean_wall_time_ms": 305,
+          "mean_worker_input_tokens": 4400,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        },
+        "selective": {
+          "completion_rate": 1.0,
+          "conflicts": 0,
+          "estimated_cost": {
+            "complete_runs": 2,
+            "mean_usd": 0.002265
+          },
+          "mean_controller_input_tokens": 700,
+          "mean_critical_path_ms": 265,
+          "mean_quality_score": 100.0,
+          "mean_raw_log_bytes": 3600,
+          "mean_receipt_links": 3,
+          "mean_receipt_tokens": 230,
+          "mean_tool_calls": 9,
+          "mean_wall_time_ms": 285,
+          "mean_worker_input_tokens": 3600,
+          "measured_cost": {
+            "complete_runs": 0,
+            "mean_usd": null
+          },
+          "process_compliance_rate": 1.0,
+          "quality_pass_rate": 1.0,
+          "retries": 0,
+          "route_adherence_rate": 1.0,
+          "runs": 2
+        }
+      }
+    }
+  },
+  "claimed_quality_disagreements": [],
+  "data_origin": "synthetic",
+  "failures_by_outcome": {
+    "blocked": 0,
+    "cancelled": 0,
+    "error": 0,
+    "timeout": 0
+  },
+  "limitations": [
+    "Synthetic observations do not establish live-model quality, savings, or latency.",
+    "Estimated costs are reported separately from measured costs and are not interchangeable.",
+    "Receipt links and linked-consumer context are synthetic harness observations, not live savings estimates."
+  ],
+  "process_failures": [],
+  "release_claim_supported": false,
+  "route_failures": [],
+  "scheduled_runs": 30,
+  "schema_version": 1,
+  "treatments": {
+    "direct": {
+      "completion_rate": 1.0,
+      "conflicts": 0,
+      "estimated_cost": {
+        "complete_runs": 10,
+        "mean_usd": 0.00241
+      },
+      "mean_controller_input_tokens": 4820,
+      "mean_critical_path_ms": 314,
+      "mean_quality_score": 100.0,
+      "mean_raw_log_bytes": 14260,
+      "mean_receipt_links": 0,
+      "mean_receipt_tokens": 0,
+      "mean_tool_calls": 8,
+      "mean_wall_time_ms": 324,
+      "mean_worker_input_tokens": 0,
+      "measured_cost": {
+        "complete_runs": 0,
+        "mean_usd": null
+      },
+      "process_compliance_rate": 1.0,
+      "quality_pass_rate": 1.0,
+      "retries": 0,
+      "route_adherence_rate": 1.0,
+      "runs": 10
+    },
+    "mandatory_delegate": {
+      "completion_rate": 1.0,
+      "conflicts": 0,
+      "estimated_cost": {
+        "complete_runs": 10,
+        "mean_usd": 0.0022225
+      },
+      "mean_controller_input_tokens": 0,
+      "mean_critical_path_ms": 258,
+      "mean_quality_score": 100.0,
+      "mean_raw_log_bytes": 7700,
+      "mean_receipt_links": 1,
+      "mean_receipt_tokens": 205,
+      "mean_tool_calls": 7,
+      "mean_wall_time_ms": 278,
+      "mean_worker_input_tokens": 4240,
+      "measured_cost": {
+        "complete_runs": 0,
+        "mean_usd": null
+      },
+      "process_compliance_rate": 1.0,
+      "quality_pass_rate": 1.0,
+      "retries": 0,
+      "route_adherence_rate": 1.0,
+      "runs": 10
+    },
+    "selective": {
+      "completion_rate": 1.0,
+      "conflicts": 0,
+      "estimated_cost": {
+        "complete_runs": 10,
+        "mean_usd": 0.0019805
+      },
+      "mean_controller_input_tokens": 320,
+      "mean_critical_path_ms": 184,
+      "mean_quality_score": 100.0,
+      "mean_raw_log_bytes": 6250,
+      "mean_receipt_links": 1,
+      "mean_receipt_tokens": 171,
+      "mean_tool_calls": 6.8,
+      "mean_wall_time_ms": 202,
+      "mean_worker_input_tokens": 3470,
+      "measured_cost": {
+        "complete_runs": 0,
+        "mean_usd": null
+      },
+      "process_compliance_rate": 1.0,
+      "quality_pass_rate": 1.0,
+      "retries": 0,
+      "route_adherence_rate": 1.0,
+      "runs": 10
+    }
+  }
+}

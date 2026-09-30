@@ -1,0 +1,14 @@
+ROUTE: DELEGATE — ISOLATED_SERIAL / hard-delegate-or-unknown-signal / named runbook and independent review.
+
+- Topology: author → distinct read-only reviewer
+- Author: `/root/architecture_author_unexposed_unexposed`
+- Reviewer: `/root/architecture_reviewer_unexposed_unexposed`
+- Timing: author 10.832s; review 0.662s; controller window 84.101s
+- Retries: 0
+- SHA-256: `6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5`
+- Exact size: 209 bytes
+- Tree/source preservation: verified
+- Review result: **PASS**
+- Cost: unavailable; no measured USD exposed
+
+The controller did not inspect or edit the artifact.

@@ -1,0 +1,109 @@
+{
+  "children": [
+    {
+      "agent_path": "/root/replace_alpha_unexposed_unexposed",
+      "duration_ms": 30546,
+      "end_at": "2026-09-23T03:23:37.929Z",
+      "identity": {
+        "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+        "task_id": "the identical canonical purpose-model-effort name.",
+        "worker_name": "<canonical purpose-model-effort name>"
+      },
+      "model": "gpt-5.6-sol",
+      "parent_thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd",
+      "reasoning_effort": "high",
+      "source_evidence_lines": [
+        11,
+        17,
+        48,
+        49,
+        51
+      ],
+      "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-06-01a0cc49-d7c1-7310-997d-4b3d4392adcb.jsonl",
+      "source_sha256": "b1b291010e81565014df3607408174597891d59e9182f17eebef084c25b7dbad",
+      "start_at": "2026-09-23T03:23:06.873Z",
+      "thread_id": "01a0cc49-d7c1-7310-997d-4b3d4392adcb"
+    },
+    {
+      "agent_path": "/root/replace_beta_unexposed_unexposed",
+      "duration_ms": 29673,
+      "end_at": "2026-09-23T03:24:27.631Z",
+      "identity": {
+        "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+        "task_id": "the identical canonical purpose-model-effort name.",
+        "worker_name": "<canonical purpose-model-effort name>"
+      },
+      "model": "gpt-5.6-sol",
+      "parent_thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd",
+      "reasoning_effort": "high",
+      "source_evidence_lines": [
+        11,
+        19,
+        40,
+        41,
+        43,
+        62,
+        63,
+        65
+      ],
+      "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-13-01a0cc49-f19f-7702-a081-d5484c9d1180.jsonl",
+      "source_sha256": "c0425ffcc197ba90343273483977fbd4d38260b5ee26f92af11fddef645f30a3",
+      "start_at": "2026-09-23T03:23:13.461Z",
+      "thread_id": "01a0cc49-f19f-7702-a081-d5484c9d1180"
+    },
+    {
+      "agent_path": "/root/replace_gamma_unexposed_unexposed",
+      "duration_ms": 19924,
+      "end_at": "2026-09-23T03:23:41.442Z",
+      "identity": {
+        "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+        "task_id": "the identical canonical purpose-model-effort name.",
+        "worker_name": "<canonical purpose-model-effort name>"
+      },
+      "model": "gpt-5.6-sol",
+      "parent_thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd",
+      "reasoning_effort": "high",
+      "source_evidence_lines": [
+        11,
+        21,
+        42,
+        43,
+        45
+      ],
+      "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-21-01a0cc4a-0efc-7842-896f-e8ddd3558af5.jsonl",
+      "source_sha256": "c3ca92bd736afe97481da801a54d754726d575329594fba3c13afb4c160781e7",
+      "start_at": "2026-09-23T03:23:21.014Z",
+      "thread_id": "01a0cc4a-0efc-7842-896f-e8ddd3558af5"
+    }
+  ],
+  "parent": {
+    "agent_path": null,
+    "duration_ms": 141897,
+    "end_at": "2026-09-23T03:24:44.492Z",
+    "identity": {
+      "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+      "task_id": "the identical canonical purpose-model-effort name.",
+      "worker_name": "<canonical purpose-model-effort name>"
+    },
+    "model": "gpt-5.6-sol",
+    "parent_thread_id": null,
+    "reasoning_effort": "high",
+    "source_evidence_lines": [
+      4,
+      11,
+      16,
+      30,
+      34,
+      38,
+      53,
+      57,
+      63,
+      80,
+      89
+    ],
+    "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-22-22-01a0cc49-283c-7f32-9232-e629f8c81fcd.jsonl",
+    "source_sha256": "37e85c6c5a6e0ce26344c13b3c6828a16987b8a8123cccc68e1b37b6a48e433b",
+    "start_at": "2026-09-23T03:22:22.025Z",
+    "thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd"
+  }
+}

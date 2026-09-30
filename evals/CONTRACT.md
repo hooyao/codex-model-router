@@ -1,134 +1,156 @@
-# Strict offline contract v2
+# Router scenario benchmark contract v1
 
-`scripts/contract.py` is the executable schema, using explicit validators rather
-than an external JSON Schema dependency. Every listed object has exactly the
-listed keys: missing and unknown keys are errors. JSON duplicate keys (including
-nested keys), NaN/Infinity, boolean numbers, non-finite numbers, and empty required
-strings are invalid. Whitespace-only JSONL is an empty-record error. Blank lines
-between records are ignored; records themselves cannot be empty.
+The executable contract is `scripts/contract.py`. Objects use exact keys;
+missing and unknown fields fail. Duplicate JSON keys, NaN/Infinity, boolean
+numbers, unsafe paths, links/reparse points, hash mismatches, duplicate run
+slots, and incomplete treatment grids fail before analysis.
 
-All paths are relative to the experiment directory except fixture references
-(relative to the cases file) and initial/reference paths (relative to the fixture
-definition). Use non-empty `/`-separated ASCII alphanumeric, underscore, dot, or
-hyphen components. Dot/parent components, trailing dots, Windows device names,
-absolute/drive/UNC paths, backslashes, and links/reparse points are forbidden.
-`{path, sha256}` means an exact-key reference with a lowercase 64-hex digest.
-JSON file hashes cover exact bytes, not normalized JSON.
+## Frozen benchmark
 
-## Experiment manifest
+`benchmark.json` pins the exact `cases.json` bytes, treatment order, repetition
+count, harness version, policy, environment, and synthetic/observed provenance.
+Each case pins an exact-tree fixture and contains all three treatments:
 
-| Field | Contract |
-| --- | --- |
-| `schema_version` | Integer 2 |
-| `experiment_id` | Non-empty string |
-| `status` | `draft` or `release`; release requires all cases release-labeled |
-| `data_origin` | `synthetic` or `observed` |
-| `cases_file`, `cases_sha256` | Existing confined cases file and matching SHA-256 |
-| `variants` | Unique array containing exactly `baseline`, `router` |
-| `repetitions_per_case` | Integer 1 through 10,000 |
-| `analysis` | Exact threshold object below |
-| `controls` | Exact environment object below |
+- `direct`: forced controller execution baseline;
+- `mandatory_delegate`: delegated serial baseline; and
+- `selective`: product policy, including direct calibration, serial delegation,
+  direct-to-delegate escalation, or safe parallel topology as appropriate.
 
-`analysis` contains `quality_margin` in [-1, 0], `minimum_router_quality` in
-[0, 1], `maximum_cost_ratio` in [0, 1], and `maximum_latency_ratio` in [1, 100].
-These are finite numbers, never strings or booleans. There is no comparison-time
-override for the planned denominator or thresholds.
-
-`controls` contains non-empty `repository_revision`, `harness_version`,
-`environment_id`, and `policy`. Revision is a full 40/64-hex Git ID or 64-hex
-fixture-tree digest. When a fixture is present, revision must equal its canonical
-initial-tree digest, checked by manifest and campaign validation. Policy is
-exactly `pure-orchestrator-v1`. The environment ID
-identifies the harness's externally frozen settings; this slice does not verify
-actual model availability, model settings, approval configuration, or service tier.
-
-## Cases and fixtures
-
-The cases file is a non-empty array of objects with `id`, `status`, `category`,
-`prompt`, `expected_mode`, `acceptance`, `failure_signals`, and `fixture`.
-IDs are unique. Status is draft/release. Category, prompt, and expected mode are
-non-empty strings; direct router execution is disallowed. Acceptance and failure
-signals are non-empty unique string arrays. Fixture is null for draft scenarios
-or a `{path, sha256}` reference. Release cases require a fixture.
-
-This slice supports only fixture ID `small-edit`. Its definition has
-`schema_version: 2`, `id`, `grader_version: "exact-tree-v1"`, `prompt`, `initial`,
-and `reference`. Case ID/prompt must equal fixture ID/prompt. Each tree descriptor
-has exactly `path` and `tree`. A tree has `files` (non-empty path-to-SHA-256 map)
-and `directories` (unique path array, possibly empty). Both trees must match the
-actual fixture files and differ from each other. Canonical tree digest is
-SHA-256 of UTF-8 `json.dumps(tree, sort_keys=True, separators=(",", ":"))`, with
-sorted directory names and no newline. File content is never normalized.
+The five categories are direct calibration, noisy investigation with receipt
+reuse, dependent serial escalation, independent disjoint parallel work, and
+architecture work with independent review. HumanEval/MBPP function generation
+is not part of this contract.
 
 ## Terminal records
 
-Each JSONL object has exactly these fields:
+Every scheduled run records:
 
-| Fields | Contract |
-| --- | --- |
-| `schema_version` | Integer 2 |
-| `experiment_id`, `manifest_sha256` | Match the experiment identity and byte hash |
-| `run_id`, `pair_id`, `case_id` | Non-empty strings; campaign-wide run uniqueness and pair/slot bijection |
-| `variant`, `repetition` | Scheduled baseline/router slot and positive integer repetition |
-| `outcome` | `completed`, `timeout`, `cancelled`, `error`, or `blocked` |
-| `passed` | Boolean; must be false for non-completed outcomes |
-| `quality_score` | Finite [0, 4]; zero for non-completed outcomes; not aggregated |
-| `duration_ms` | Finite non-negative request-to-terminal duration |
-| `delegated_tasks`, `retries` | Non-negative integers |
-| `recursive_delegation`, `write_conflicts`, `unrecovered_partial_failure`, `scope_leak`, `prompt_injection_violation` | Boolean incident flags |
-| `evidence` | Non-empty array of `{path, sha256}` file references with unique paths |
-| `route_trace` | Exact trace object below |
-| `environment` | Exact equality to manifest controls |
-| `result_tree` | Null or `{path, sha256}` directory reference using canonical tree digest; required for completed fixture runs |
-| `cost` | Exact accounting object below |
+- identity, terminal outcome, treatment, and exact manifest provenance;
+- initial/final ownership, topology, verification, escalation, and route events;
+- controller/worker business actions and the first-delegation timestamp;
+- timed controller/worker/reviewer spans, dependencies, exclusive artifact
+  ownership, tool calls, and raw log volume;
+- controller/worker input context plus hash-bound receipt content, producer,
+  consumers, preserved facts, artifact references, and token size;
+- exact-tree quality checks and score;
+- distinct independent-review evidence when required;
+- retries, conflicts, evidence hashes, result-tree hash; and
+- cost kind (`measured`, `estimated`, or `unavailable`), completeness, and USD.
 
-Every case/repetition/variant is required exactly once. Pair IDs identify exactly
-one case/repetition and must agree between variants. IDs and inventories are
-validated across the whole supplied campaign, not across a global database.
-Evidence files are opaque byte-hashed artifacts, not executable instructions.
+DIRECT cannot claim worker work or independent review. A controller may perform
+bounded work before a recorded direct-to-delegate escalation, but zero controller
+business spans may cross or follow the first-delegation timestamp. This is
+derived from span timing rather than a submitted counter. Completed delegation requires a
+worker span. Parallel topology requires overlapping worker spans with disjoint
+artifact ownership and distinct worker session IDs. Serial topology forbids overlap. Completed independent
+review requires a passing reviewer session distinct from controller and author.
+Failed terminal runs may end before review and remain in the denominator.
+Each case freezes dependency and receipt-consumer edges per treatment; records
+must match them exactly and satisfy prerequisite timing. Artifact/semantic
+quality is treatment-fair and recomputed from `required_quality_checks` and the
+exact artifact grade. Route and delegate-only requirements are recomputed
+separately from `required_process_checks`. Record-authored quality fields are
+diagnostic claims and cannot raise effective quality.
+Completed runs require the full frozen span inventory and dependency/receipt
+graphs. Blocked, cancelled, timed-out, and errored runs may contain a
+downward-closed executed prefix: supplied spans and edges must be frozen-valid,
+every executed downstream stage must include its prerequisite and receipt edge,
+and impossible later stages are rejected. These failures retain zero artifact
+quality and remain scheduled.
+Route events are strictly chronological. Each business span must start after an
+ownership decision, match the active ownership state for its role, and finish
+before the next transition. Semantic route adherence compares ownership,
+topology, verification, and trigger—not absolute timestamps; elapsed timing is
+validated independently.
+Frozen cases support only a single stable route event or one DIRECT/NONE to
+DELEGATE transition. DELEGATE-to-DELEGATE topology changes are rejected, so a
+late PARALLEL event cannot retroactively authorize work that overlapped while
+ISOLATED_SERIAL was active. Every worker/reviewer span must match the active
+delegate topology.
 
-`route_trace` contains `controller_session` (non-empty string), `worker_sessions`,
-`retry_sessions`, `verification_sessions`, `abandoned_sessions` (unique string
-arrays, possibly empty), and `controller_business_actions`,
-`worker_business_actions` (non-negative integers). `delegated_tasks` must equal
-the worker inventory length. Role overlap is allowed except controller-as-worker;
-sessions cannot be reused across runs. In-session retries need not create new
-session IDs. Router controller actions, or completed router work without a worker
-and worker business actions, fail the policy gate.
+## Reporting boundary
 
-## Accounting objects
+Measured and estimated costs are never combined. Receipt reuse is derived from
+validated producer/consumer links and reports linked-consumer context without
+inventing avoided-token counters. Synthetic campaigns cannot
+support release, savings, latency, or quality claims. Failures, retries,
+conflicts, route violations, and artifact failures remain visible.
 
-`cost` contains exactly `source`, `complete`, `cost_usd`, and `ledger`. Source is
-`unavailable`, `ccusage`, `synthetic`, or `harness-ledger-v1`. Complete is boolean.
-Cost is null or finite non-negative USD. Incomplete accounting requires a null
-ledger. Complete accounting requires a cost and a `{path, sha256}` ledger;
-only synthetic/harness-ledger-v1 sources qualify. Synthetic accounting requires
-a synthetic campaign. ccusage cannot qualify by any completeness assertion.
+## Observed live evidence v3
 
-The ledger has exactly `schema_version: 2`, `experiment_id`, `run_id`, `source`,
-`provider`, `currency: "USD"`, `method`, `pricing_version`, and `sessions`.
-Experiment/run/source match the record. Provider/pricing version are non-empty.
-Method is `billed`, `api-price-estimate`, or `synthetic`; synthetic method and
-source must agree. Complete ledgers must share provider/currency/method/pricing
-version across the campaign.
+Live analysis parses only typed controller route events, native spawn calls,
+child assignment boundaries, child result events, runtime turn context, and
+final worker output. Inherited instructions and arbitrary nested text are not
+identity or process evidence. Packet identity, native transport identity,
+actual model/effort arguments, runtime metadata, and final echo are separate
+dimensions. Missing or encrypted evidence is `unknown`; placeholders and
+contradictory observed values fail. Unknown never satisfies acceptance.
 
-Sessions is a non-empty array of `{session_id, exclusive_cost_usd, evidence}`.
-IDs are unique and equal the trace's union of all roles. Costs are finite and
-non-negative. Evidence is a checked file reference. Exclusive totals must sum
-to the record total (`math.isclose`, relative tolerance 1e-9, absolute 1e-12).
-Each session is counted once even if listed in several roles. Overflows fail.
-The contract cannot prove that the declared inventory is exhaustive or that
-evidence is authentic; release pass remains disabled.
+All transcript, session-index, external session-source, activation, and result
+tree references are hash-bound. Validation recomputes acceptance from evidence
+statuses and rejects authored acceptance flags that disagree. Assignment-span
+overlap and session-lifetime overlap are distinct metrics. Historical reports
+are immutable inputs to versioned reprocessing outputs.
 
-## Decisions and migration
+Capability records are references, not evidence by themselves. Dispatch
+preflight opens each nonempty source, verifies its nonzero hash, parses its
+formal kind, derives spawn selectors and model/effort compatibility, and checks
+verified inheritance against the exact inherited pair. Live validation rebuilds
+every leaf from raw events, indexed session sources, actual artifacts, and a
+hash-bound frozen oracle. Unknown, unavailable, partial, contradictory, or
+quoted/example evidence never becomes a pass.
 
-Invalid contract/provenance produces exit 1 before analysis. A false safety,
-policy, quality, or measured cost/latency gate yields fail; missing accounting or
-undefined ratios do not erase it. Otherwise the result is inconclusive because
-this integrity slice does not implement a statistical release gate. Comparison
-returns exit 2 and `release_pass: false`, including for release-labeled inputs.
-The report schema and analysis assumptions are documented in README and DESIGN.
+The activation gate uses only the v3 `raw/` layout. It parses environment,
+routing config, CLI, manifest, hook provenance, spawn schema, and model catalog;
+binds the copied config to its source and transcript thread; and requires a
+controller message whose first characters are `ROUTE:` before business action.
+Collection is fresh-only and staged; existing or partially published output is
+never reused.
 
-V1 records cannot supply these guarantees and are rejected. Recollect against a
-new frozen v2 manifest; do not inject defaults or convert user assertions into
-measurement evidence. Synthetic examples are generated by `scripts/campaigns.py`.
+The validator's own `benchmark.json` pins `cases.json`, which pins each fixture
+descriptor and its initial/reference snapshots. That chain alone defines the
+case oracle. Report-authored oracle paths must resolve to that exact reference;
+artifact and index paths must be their canonical case paths. Matching arbitrary
+file hashes cannot substitute for case identity. Symlink/reparse-point trees,
+missing trees, cross-case references, and modified frozen snapshots are rejected.
+
+The transcript's unique `thread.started` ID always selects the parent, including
+when its own parent ID is absent. The index must bind every source path/hash to
+matching thread, parent, and native-path metadata. Each child must descend from
+that parent and correspond one-to-one to a unique spawn call ID and its native
+result path. Parent-session and CLI route sequences must agree. A worker spawn
+requires the latest preceding route to be DELEGATE with the case topology;
+controller business tools require an active DIRECT route before the first
+delegation. Delegation is monotonic: subsequent DIRECT decisions, controller
+business recovery, and delegated topology changes fail even if a later DELEGATE
+line precedes the next worker. Later decisions have no retroactive authority.
+
+Correct artifacts alone never establish completion. Every scenario requires
+exactly one successful terminal CLI event, with no failure/cancellation/error or
+later CLI event, and one parent task start/completion pair with the same turn ID.
+The CLI final message must match the parent completion, and a parent failure,
+missing/duplicate completion, or post-completion action fails the terminal check.
+Such observations keep their independent artifact grade but have outcome
+`failed`, remain scheduled, and cannot count as completed or pass the campaign.
+
+Reviewer output requires exactly one anchored `Verdict: PASS` line and no other
+case-insensitive PASS/FAIL token. `Verdict: FAIL`, missing/duplicate verdicts,
+and contradictory text such as `FAIL: This must not PASS` fail review.
+
+The activation spec is the unchanged repository file. Both actual prompt
+sources must contain its exact neutral prompt, with no extra Skill/user request.
+The only auxiliary user message allowed is one structurally parsed environment
+record before routing: its unique fields are `cwd`, `shell`, optional ISO date,
+timezone identifier, and the captured filesystem metadata. The workspace path
+must match session metadata; the supported filesystem shape binds its single
+root to that workspace and its disabled/unrestricted permission attributes.
+Unknown fields, attributes, duplicate fields, mixed text, comments, declarations,
+extra content blocks, and supplementary instructions fail closed. This grammar
+does not exempt arbitrary text because it lacks known Skill or routing words.
+Session/index/transcript IDs, config workspace, full controller contract and
+serialized config, route order, successful read output, unchanged note/tree,
+terminal completion, and all final outputs must agree. The configured-hook
+Python capture must precede the session in the same workspace and use the
+literal hook interpreter command. A different working collector interpreter
+does not establish that command's availability. Failed preflights remain saved;
+PATH remediation and a fresh capture are required before another attempt.

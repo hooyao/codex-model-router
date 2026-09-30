@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "status": "NO_ELIGIBLE_CANDIDATE",
+  "plan_sha256": "06007d96fe0c5dcf7ad29390ae97818a369b6c03bcfdcb17739361158a74a9f7",
+  "trusted_selection_sha256": "d96f192ff68bb73553917e8a5fd2c20678b58c7e03b7b501abb1a4393c6caf30",
+  "minimum_public_accuracy": 0.63,
+  "maximum_model_bytes_exclusive": 157286400,
+  "resource_limits": {
+    "cpu_quota_percent": 100,
+    "memory_max_bytes": 4294967296,
+    "memory_swap_max_bytes": 0,
+    "tasks_max": 512,
+    "runtime_max_seconds": 3600,
+    "observed_memory_peak_bytes": 2450120704
+  },
+  "results": [
+    {
+      "id": "bigram-16-e5",
+      "public_correct": 6214,
+      "public_examples": 10000,
+      "public_accuracy": 0.6214,
+      "model_bytes": 101866109,
+      "model_sha256": "7cb23328fe3ea725bb2682a9f3ea0566c2db23954782c0ccca6b6d582b81c6e3",
+      "elapsed_seconds": 110.25610646,
+      "eligible": false
+    },
+    {
+      "id": "bigram-16-e10",
+      "public_correct": 6050,
+      "public_examples": 10000,
+      "public_accuracy": 0.605,
+      "model_bytes": 101866109,
+      "model_sha256": "00d6af5fc0d5679413543adcef515a7f6d6e6a69bb3a581d262a466b91217279",
+      "elapsed_seconds": 203.31843602100002,
+      "eligible": false
+    },
+    {
+      "id": "bigram-24-e10",
+      "public_correct": 6022,
+      "public_examples": 10000,
+      "public_accuracy": 0.6022,
+      "model_bytes": 124552061,
+      "model_sha256": "951cf92347704988525d72045a2e9f5878bb34326e2cf74be2969da044834ce4",
+      "elapsed_seconds": 279.95990442,
+      "eligible": false
+    },
+    {
+      "id": "subword-24-e10",
+      "public_correct": 6224,
+      "public_examples": 10000,
+      "public_accuracy": 0.6224,
+      "model_bytes": 124552061,
+      "model_sha256": "9028800bc1c07b72c0b1055c4f48c204cd0d3746bc33359b2e7dc671c8866b68",
+      "elapsed_seconds": 1062.190364356,
+      "eligible": false
+    }
+  ],
+  "selected_candidate": null,
+  "private_verifier_calls": 0
+}

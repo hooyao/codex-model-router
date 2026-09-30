@@ -1,0 +1,18 @@
+ROUTE: DELEGATE — ISOLATED_SERIAL/hard-delegate-or-unknown-signal/model-unexposed/effort-unexposed/required independent review.
+
+Created [decision.json](/Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T031600Z/workspaces/architecture-review/decision.json).
+
+- Resolver: `DELEGATE`, `ISOLATED_SERIAL`, `INDEPENDENT_REVIEW`
+- Parent: `/root`
+- Author: `/root/decision_author_model_unexposed_effort_unexposed`
+- Reviewer: `/root/decision_reviewer_model_unexposed_effort_unexposed`
+- Authorship: author exclusively created the artifact; reviewer was read-only
+- Sequence: author completed before reviewer dispatch
+- Independent review: PASS
+- Validation: exact bytes/schema, 209 bytes, no BOM, final LF, five exact ordered keys/values
+- SHA-256: `6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5`
+- Retries/failures: none
+- Model/effort, exact timing, persisted author identity, and measured USD cost: not exposed
+- Preservation: author reported no other edits; broader preservation lacked a prior baseline for independent verification
+
+The controller did not inspect, create, edit, or substantively validate the artifact.

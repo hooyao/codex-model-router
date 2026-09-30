@@ -1,0 +1,1590 @@
+{
+  "acceptance": {
+    "activation_gate_pass": false,
+    "artifact_pass": true,
+    "campaign_pass": false,
+    "completed_runs": 4,
+    "identity_contract_pass": false,
+    "required_route_process_pass": false,
+    "scheduled_runs": 4
+  },
+  "activation_gate": {
+    "checks": [
+      {
+        "detail": "controller agent-message source",
+        "evidence_refs": [],
+        "name": "hook-route-event",
+        "status": "fail"
+      },
+      {
+        "detail": "hook-created source-specific artifact",
+        "evidence_refs": [],
+        "name": "hook-config-artifact",
+        "status": "fail"
+      },
+      {
+        "detail": "Python and sandbox preflight evidence",
+        "evidence_refs": [],
+        "name": "environment-preflight",
+        "status": "unknown"
+      }
+    ],
+    "diagnostic_observations": [],
+    "evidence": {
+      "transcript": {
+        "path": "raw/activation.jsonl",
+        "sha256": "f5ebb07913206768c88e41132d8a039ef2aa820aa49913d0516c595e79dc630b"
+      }
+    },
+    "root_cause": "unknown",
+    "status": "fail"
+  },
+  "analysis_version": "role-bounded-v2",
+  "campaign_id": "router-scenarios-live-20260923T031600Z",
+  "claim_boundary": {
+    "automatic_hook_compliance_established": false,
+    "comparative_cost_or_latency_claim_supported": false,
+    "context_deletion_or_sandboxing_established": false,
+    "measured_usd_available": false
+  },
+  "data_origin": "observed",
+  "historical_result_preserved": true,
+  "observations": [
+    {
+      "artifact_validation": {
+        "actual_tree": {
+          "README.md": "b54dfc3f60705e186eaf92e7c9e7edc96332dc196b503239d8a75cda3dd7cbdd",
+          "app/settings.json": "83e83419f826cfbc9a49479ddd8a50fc74df3cab610300e625716e2c2a4b8db7",
+          "docs/ops.md": "4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756",
+          "logs/startup.log": "d691a86ab2a70e015a3195737974886c7f202e45358e73081dc8df117e3e4cc7",
+          "notes/archive.md": "794f2bddd12fdd512c05baca972ce12402b6220eb35285578cec1d60a80817f2"
+        },
+        "expected_tree": {
+          "README.md": "b54dfc3f60705e186eaf92e7c9e7edc96332dc196b503239d8a75cda3dd7cbdd",
+          "app/settings.json": "83e83419f826cfbc9a49479ddd8a50fc74df3cab610300e625716e2c2a4b8db7",
+          "docs/ops.md": "4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756",
+          "logs/startup.log": "d691a86ab2a70e015a3195737974886c7f202e45358e73081dc8df117e3e4cc7",
+          "notes/archive.md": "794f2bddd12fdd512c05baca972ce12402b6220eb35285578cec1d60a80817f2"
+        },
+        "status": "pass"
+      },
+      "case_id": "investigation-reuse",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "usd": null
+      },
+      "evidence": {
+        "artifact_tree": {
+          "files": {
+            "README.md": "b54dfc3f60705e186eaf92e7c9e7edc96332dc196b503239d8a75cda3dd7cbdd",
+            "app/settings.json": "83e83419f826cfbc9a49479ddd8a50fc74df3cab610300e625716e2c2a4b8db7",
+            "docs/ops.md": "4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756",
+            "logs/startup.log": "d691a86ab2a70e015a3195737974886c7f202e45358e73081dc8df117e3e4cc7",
+            "notes/archive.md": "794f2bddd12fdd512c05baca972ce12402b6220eb35285578cec1d60a80817f2"
+          },
+          "path": "results/investigation-reuse",
+          "tree_sha256": "f0bd09959b86941d94d5af774171502c7b3717ffbdcd5de880a6302f99889181"
+        },
+        "session_index": {
+          "path": "session-evidence/investigation-reuse/session-index.json",
+          "sha256": "4e3659ad0f2ee0379d10168d342b3de50d4ae6ca14cd3395f3b3b96b67da54bb"
+        },
+        "session_sources": [
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-16-09-01a0cc43-7862-7272-a436-c02bce690354.jsonl",
+            "sha256": "87856b858b7a436394c55e4f91c8f5db307bce6aabbc16074df08ebd5fb2130a"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-16-48-01a0cc44-101a-7d00-9540-72a56a8b61de.jsonl",
+            "sha256": "fce644975261c696bf761b13d495beeb0ca01637298faa7a59f615dc9db33d2f"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-17-36-01a0cc44-cbfb-7372-be9b-912f437d0080.jsonl",
+            "sha256": "e806815d18b5d9779d90cb5a1dc862a6f72b23bfa79957269ed0cb8a91613ae5"
+          }
+        ],
+        "transcript": {
+          "path": "raw/investigation-reuse.jsonl",
+          "sha256": "8da9f6349744c004216db9fd37b5767293043dd9f5275ab78885bfbe0611f447"
+        }
+      },
+      "identity_contract_validation": {
+        "status": "fail",
+        "workers": [
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 41,
+                "status": "fail",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "investigate-authoritative-ttl-gpt-5-medium",
+                  "worker_name": "investigate-authoritative-ttl-gpt-5-medium"
+                }
+              },
+              "native_transport": {
+                "status": "pass",
+                "value": {
+                  "field": "task_name",
+                  "name": "investigate_authoritative_ttl_gpt_5_medium",
+                  "spawn_line": 30
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 29,
+                  "model": "gpt-5.6-sol",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "unknown",
+                "value": {
+                  "inheritance_verified": false,
+                  "model": null,
+                  "reasoning_effort": null
+                }
+              }
+            },
+            "status": "fail",
+            "thread_id": "01a0cc44-101a-7d00-9540-72a56a8b61de"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 46,
+                "status": "fail",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "implement-cache-ttl-gpt-5-medium",
+                  "worker_name": "implement-cache-ttl-gpt-5-medium"
+                }
+              },
+              "native_transport": {
+                "status": "pass",
+                "value": {
+                  "field": "task_name",
+                  "name": "implement_cache_ttl_gpt_5_medium",
+                  "spawn_line": 60
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 8,
+                  "model": "gpt-5.6-sol",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "unknown",
+                "value": {
+                  "inheritance_verified": false,
+                  "model": null,
+                  "reasoning_effort": null
+                }
+              }
+            },
+            "status": "fail",
+            "thread_id": "01a0cc44-cbfb-7372-be9b-912f437d0080"
+          }
+        ]
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "assignment_spans": [
+          {
+            "end_at": "2026-09-23T03:18:36.657Z",
+            "end_line": 74,
+            "start_at": "2026-09-23T03:16:10.246Z",
+            "start_line": 2,
+            "turn_id": "01a0cc43-7be4-7d53-9e74-029d37fa1a69"
+          }
+        ],
+        "final_echo": {
+          "native_task_name": null,
+          "task_id": null,
+          "worker_name": null
+        },
+        "final_echo_line": 74,
+        "final_text": "Implemented and validated.\n\n- Parent session: `01a0c7e8-eeba-7b93-98bf-07720d23f894`\n- Route/topology: `DELEGATE / ISOLATED_SERIAL`\n- Workers:\n  - `investigate-authoritative-ttl-gpt-5-medium`\n  - `implement-cache-ttl-gpt-5-medium`\n- Worker sessions: runtime exposed the same session ID as parent for both workers\n- Model/effort: `gpt-5 / medium`\n- Receipt: `docs/ops.md` \u2192 TTL `45`; source SHA-256 `4a564075\u2026f2756`; receipt SHA-256 `3374b86e\u2026c9109`\n- Consumer: `implement-cache-ttl-gpt-5-medium`\n- Change: [app/settings.json](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T031600Z/workspaces/investigation-reuse/app/settings.json:1), `30 \u2192 45`\n- Validation: exact integer `45`; region remains `primary`; only the two TTL bytes changed; final diff names only `app/settings.json`; `git diff --check` clean\n- Failures/retries: investigator had one local command retry; implementation and dispatch had none\n- Cost: unavailable; runtime exposed no measured USD cost",
+        "parent_thread_id": null,
+        "runtime": {
+          "evidence_line": 8,
+          "model": "gpt-5.6-sol",
+          "reasoning_effort": "high"
+        },
+        "session_end_at": "2026-09-23T03:18:36.657Z",
+        "session_start_at": "2026-09-23T03:16:09.559Z",
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-16-09-01a0cc43-7862-7272-a436-c02bce690354.jsonl",
+        "source_sha256": "87856b858b7a436394c55e4f91c8f5db307bce6aabbc16074df08ebd5fb2130a",
+        "thread_id": "01a0cc43-7862-7272-a436-c02bce690354"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "detail": "role-bounded route event",
+            "evidence_refs": [
+              "transcript:23"
+            ],
+            "name": "route",
+            "status": "pass"
+          },
+          {
+            "detail": "persisted child metadata",
+            "evidence_refs": [
+              "parent-session:30",
+              "parent-session:60"
+            ],
+            "name": "two-distinct-workers",
+            "status": "pass"
+          },
+          {
+            "detail": "specific child result, not inherited prompt text",
+            "evidence_refs": [
+              "parent-session:41"
+            ],
+            "name": "receipt-result",
+            "status": "pass"
+          },
+          {
+            "detail": "native task names only",
+            "evidence_refs": [
+              "parent-session:30",
+              "parent-session:60"
+            ],
+            "name": "stage-ownership",
+            "status": "pass"
+          }
+        ],
+        "status": "pass"
+      },
+      "route_events": [
+        {
+          "line": 23,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL/hard-delegate-or-unknown-signal/gpt-5/medium/named multi-step investigation with a required implementation dependency",
+          "timestamp": "2026-09-23T03:16:33.677Z"
+        }
+      ],
+      "timing": {
+        "all_worker_assignment_overlap_ms": 0,
+        "parent_session_lifetime_ms": 147098,
+        "session_lifetime_overlap_ms": 0
+      },
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cached_input_tokens": 210100,
+          "input_tokens": 236107,
+          "output_tokens": 5780,
+          "reasoning_output_tokens": 2911
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/investigate_authoritative_ttl_gpt_5_medium",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T03:17:04.273Z",
+              "end_line": 27,
+              "start_at": "2026-09-23T03:16:48.535Z",
+              "start_line": 2,
+              "turn_id": "01a0cc44-11ce-7970-a3ec-6bb65eeede49"
+            },
+            {
+              "end_at": "2026-09-23T03:17:25.366Z",
+              "end_line": 41,
+              "start_at": "2026-09-23T03:17:18.275Z",
+              "start_line": 28,
+              "turn_id": "01a0cc44-86ff-7512-a9d1-0365166ceff2"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "investigate-authoritative-ttl-gpt-5-medium",
+            "worker_name": "investigate-authoritative-ttl-gpt-5-medium"
+          },
+          "final_echo_line": 41,
+          "final_text": "Worker name: investigate-authoritative-ttl-gpt-5-medium  \nTask ID: investigate-authoritative-ttl-gpt-5-medium  \nCODEX_SESSION_ID: `01a0c7e8-eeba-7b93-98bf-07720d23f894`",
+          "parent_thread_id": "01a0cc43-7862-7272-a436-c02bce690354",
+          "runtime": {
+            "evidence_line": 29,
+            "model": "gpt-5.6-sol",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T03:17:25.366Z",
+          "session_start_at": "2026-09-23T03:16:48.055Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-16-48-01a0cc44-101a-7d00-9540-72a56a8b61de.jsonl",
+          "source_sha256": "fce644975261c696bf761b13d495beeb0ca01637298faa7a59f615dc9db33d2f",
+          "thread_id": "01a0cc44-101a-7d00-9540-72a56a8b61de"
+        },
+        {
+          "agent_path": "/root/implement_cache_ttl_gpt_5_medium",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T03:18:29.038Z",
+              "end_line": 46,
+              "start_at": "2026-09-23T03:17:36.567Z",
+              "start_line": 2,
+              "turn_id": "01a0cc44-cd7c-77c0-86fd-a4d50f914eed"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "implement-cache-ttl-gpt-5-medium",
+            "worker_name": "implement-cache-ttl-gpt-5-medium"
+          },
+          "final_echo_line": 46,
+          "final_text": "Worker name: implement-cache-ttl-gpt-5-medium  \nTask ID: implement-cache-ttl-gpt-5-medium\n\nOutcome: Completed successfully.\n\n- Receipt verified: SHA-256 `3374b86e37a1cc7d0bc6c35cbf25fd5781c165db03b27ccc73c05282710c9109`\n- Consumed facts: `docs/ops.md`, TTL `45`, source SHA-256 `4a564075e70924a925cdcdb1ca4036aa7a165a8990872598ccc173ddacbf2756`\n- Changed artifact: [app/settings.json](Q:/MyProjects/codex-model-router/evals/live/router-scenarios-live-20260923T031600Z/workspaces/investigation-reuse/app/settings.json)\n- Exact change: `cache_ttl_seconds: 30 \u2192 45`\n- Byte validation: 44 bytes before/after; only offsets 21\u201322 changed from ASCII `30` to `45`\n- JSON validation: integer `45`; region preserved as `primary`\n- Diff: one deletion/one addition; `git diff --check` clean\n- Final diff names: only `app/settings.json`\n- Pre-existing unrelated state preserved: untracked `.codex-model-router/`\n- Diff hunk: `-{\"cache_ttl_seconds\":30,\"region\":\"primary\"}` / `+{\"cache_ttl_seconds\":45,\"region\":\"primary\"}`\n- Model/effort: `gpt-5`, medium; no runtime discrepancy exposed\n- Risks/blockers: none\n- Tool failures/retries: none\n- CODEX_SESSION_ID: `01a0c7e8-eeba-7b93-98bf-07720d23f894`",
+          "parent_thread_id": "01a0cc43-7862-7272-a436-c02bce690354",
+          "runtime": {
+            "evidence_line": 8,
+            "model": "gpt-5.6-sol",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T03:18:29.038Z",
+          "session_start_at": "2026-09-23T03:17:36.166Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-17-36-01a0cc44-cbfb-7372-be9b-912f437d0080.jsonl",
+          "source_sha256": "e806815d18b5d9779d90cb5a1dc862a6f72b23bfa79957269ed0cb8a91613ae5",
+          "thread_id": "01a0cc44-cbfb-7372-be9b-912f437d0080"
+        }
+      ]
+    },
+    {
+      "artifact_validation": {
+        "actual_tree": {
+          "migration.md": "36b6f4549ab9e07a4aeebfcddc90c6f281e73e3c0edc66acb50d6298ead38585",
+          "request.md": "ef54629bb9c22d1e6b971ebc2d9630807853fc1e3f6be71d444ee78930b701e7",
+          "src/api.json": "332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993",
+          "src/schema.json": "40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d",
+          "tests/expected.json": "eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6"
+        },
+        "expected_tree": {
+          "migration.md": "36b6f4549ab9e07a4aeebfcddc90c6f281e73e3c0edc66acb50d6298ead38585",
+          "request.md": "ef54629bb9c22d1e6b971ebc2d9630807853fc1e3f6be71d444ee78930b701e7",
+          "src/api.json": "332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993",
+          "src/schema.json": "40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d",
+          "tests/expected.json": "eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6"
+        },
+        "status": "pass"
+      },
+      "case_id": "serial-escalation",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "usd": null
+      },
+      "evidence": {
+        "artifact_tree": {
+          "files": {
+            "migration.md": "36b6f4549ab9e07a4aeebfcddc90c6f281e73e3c0edc66acb50d6298ead38585",
+            "request.md": "ef54629bb9c22d1e6b971ebc2d9630807853fc1e3f6be71d444ee78930b701e7",
+            "src/api.json": "332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993",
+            "src/schema.json": "40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d",
+            "tests/expected.json": "eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6"
+          },
+          "path": "results/serial-escalation",
+          "tree_sha256": "af5c69ffb7fb67f17005140b2d7506de73294ffc8a52db5716b834b960f47458"
+        },
+        "session_index": {
+          "path": "session-evidence/serial-escalation/session-index.json",
+          "sha256": "3504ceba7dd405b36500dba34e985da7984ac68ed2eaad09da9a41a064999a01"
+        },
+        "session_sources": [
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-19-14-01a0cc46-4b8e-7813-8cbf-91450da29f66.jsonl",
+            "sha256": "96af8f148e6d9b7a46a75b83376c3f3ccf218ae0bbed8f5d1add9decb8372997"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-03-01a0cc47-0b21-70e2-8781-e80f1899ced3.jsonl",
+            "sha256": "b5ba5be72c41abc06fdbdb395115ddff12c03c4672d4c652a8758a910d3ff561"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-22-01a0cc47-56f8-7f20-a598-83151165e798.jsonl",
+            "sha256": "f324ecabd031446eddb0db38387a32a46f2e63a15aca9c89fcc9845da89399fa"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-52-01a0cc47-cbef-7393-9a71-3e98922adb69.jsonl",
+            "sha256": "8278371144a687db4506db6ddd950fab020649e893a0f80eb7a0923ca903a5c7"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-21-28-01a0cc48-567a-77a0-96ac-0514c1577af7.jsonl",
+            "sha256": "08625aa0ed1dc27c7253cd45c1a7b4992ab612f95747461e31b7581bb5b73683"
+          }
+        ],
+        "transcript": {
+          "path": "raw/serial-escalation.jsonl",
+          "sha256": "ef58724533f4bde9b831f303577fe17e317352c3b36e1cd1bd5ea22385619925"
+        }
+      },
+      "identity_contract_validation": {
+        "status": "fail",
+        "workers": [
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 37,
+                "status": "fail",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "plan-migration-unavailable-unavailable",
+                  "worker_name": "plan-migration-unavailable-unavailable"
+                }
+              },
+              "native_transport": {
+                "status": "pass",
+                "value": {
+                  "field": "task_name",
+                  "name": "plan_migration_unavailable_unavailable",
+                  "spawn_line": 44
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 24,
+                  "model": "gpt-5.6-sol",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "unknown",
+                "value": {
+                  "inheritance_verified": false,
+                  "model": null,
+                  "reasoning_effort": null
+                }
+              }
+            },
+            "status": "fail",
+            "thread_id": "01a0cc47-0b21-70e2-8781-e80f1899ced3"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 51,
+                "status": "fail",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "update-schema-unavailable-unavailable",
+                  "worker_name": "update-schema-unavailable-unavailable"
+                }
+              },
+              "native_transport": {
+                "status": "pass",
+                "value": {
+                  "field": "task_name",
+                  "name": "update_schema_unavailable_unavailable",
+                  "spawn_line": 59
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 29,
+                  "model": "gpt-5.6-sol",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "unknown",
+                "value": {
+                  "inheritance_verified": false,
+                  "model": null,
+                  "reasoning_effort": null
+                }
+              }
+            },
+            "status": "fail",
+            "thread_id": "01a0cc47-56f8-7f20-a598-83151165e798"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 55,
+                "status": "fail",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "update-api-unavailable-unavailable",
+                  "worker_name": "update-api-unavailable-unavailable"
+                }
+              },
+              "native_transport": {
+                "status": "pass",
+                "value": {
+                  "field": "task_name",
+                  "name": "update_api_unavailable_unavailable",
+                  "spawn_line": 72
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 33,
+                  "model": "gpt-5.6-sol",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "unknown",
+                "value": {
+                  "inheritance_verified": false,
+                  "model": null,
+                  "reasoning_effort": null
+                }
+              }
+            },
+            "status": "fail",
+            "thread_id": "01a0cc47-cbef-7393-9a71-3e98922adb69"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 64,
+                "status": "fail",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "update-contract-test-unavailable-unavailable",
+                  "worker_name": "update-contract-test-unavailable-unavailable"
+                }
+              },
+              "native_transport": {
+                "status": "pass",
+                "value": {
+                  "field": "task_name",
+                  "name": "update_contract_test_unavailable_unavailable",
+                  "spawn_line": 84
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 37,
+                  "model": "gpt-5.6-sol",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "unknown",
+                "value": {
+                  "inheritance_verified": false,
+                  "model": null,
+                  "reasoning_effort": null
+                }
+              }
+            },
+            "status": "fail",
+            "thread_id": "01a0cc48-567a-77a0-96ac-0514c1577af7"
+          }
+        ]
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "assignment_spans": [
+          {
+            "end_at": "2026-09-23T03:22:12.712Z",
+            "end_line": 97,
+            "start_at": "2026-09-23T03:19:14.860Z",
+            "start_line": 2,
+            "turn_id": "01a0cc46-4d5e-7ed2-b392-b0d10ea63da6"
+          }
+        ],
+        "final_echo": {
+          "native_task_name": null,
+          "task_id": null,
+          "worker_name": null
+        },
+        "final_echo_line": 97,
+        "final_text": "Completed the serial escalation successfully.\n\n- Routes: `DIRECT` (`bounded-direct-fast-path`) \u2192 `DELEGATE` (`ISOLATED_SERIAL`, `scope-expanded`).\n- Order/timing: plan 0.04s \u2192 schema 10.15s \u2192 API 12.73s \u2192 contract-test 20.99s.\n- Receipt chain:\n  - Plan `e2450d\u20261499` \u2192 schema\n  - Schema `24c417\u20267fcc` \u2192 API\n  - API `20a4e6\u2026cbd6` \u2192 contract-test\n  - Final `c4c4e1\u2026252ab` \u2192 controller\n- Validation: worker confirmed all three JSON files parse; requested fields are integer `2`; other values/files were preserved; artifact hashes and dependency order matched.\n- Retries/failures: `0/0`.\n- Workers: native task paths were exposed; parent and child IDs were unavailable. Model/effort and measured USD cost were also unavailable.\n- Controller performed no business-artifact inspection or editing after delegation.",
+        "parent_thread_id": null,
+        "runtime": {
+          "evidence_line": 8,
+          "model": "gpt-5.6-sol",
+          "reasoning_effort": "high"
+        },
+        "session_end_at": "2026-09-23T03:22:12.712Z",
+        "session_start_at": "2026-09-23T03:19:14.378Z",
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-19-14-01a0cc46-4b8e-7813-8cbf-91450da29f66.jsonl",
+        "source_sha256": "96af8f148e6d9b7a46a75b83376c3f3ccf218ae0bbed8f5d1add9decb8372997",
+        "thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "detail": "ordered route events",
+            "evidence_refs": [
+              "transcript:22",
+              "transcript:39"
+            ],
+            "name": "direct-then-delegate",
+            "status": "pass"
+          },
+          {
+            "detail": "route trigger",
+            "evidence_refs": [
+              "transcript:22",
+              "transcript:39"
+            ],
+            "name": "scope-expanded",
+            "status": "pass"
+          },
+          {
+            "detail": "native task names only",
+            "evidence_refs": [
+              "parent-session:44",
+              "parent-session:59",
+              "parent-session:72",
+              "parent-session:84"
+            ],
+            "name": "four-stages",
+            "status": "pass"
+          },
+          {
+            "detail": "assignment spans, not session lifetime",
+            "evidence_refs": [
+              "session-index:assignment_spans"
+            ],
+            "name": "serial-assignment-timing",
+            "status": "pass"
+          }
+        ],
+        "status": "pass"
+      },
+      "route_events": [
+        {
+          "line": 22,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DIRECT \u2014 bounded-direct-fast-path/all bounded direct requirements are explicitly satisfied",
+          "timestamp": "2026-09-23T03:19:33.271Z"
+        },
+        {
+          "line": 39,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL/hard-delegate-or-unknown-signal/model-unavailable/effort-unavailable/scope-expanded with dependent schema, API, and contract consumers",
+          "timestamp": "2026-09-23T03:19:54.929Z"
+        }
+      ],
+      "timing": {
+        "all_worker_assignment_overlap_ms": 0,
+        "parent_session_lifetime_ms": 178334,
+        "session_lifetime_overlap_ms": 0
+      },
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cached_input_tokens": 321743,
+          "input_tokens": 343445,
+          "output_tokens": 7397,
+          "reasoning_output_tokens": 2547
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/plan_migration_unavailable_unavailable",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T03:20:12.855Z",
+              "end_line": 37,
+              "start_at": "2026-09-23T03:20:03.919Z",
+              "start_line": 23,
+              "turn_id": "01a0cc47-0e4c-7542-81f3-f8f047d1735c"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "plan-migration-unavailable-unavailable",
+            "worker_name": "plan-migration-unavailable-unavailable"
+          },
+          "final_echo_line": 37,
+          "final_text": "Worker name: plan-migration-unavailable-unavailable  \nTask ID: plan-migration-unavailable-unavailable\n\nOutcome: Plan complete; no files edited.\n\nEvidence:\n\n- `request.md`: requests migration-note version alignment.\n- `migration.md`: requires schema \u2192 API \u2192 contract fixture.\n- `src/schema.json`: `schema_version` = integer `1`.\n- `src/api.json`: `response_schema_version` = integer `1`.\n- `tests/expected.json`: `schema_version` = integer `1`.\n\nValidation: Change only those fields to integer `2`, in order `schema -> api -> contract-test`; preserve every other value and file.\n\nCanonical receipt text: `plan|schema=src/schema.json:schema_version->2|api=src/api.json:response_schema_version->2|contract=tests/expected.json:schema_version->2|order=schema>api>contract-test`\n\nreceipt_sha256: `e2450d659302d168a06bb26ef813caf7d907a3f8efce89c5286f7bbf2ace1499`  \nreceipt_consumer: `update-schema-unavailable-unavailable`  \nstarted_utc: `2026-09-23T03:20:08.6621012Z`  \nfinished_utc: `2026-09-23T03:20:08.7063371Z`  \nrisks or blockers: None.",
+          "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+          "runtime": {
+            "evidence_line": 24,
+            "model": "gpt-5.6-sol",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T03:20:12.855Z",
+          "session_start_at": "2026-09-23T03:20:03.408Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-03-01a0cc47-0b21-70e2-8781-e80f1899ced3.jsonl",
+          "source_sha256": "b5ba5be72c41abc06fdbdb395115ddff12c03c4672d4c652a8758a910d3ff561",
+          "thread_id": "01a0cc47-0b21-70e2-8781-e80f1899ced3"
+        },
+        {
+          "agent_path": "/root/update_schema_unavailable_unavailable",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T03:20:42.731Z",
+              "end_line": 51,
+              "start_at": "2026-09-23T03:20:23.553Z",
+              "start_line": 28,
+              "turn_id": "01a0cc47-5aff-7be1-b210-dfdb31d70318"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "update-schema-unavailable-unavailable",
+            "worker_name": "update-schema-unavailable-unavailable"
+          },
+          "final_echo_line": 51,
+          "final_text": "Worker name: update-schema-unavailable-unavailable  \nTask ID: update-schema-unavailable-unavailable\n\nOutcome: Updated only `src/schema.json`.\n\nEvidence:\n- Input receipt hash validated: `e2450d659302d168a06bb26ef813caf7d907a3f8efce89c5286f7bbf2ace1499`\n- Before: `91600aaf82b1eed56f4ccbeec166cb3e00e1be3c2d7e01da422fef33284285df`\n- After: `40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d`\n\nValidation: JSON parsed; `schema_version` is integer `2`; all other values unchanged.\n\nCanonical receipt:\n`schema|input=e2450d659302d168a06bb26ef813caf7d907a3f8efce89c5286f7bbf2ace1499|artifact=src/schema.json|before=91600aaf82b1eed56f4ccbeec166cb3e00e1be3c2d7e01da422fef33284285df|after=40bed9e2980b38046526f679697c0ab0fe1c15e21b0614bfde65c75a10bd810d|change=schema_version:1->2|status=validated`\n\nReceipt SHA-256: `24c41778cee4f19d0efe680167475106475402049a564fd02f17266f19157fcc`  \nReceipt consumer: `update-api-unavailable-unavailable`  \nStarted UTC: `2026-09-23T03:20:28.3377818Z`  \nFinished UTC: `2026-09-23T03:20:38.4910393Z`  \nRisks/blockers: None.",
+          "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+          "runtime": {
+            "evidence_line": 29,
+            "model": "gpt-5.6-sol",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T03:20:42.731Z",
+          "session_start_at": "2026-09-23T03:20:22.883Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-22-01a0cc47-56f8-7f20-a598-83151165e798.jsonl",
+          "source_sha256": "f324ecabd031446eddb0db38387a32a46f2e63a15aca9c89fcc9845da89399fa",
+          "thread_id": "01a0cc47-56f8-7f20-a598-83151165e798"
+        },
+        {
+          "agent_path": "/root/update_api_unavailable_unavailable",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T03:21:16.580Z",
+              "end_line": 55,
+              "start_at": "2026-09-23T03:20:53.219Z",
+              "start_line": 32,
+              "turn_id": "01a0cc47-cee0-77e2-a185-8f2268f92e71"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "update-api-unavailable-unavailable",
+            "worker_name": "update-api-unavailable-unavailable"
+          },
+          "final_echo_line": 55,
+          "final_text": "Worker name: update-api-unavailable-unavailable  \nTask ID: update-api-unavailable-unavailable\n\nOutcome: Updated only `src/api.json`; `response_schema_version` changed from integer `1` to `2`.\n\nEvidence/validation:\n\n- Input receipt SHA-256: passed\n- JSON parse: passed\n- Target integer `2`: passed\n- Other values unchanged: passed\n- Before SHA-256: `980002b8f169660737ad062ab3b56029bf236cfe80484c231f71a027f13ebcc5`\n- After SHA-256: `332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993`\n\nCanonical receipt:\n\n`api|input=24c41778cee4f19d0efe680167475106475402049a564fd02f17266f19157fcc|artifact=src/api.json|before=980002b8f169660737ad062ab3b56029bf236cfe80484c231f71a027f13ebcc5|after=332d1051031c99cfaf0e0a9c51838d99e1e3aece0f422a3d09ea7dfe89e80993|change=response_schema_version:1->2|status=validated`\n\nReceipt SHA-256: `20a4e60045bdfbbb05a35f3feaf1746c4825d52afc156deb4d87254384ebcbd6`  \nReceipt consumer: `update-contract-test-unavailable-unavailable`  \nStarted UTC: `2026-09-23T03:20:59.3512101Z`  \nFinished UTC: `2026-09-23T03:21:12.0828301Z`  \nRisks/blockers: none.",
+          "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+          "runtime": {
+            "evidence_line": 33,
+            "model": "gpt-5.6-sol",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T03:21:16.580Z",
+          "session_start_at": "2026-09-23T03:20:52.738Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-52-01a0cc47-cbef-7393-9a71-3e98922adb69.jsonl",
+          "source_sha256": "8278371144a687db4506db6ddd950fab020649e893a0f80eb7a0923ca903a5c7",
+          "thread_id": "01a0cc47-cbef-7393-9a71-3e98922adb69"
+        },
+        {
+          "agent_path": "/root/update_contract_test_unavailable_unavailable",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T03:22:04.498Z",
+              "end_line": 64,
+              "start_at": "2026-09-23T03:21:28.659Z",
+              "start_line": 36,
+              "turn_id": "01a0cc48-5951-7952-9194-68865df12e20"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "update-contract-test-unavailable-unavailable",
+            "worker_name": "update-contract-test-unavailable-unavailable"
+          },
+          "final_echo_line": 64,
+          "final_text": "Worker name: update-contract-test-unavailable-unavailable  \nTask ID: update-contract-test-unavailable-unavailable\n\nOutcome: updated `tests/expected.json` `schema_version` from integer `1` to `2`.\n\nEvidence/validation:\n\n- Incoming API receipt SHA-256 matched `20a4e...bd6`.\n- API receipt input matched schema receipt `24c4...fcc`.\n- All three JSON files parsed; fields are integer `2`.\n- Exact upstream hashes matched.\n- Fixture\u2019s other value (`accepted: true`) was unchanged.\n- Order validated via receipt edges and artifact timestamps: schema `03:20:32.321Z` \u2192 API `03:21:03.996Z` \u2192 contract test `03:21:44.361Z`, following recorded plan \u2192 schema \u2192 API \u2192 contract-test.\n- Retries/failures: 0/0.\n- Risks/blockers: none.\n\nArtifact hashes:\n\n- Before: `166acb61f8c6dbf746358894959a82b86602abda460f44b20f0a53b4cb5e4ce7`\n- After: `eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6`\n\nCanonical receipt:\n\n`contract-test|input=20a4e60045bdfbbb05a35f3feaf1746c4825d52afc156deb4d87254384ebcbd6|artifact=tests/expected.json|before=166acb61f8c6dbf746358894959a82b86602abda460f44b20f0a53b4cb5e4ce7|after=eb52b757c9c1a85d2971fe9292b16622cd1fa17d091ae63bc87cdbcd7fd387e6|change=schema_version:1->2|cross_artifacts=2,2,2|order=plan>schema>api>contract-test|status=validated`\n\n`receipt_sha256=c4c4e11b0b450aafe22467e81e394c90c48f710eb261a51f63b33e7dd82252ab`  \n`receipt_consumer=controller-final-synthesis`  \n`started_utc=2026-09-23T03:21:35.713Z`  \n`finished_utc=2026-09-23T03:21:56.707Z`  \nModel/effort: unavailable/unavailable.",
+          "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+          "runtime": {
+            "evidence_line": 37,
+            "model": "gpt-5.6-sol",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T03:22:04.498Z",
+          "session_start_at": "2026-09-23T03:21:28.229Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-21-28-01a0cc48-567a-77a0-96ac-0514c1577af7.jsonl",
+          "source_sha256": "08625aa0ed1dc27c7253cd45c1a7b4992ab612f95747461e31b7581bb5b73683",
+          "thread_id": "01a0cc48-567a-77a0-96ac-0514c1577af7"
+        }
+      ]
+    },
+    {
+      "artifact_validation": {
+        "actual_tree": {
+          "reports/alpha.md": "11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2",
+          "reports/beta.md": "ef43ecf72af1579b7a10cc8ece75cbe40f63fe3f4760333f99e51867c5046fec",
+          "reports/gamma.md": "22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88"
+        },
+        "expected_tree": {
+          "reports/alpha.md": "11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2",
+          "reports/beta.md": "ef43ecf72af1579b7a10cc8ece75cbe40f63fe3f4760333f99e51867c5046fec",
+          "reports/gamma.md": "22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88"
+        },
+        "status": "pass"
+      },
+      "case_id": "parallel-disjoint",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "usd": null
+      },
+      "evidence": {
+        "artifact_tree": {
+          "files": {
+            "reports/alpha.md": "11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2",
+            "reports/beta.md": "ef43ecf72af1579b7a10cc8ece75cbe40f63fe3f4760333f99e51867c5046fec",
+            "reports/gamma.md": "22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88"
+          },
+          "path": "results/parallel-disjoint",
+          "tree_sha256": "d79e01a0ef9b2fd10437897963103e2452113bf5fdba741259ea3b65ee0c70ca"
+        },
+        "session_index": {
+          "path": "session-evidence/parallel-disjoint/session-index.json",
+          "sha256": "34bb26406c8dcad57de2bdb00f67577b642402eafdb3de6d2857934dc354ad59"
+        },
+        "session_sources": [
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-22-22-01a0cc49-283c-7f32-9232-e629f8c81fcd.jsonl",
+            "sha256": "37e85c6c5a6e0ce26344c13b3c6828a16987b8a8123cccc68e1b37b6a48e433b"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-06-01a0cc49-d7c1-7310-997d-4b3d4392adcb.jsonl",
+            "sha256": "b1b291010e81565014df3607408174597891d59e9182f17eebef084c25b7dbad"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-13-01a0cc49-f19f-7702-a081-d5484c9d1180.jsonl",
+            "sha256": "c0425ffcc197ba90343273483977fbd4d38260b5ee26f92af11fddef645f30a3"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-21-01a0cc4a-0efc-7842-896f-e8ddd3558af5.jsonl",
+            "sha256": "c3ca92bd736afe97481da801a54d754726d575329594fba3c13afb4c160781e7"
+          }
+        ],
+        "transcript": {
+          "path": "raw/parallel-disjoint.jsonl",
+          "sha256": "2da29e8e5dfeb650a7dea54972e918ae01fe9d7685e11c94fcd0322be3643ede"
+        }
+      },
+      "identity_contract_validation": {
+        "status": "fail",
+        "workers": [
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 51,
+                "status": "fail",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "replace-alpha-unexposed-unexposed",
+                  "worker_name": "replace-alpha-unexposed-unexposed"
+                }
+              },
+              "native_transport": {
+                "status": "pass",
+                "value": {
+                  "field": "task_name",
+                  "name": "replace_alpha_unexposed_unexposed",
+                  "spawn_line": 30
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 19,
+                  "model": "gpt-5.6-sol",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "unknown",
+                "value": {
+                  "inheritance_verified": false,
+                  "model": null,
+                  "reasoning_effort": null
+                }
+              }
+            },
+            "status": "fail",
+            "thread_id": "01a0cc49-d7c1-7310-997d-4b3d4392adcb"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 65,
+                "status": "fail",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "validate-exact-tree-unexposed-unexposed",
+                  "worker_name": "validate-exact-tree-unexposed-unexposed"
+                }
+              },
+              "native_transport": {
+                "status": "pass",
+                "value": {
+                  "field": "task_name",
+                  "name": "replace_beta_unexposed_unexposed",
+                  "spawn_line": 34
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 45,
+                  "model": "gpt-5.6-sol",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "unknown",
+                "value": {
+                  "inheritance_verified": false,
+                  "model": null,
+                  "reasoning_effort": null
+                }
+              }
+            },
+            "status": "fail",
+            "thread_id": "01a0cc49-f19f-7702-a081-d5484c9d1180"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 45,
+                "status": "fail",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "replace-gamma-unexposed-unexposed",
+                  "worker_name": "replace-gamma-unexposed-unexposed"
+                }
+              },
+              "native_transport": {
+                "status": "pass",
+                "value": {
+                  "field": "task_name",
+                  "name": "replace_gamma_unexposed_unexposed",
+                  "spawn_line": 38
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 23,
+                  "model": "gpt-5.6-sol",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "unknown",
+                "value": {
+                  "inheritance_verified": false,
+                  "model": null,
+                  "reasoning_effort": null
+                }
+              }
+            },
+            "status": "fail",
+            "thread_id": "01a0cc4a-0efc-7842-896f-e8ddd3558af5"
+          }
+        ]
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "assignment_spans": [
+          {
+            "end_at": "2026-09-23T03:24:44.492Z",
+            "end_line": 89,
+            "start_at": "2026-09-23T03:22:22.972Z",
+            "start_line": 2,
+            "turn_id": "01a0cc49-2be9-76c2-a942-3c8c0aeaedb1"
+          }
+        ],
+        "final_echo": {
+          "native_task_name": null,
+          "task_id": null,
+          "worker_name": null
+        },
+        "final_echo_line": 89,
+        "final_text": "ROUTE: DELEGATE \u2014 PARALLEL / hard-delegate-or-unknown-signal / model-effort unexposed / three independent, dependency-free, write-disjoint tasks.\n\n- Topology: `/root` \u2192 three depth-1 native workers, concurrency 3.\n- Dispatch: alpha, beta, gamma dispatched before the first wait.\n- Identities:\n  - `/root/replace_alpha_unexposed_unexposed`\n  - `/root/replace_beta_unexposed_unexposed`\n  - `/root/replace_gamma_unexposed_unexposed`\n- Ownership: each worker exclusively owned its corresponding report file.\n- Timing:\n  - Alpha: `03:23:12.405Z\u201303:23:32.754Z`\n  - Beta: `03:23:19.722Z\u201303:23:31.558Z`\n  - Gamma: `03:23:26.434Z\u201303:23:37.299Z`\n  - All three overlapped for approximately 5.12 seconds.\n- Results: all three exact replacements succeeded; headings and all other bytes were preserved.\n- Validation: the reused beta worker performed read-only exact-tree validation. Exactly the three expected files exist, each expected hash/length matched, each verified token occurs once, and no `TODO` remains.\n- Retries: alpha had one no-change patch attempt, then succeeded within the retry ceiling. Validation corrected one telemetry expression; no artifact impact.\n- Failures/conflicts: none.\n- Model/effort and measured USD cost: not exposed, so none claimed.\n- The controller neither inspected nor edited business artifacts.",
+        "parent_thread_id": null,
+        "runtime": {
+          "evidence_line": 8,
+          "model": "gpt-5.6-sol",
+          "reasoning_effort": "high"
+        },
+        "session_end_at": "2026-09-23T03:24:44.492Z",
+        "session_start_at": "2026-09-23T03:22:22.025Z",
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-22-22-01a0cc49-283c-7f32-9232-e629f8c81fcd.jsonl",
+        "source_sha256": "37e85c6c5a6e0ce26344c13b3c6828a16987b8a8123cccc68e1b37b6a48e433b",
+        "thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "detail": "role-bounded route event",
+            "evidence_refs": [
+              "transcript:24",
+              "transcript:86"
+            ],
+            "name": "route",
+            "status": "pass"
+          },
+          {
+            "detail": "persisted child metadata",
+            "evidence_refs": [
+              "parent-session:30",
+              "parent-session:34",
+              "parent-session:38"
+            ],
+            "name": "three-workers",
+            "status": "pass"
+          },
+          {
+            "detail": "first assignment span per worker",
+            "evidence_refs": [
+              "session-index:assignment_spans"
+            ],
+            "name": "assignment-overlap",
+            "status": "pass"
+          },
+          {
+            "detail": "each worker's own final result",
+            "evidence_refs": [
+              "worker-session:final_echo"
+            ],
+            "name": "disjoint-ownership-results",
+            "status": "pass"
+          }
+        ],
+        "status": "pass"
+      },
+      "route_events": [
+        {
+          "line": 24,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DELEGATE \u2014 PARALLEL / hard-delegate-or-unknown-signal / runtime model and effort unexposed / named multi-step runbook with three bounded, independent, dependency-free, write-disjoint tasks.",
+          "timestamp": "2026-09-23T03:22:54.960Z"
+        },
+        {
+          "line": 86,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DELEGATE \u2014 PARALLEL / hard-delegate-or-unknown-signal / model-effort unexposed / three independent, dependency-free, write-disjoint tasks.",
+          "timestamp": "2026-09-23T03:24:43.813Z"
+        }
+      ],
+      "timing": {
+        "all_worker_assignment_overlap_ms": 15034,
+        "parent_session_lifetime_ms": 142467,
+        "session_lifetime_overlap_ms": 16915
+      },
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cached_input_tokens": 327319,
+          "input_tokens": 348481,
+          "output_tokens": 6822,
+          "reasoning_output_tokens": 2708
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/replace_alpha_unexposed_unexposed",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T03:23:37.929Z",
+              "end_line": 51,
+              "start_at": "2026-09-23T03:23:07.383Z",
+              "start_line": 18,
+              "turn_id": "01a0cc49-daf4-7511-9ceb-7954316fb38d"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "replace-alpha-unexposed-unexposed",
+            "worker_name": "replace-alpha-unexposed-unexposed"
+          },
+          "final_echo_line": 51,
+          "final_text": "Worker name: replace-alpha-unexposed-unexposed  \nTask ID: replace-alpha-unexposed-unexposed\n\nOutcome: Success. Replaced exactly one `TODO` with `verified-alpha` in `reports/alpha.md`.\n\nNative identity: `/root/replace_alpha_unexposed_unexposed`; parent: `/root`. Model/effort unexposed.\n\nUTC: `2026-09-23T03:23:12.4055899Z`\u2013`2026-09-23T03:23:32.7541177Z`\n\nEvidence:\n\n- Original: 22 bytes, SHA-256 `8cd5bf36ecdadb5f71120dde1abc04102b0375648729b8f99ab45e93cc769b87`\n- Final: 32 bytes, SHA-256 `11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2`\n- Replacement count: 1\n\nValidation: one `verified-alpha`, zero `TODO`, heading remains `# Alpha`, and final bytes exactly equal original bytes with only the required replacement.\n\nOne initial patch attempt made no change because its context omitted `status:`; corrected bounded retry succeeded. No conflicts, risks, or blockers.",
+          "parent_thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd",
+          "runtime": {
+            "evidence_line": 19,
+            "model": "gpt-5.6-sol",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T03:23:37.929Z",
+          "session_start_at": "2026-09-23T03:23:06.873Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-06-01a0cc49-d7c1-7310-997d-4b3d4392adcb.jsonl",
+          "source_sha256": "b1b291010e81565014df3607408174597891d59e9182f17eebef084c25b7dbad",
+          "thread_id": "01a0cc49-d7c1-7310-997d-4b3d4392adcb"
+        },
+        {
+          "agent_path": "/root/replace_beta_unexposed_unexposed",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T03:23:36.552Z",
+              "end_line": 43,
+              "start_at": "2026-09-23T03:23:13.906Z",
+              "start_line": 20,
+              "turn_id": "01a0cc49-f470-7b53-9ba0-c7586a7af107"
+            },
+            {
+              "end_at": "2026-09-23T03:24:27.631Z",
+              "end_line": 65,
+              "start_at": "2026-09-23T03:23:57.958Z",
+              "start_line": 44,
+              "turn_id": "01a0cc4a-a083-7070-996f-d551410f2a62"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "validate-exact-tree-unexposed-unexposed",
+            "worker_name": "validate-exact-tree-unexposed-unexposed"
+          },
+          "final_echo_line": 65,
+          "final_text": "Worker name: validate-exact-tree-unexposed-unexposed  \nTask ID: validate-exact-tree-unexposed-unexposed\n\nOutcome: Success  \nNative worker: `/root/replace_beta_unexposed_unexposed`; parent: `/root`  \nUTC start/end: `2026-09-23T03:24:07.3273928Z` / `2026-09-23T03:24:21.5912118Z`\n\nTree: exactly `reports/alpha.md`, `reports/beta.md`, `reports/gamma.md`.\n\n- Alpha: 32 bytes; SHA-256 `11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2`; one `verified-alpha`; zero `TODO`; heading `# Alpha`.\n- Beta: 30 bytes; SHA-256 `ef43ecf72af1579b7a10cc8ece75cbe40f63fe3f4760333f99e51867c5046fec`; one `verified-beta`; zero `TODO`; heading `# Beta`.\n- Gamma: 32 bytes; SHA-256 `22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88`; one `verified-gamma`; zero `TODO`; heading `# Gamma`.\n\nAll tree and byte-level expectations passed. Read-only; no files edited. One path-formatting telemetry expression was corrected and rerun; no artifact impact. No remaining risks or blockers.",
+          "parent_thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd",
+          "runtime": {
+            "evidence_line": 45,
+            "model": "gpt-5.6-sol",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T03:24:27.631Z",
+          "session_start_at": "2026-09-23T03:23:13.461Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-13-01a0cc49-f19f-7702-a081-d5484c9d1180.jsonl",
+          "source_sha256": "c0425ffcc197ba90343273483977fbd4d38260b5ee26f92af11fddef645f30a3",
+          "thread_id": "01a0cc49-f19f-7702-a081-d5484c9d1180"
+        },
+        {
+          "agent_path": "/root/replace_gamma_unexposed_unexposed",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T03:23:41.442Z",
+              "end_line": 45,
+              "start_at": "2026-09-23T03:23:21.518Z",
+              "start_line": 22,
+              "turn_id": "01a0cc4a-122c-76e1-874b-aa2a78b4a07a"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "replace-gamma-unexposed-unexposed",
+            "worker_name": "replace-gamma-unexposed-unexposed"
+          },
+          "final_echo_line": 45,
+          "final_text": "Worker name: replace-gamma-unexposed-unexposed  \nTask ID: replace-gamma-unexposed-unexposed\n\nOutcome: Success. Replaced the sole `TODO` with `verified-gamma` in `reports/gamma.md`.\n\n- Native agent/parent identity: unexposed\n- UTC start: `2026-09-23T03:23:26.4349288Z`\n- UTC end: `2026-09-23T03:23:37.2995102Z`\n- Original: 22 bytes, SHA-256 `cd429fc84c0fbe366f313934c8639bfce0524e98d9930092bf148f361f12a109`\n- Final: 32 bytes, SHA-256 `22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88`\n- Replacement count: exactly 1\n- Validation: one `verified-gamma`; zero `TODO`; heading unchanged; all other bytes identical to the original under the single replacement\n- Risks/blockers: none",
+          "parent_thread_id": "01a0cc49-283c-7f32-9232-e629f8c81fcd",
+          "runtime": {
+            "evidence_line": 23,
+            "model": "gpt-5.6-sol",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T03:23:41.442Z",
+          "session_start_at": "2026-09-23T03:23:21.014Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-23-21-01a0cc4a-0efc-7842-896f-e8ddd3558af5.jsonl",
+          "source_sha256": "c3ca92bd736afe97481da801a54d754726d575329594fba3c13afb4c160781e7",
+          "thread_id": "01a0cc4a-0efc-7842-896f-e8ddd3558af5"
+        }
+      ]
+    },
+    {
+      "artifact_validation": {
+        "actual_tree": {
+          "constraints.md": "807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368",
+          "current.md": "099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7",
+          "decision.json": "6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5"
+        },
+        "expected_tree": {
+          "constraints.md": "807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368",
+          "current.md": "099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7",
+          "decision.json": "6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5"
+        },
+        "status": "pass"
+      },
+      "case_id": "architecture-review",
+      "cost": {
+        "complete": false,
+        "kind": "unavailable",
+        "usd": null
+      },
+      "evidence": {
+        "artifact_tree": {
+          "files": {
+            "constraints.md": "807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368",
+            "current.md": "099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7",
+            "decision.json": "6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5"
+          },
+          "path": "results/architecture-review",
+          "tree_sha256": "f1a5d6aeb9d095ccbd27631c034c80d557ddb59da7b89ff6b5056f585a699bee"
+        },
+        "session_index": {
+          "path": "session-evidence/architecture-review/session-index.json",
+          "sha256": "658ba119214dfc01ccc732a3611b86dab9e67b1faee305bbbed302ec6d354b69"
+        },
+        "session_sources": [
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-34-18-01a0cc54-17ae-7bf1-a435-31437ae691af.jsonl",
+            "sha256": "a9a0338d1db961f35f2832c05fae1471910a1306e31c838b978ccf67db5b841f"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-35-07-01a0cc54-d64a-7c92-97bd-aa50d719e578.jsonl",
+            "sha256": "440b7d29aa7ace8b5a2281b81d748dad8dcfbd25b8a13a1b9c240ded98954bf2"
+          },
+          {
+            "path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-35-51-01a0cc55-83ba-77c1-9328-9ce987094fc7.jsonl",
+            "sha256": "a960876477359b5071269613c34d5cf5d40b9919c22abc27c7efe024cf1816fd"
+          }
+        ],
+        "transcript": {
+          "path": "raw/architecture-review-rerun.jsonl",
+          "sha256": "e115ad0dec864f7cc26057b5a875e1bf82161b0f3e134ff7a37c5c3f823a6b9d"
+        }
+      },
+      "identity_contract_validation": {
+        "status": "fail",
+        "workers": [
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 32,
+                "status": "fail",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "architecture-author-unexposed-unexposed",
+                  "worker_name": "architecture-author-unexposed-unexposed"
+                }
+              },
+              "native_transport": {
+                "status": "pass",
+                "value": {
+                  "field": "task_name",
+                  "name": "architecture_author_unexposed_unexposed",
+                  "spawn_line": 34
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 8,
+                  "model": "gpt-5.6-sol",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "unknown",
+                "value": {
+                  "inheritance_verified": false,
+                  "model": null,
+                  "reasoning_effort": null
+                }
+              }
+            },
+            "status": "fail",
+            "thread_id": "01a0cc54-d64a-7c92-97bd-aa50d719e578"
+          },
+          {
+            "dimensions": {
+              "final_worker_echo": {
+                "evidence_line": 21,
+                "status": "fail",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": "architecture-reviewer-unexposed-unexposed",
+                  "worker_name": "architecture-reviewer-unexposed-unexposed"
+                }
+              },
+              "native_transport": {
+                "status": "pass",
+                "value": {
+                  "field": "task_name",
+                  "name": "architecture_reviewer_unexposed_unexposed",
+                  "spawn_line": 55
+                }
+              },
+              "packet_identity": {
+                "status": "unknown",
+                "value": {
+                  "native_task_name": null,
+                  "task_id": null,
+                  "worker_name": null
+                }
+              },
+              "runtime_metadata": {
+                "status": "pass",
+                "value": {
+                  "evidence_line": 8,
+                  "model": "gpt-5.6-sol",
+                  "reasoning_effort": "high"
+                }
+              },
+              "spawn_selection": {
+                "status": "unknown",
+                "value": {
+                  "inheritance_verified": false,
+                  "model": null,
+                  "reasoning_effort": null
+                }
+              }
+            },
+            "status": "fail",
+            "thread_id": "01a0cc55-83ba-77c1-9328-9ce987094fc7"
+          }
+        ]
+      },
+      "outcome": "completed",
+      "parent_session": {
+        "agent_path": null,
+        "assignment_spans": [
+          {
+            "end_at": "2026-09-23T03:36:38.272Z",
+            "end_line": 80,
+            "start_at": "2026-09-23T03:34:19.564Z",
+            "start_line": 2,
+            "turn_id": "01a0cc54-1b41-75b0-8be4-f2cc6dbf471c"
+          }
+        ],
+        "final_echo": {
+          "native_task_name": null,
+          "task_id": null,
+          "worker_name": null
+        },
+        "final_echo_line": 80,
+        "final_text": "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL / hard-delegate-or-unknown-signal / named runbook and independent review.\n\n- Topology: author \u2192 distinct read-only reviewer\n- Author: `/root/architecture_author_unexposed_unexposed`\n- Reviewer: `/root/architecture_reviewer_unexposed_unexposed`\n- Timing: author 10.832s; review 0.662s; controller window 84.101s\n- Retries: 0\n- SHA-256: `6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5`\n- Exact size: 209 bytes\n- Tree/source preservation: verified\n- Review result: **PASS**\n- Cost: unavailable; no measured USD exposed\n\nThe controller did not inspect or edit the artifact.",
+        "parent_thread_id": null,
+        "runtime": {
+          "evidence_line": 8,
+          "model": "gpt-5.6-sol",
+          "reasoning_effort": "high"
+        },
+        "session_end_at": "2026-09-23T03:36:38.272Z",
+        "session_start_at": "2026-09-23T03:34:18.945Z",
+        "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-34-18-01a0cc54-17ae-7bf1-a435-31437ae691af.jsonl",
+        "source_sha256": "a9a0338d1db961f35f2832c05fae1471910a1306e31c838b978ccf67db5b841f",
+        "thread_id": "01a0cc54-17ae-7bf1-a435-31437ae691af"
+      },
+      "process_validation": {
+        "checks": [
+          {
+            "detail": "role-bounded route event",
+            "evidence_refs": [
+              "transcript:23",
+              "transcript:77"
+            ],
+            "name": "route",
+            "status": "pass"
+          },
+          {
+            "detail": "route evidence only",
+            "evidence_refs": [
+              "transcript:23",
+              "transcript:77"
+            ],
+            "name": "independent-review-required",
+            "status": "unknown"
+          },
+          {
+            "detail": "persisted child metadata",
+            "evidence_refs": [
+              "session-index:thread_ids"
+            ],
+            "name": "distinct-author-reviewer",
+            "status": "pass"
+          },
+          {
+            "detail": "assignment chronology",
+            "evidence_refs": [
+              "session-index:assignment_spans"
+            ],
+            "name": "review-after-author",
+            "status": "pass"
+          },
+          {
+            "detail": "reviewer's own final result",
+            "evidence_refs": [
+              "worker-session:final_echo"
+            ],
+            "name": "review-result",
+            "status": "pass"
+          }
+        ],
+        "status": "unknown"
+      },
+      "route_events": [
+        {
+          "line": 23,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL / hard-delegate-or-unknown-signal / model and effort unexposed / named multi-step runbook plus mandatory independent review; parallel safety requirements are not all satisfied.",
+          "timestamp": "2026-09-23T03:34:42.287Z"
+        },
+        {
+          "line": 77,
+          "role": "controller_agent_message",
+          "text": "ROUTE: DELEGATE \u2014 ISOLATED_SERIAL / hard-delegate-or-unknown-signal / named runbook and independent review.",
+          "timestamp": "2026-09-23T03:36:37.621Z"
+        }
+      ],
+      "timing": {
+        "all_worker_assignment_overlap_ms": 0,
+        "parent_session_lifetime_ms": 139327,
+        "session_lifetime_overlap_ms": 0
+      },
+      "usage": {
+        "kind": "observed",
+        "scope": "codex-exec-terminal-event",
+        "tokens": {
+          "cached_input_tokens": 321805,
+          "input_tokens": 345518,
+          "output_tokens": 7108,
+          "reasoning_output_tokens": 3462
+        }
+      },
+      "worker_sessions": [
+        {
+          "agent_path": "/root/architecture_author_unexposed_unexposed",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T03:35:31.865Z",
+              "end_line": 32,
+              "start_at": "2026-09-23T03:35:07.979Z",
+              "start_line": 2,
+              "turn_id": "01a0cc54-d80f-72e2-806e-773aa968d726"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "architecture-author-unexposed-unexposed",
+            "worker_name": "architecture-author-unexposed-unexposed"
+          },
+          "final_echo_line": 32,
+          "final_text": "Worker name: architecture-author-unexposed-unexposed  \nTask ID: architecture-author-unexposed-unexposed\n\nOutcome: Created `decision.json` as the sole workspace change.\n\nEvidence:\n\n- UTC start: `2026-09-23T03:35:14.0932903Z`\n- UTC end: `2026-09-23T03:35:24.9257624Z`\n- Native agent identity: `/root/architecture_author_unexposed_unexposed`\n- Native model/session identity: not exposed\n- `decision.json`: 209 bytes\n- SHA-256: `6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5`\n- Initial tree: `.codex-model-router/`, `.codex-model-router\\routing.json`, `.git/`, `.git\\COMMIT_EDITMSG`, `.git\\config`, `.git\\description`, `.git\\HEAD`, `.git\\hooks/`, `.git\\hooks\\applypatch-msg.sample`, `.git\\hooks\\commit-msg.sample`, `.git\\hooks\\fsmonitor-watchman.sample`, `.git\\hooks\\post-update.sample`, `.git\\hooks\\pre-applypatch.sample`, `.git\\hooks\\pre-commit.sample`, `.git\\hooks\\pre-merge-commit.sample`, `.git\\hooks\\pre-push.sample`, `.git\\hooks\\pre-rebase.sample`, `.git\\hooks\\pre-receive.sample`, `.git\\hooks\\prepare-commit-msg.sample`, `.git\\hooks\\push-to-checkout.sample`, `.git\\hooks\\sendemail-validate.sample`, `.git\\hooks\\update.sample`, `.git\\index`, `.git\\info/`, `.git\\info\\exclude`, `.git\\logs/`, `.git\\logs\\HEAD`, `.git\\logs\\refs/`, `.git\\logs\\refs\\heads/`, `.git\\logs\\refs\\heads\\master`, `.git\\objects/`, `.git\\objects\\21/`, `.git\\objects\\21\\50ad590d5b3056ea8df3282b9091e36738b943`, `.git\\objects\\3e/`, `.git\\objects\\3e\\f4a37de9dae13fc5c96e11372dc0631aa6b917`, `.git\\objects\\5a/`, `.git\\objects\\5a\\c42c299b40999ca7f1dda7b945fdfd23106c5f`, `.git\\objects\\f5/`, `.git\\objects\\f5\\a59c1a6057243c00746dfa13763bd86c92bc54`, `.git\\objects\\info/`, `.git\\objects\\pack/`, `.git\\refs/`, `.git\\refs\\heads/`, `.git\\refs\\heads\\master`, `.git\\refs\\tags/`, `constraints.md`, `current.md`\n- Ending tree: identical initial tree plus `decision.json`\n\nValidation: PASS\n\n- Exact required bytes: true\n- Final single LF: yes (`LF=1`, last byte `0x0A`)\n- CR/BOM/extra bytes: none\n- `current.md` pre/post SHA-256: `099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7`\n- `constraints.md` pre/post SHA-256: `807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368`\n\nRisks or blockers: None.",
+          "parent_thread_id": "01a0cc54-17ae-7bf1-a435-31437ae691af",
+          "runtime": {
+            "evidence_line": 8,
+            "model": "gpt-5.6-sol",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T03:35:31.865Z",
+          "session_start_at": "2026-09-23T03:35:07.403Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-35-07-01a0cc54-d64a-7c92-97bd-aa50d719e578.jsonl",
+          "source_sha256": "440b7d29aa7ace8b5a2281b81d748dad8dcfbd25b8a13a1b9c240ded98954bf2",
+          "thread_id": "01a0cc54-d64a-7c92-97bd-aa50d719e578"
+        },
+        {
+          "agent_path": "/root/architecture_reviewer_unexposed_unexposed",
+          "assignment_spans": [
+            {
+              "end_at": "2026-09-23T03:36:13.007Z",
+              "end_line": 21,
+              "start_at": "2026-09-23T03:35:52.230Z",
+              "start_line": 2,
+              "turn_id": "01a0cc55-855b-7d72-a5d8-c538b559a878"
+            }
+          ],
+          "final_echo": {
+            "native_task_name": null,
+            "task_id": "architecture-reviewer-unexposed-unexposed",
+            "worker_name": "architecture-reviewer-unexposed-unexposed"
+          },
+          "final_echo_line": 21,
+          "final_text": "Worker name: architecture-reviewer-unexposed-unexposed  \nTask ID: architecture-reviewer-unexposed-unexposed\n\nOutcome: PASS\n\nEvidence:\n- Review UTC: 2026-09-23T03:36:04.1067666Z\u20132026-09-23T03:36:04.7691643Z\n- Reviewer identity: `/root/architecture_reviewer_unexposed_unexposed`\n- Author identity: `/root/architecture_author_unexposed_unexposed`; identities are distinct.\n- `decision.json`: exactly 209 bytes; exact expected byte sequence and key ordering.\n- SHA-256: `6a8232aea27049f051d8bc946d340eca9ae63e606681b9d08dbbf94d76a3f1b5`\n- One terminal LF; zero CR; no BOM or extra bytes.\n- `current.md`: `099a65ff7a02db9a68e24860a7d5d25858baaea00a7555e533760e9d3341cee7`\n- `constraints.md`: `807430bd4004bb82b19e3a410ad79e5248a30cb4a512cb0d3165c51bb4069368`\n\nValidation:\n- Complete non-Git tree contains the three reported initial files plus only `decision.json`.\n- Git tracks `current.md` and `constraints.md`; status shows only pre-existing `.codex-model-router/routing.json` and added `decision.json` as untracked.\n- Ambient session ID observed but treated as non-authoritative.\n\nRisks or blockers: None.\n\nReview result: PASS",
+          "parent_thread_id": "01a0cc54-17ae-7bf1-a435-31437ae691af",
+          "runtime": {
+            "evidence_line": 8,
+            "model": "gpt-5.6-sol",
+            "reasoning_effort": "high"
+          },
+          "session_end_at": "2026-09-23T03:36:13.007Z",
+          "session_start_at": "2026-09-23T03:35:51.768Z",
+          "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-35-51-01a0cc55-83ba-77c1-9328-9ce987094fc7.jsonl",
+          "source_sha256": "a960876477359b5071269613c34d5cf5d40b9919c22abc27c7efe024cf1816fd",
+          "thread_id": "01a0cc55-83ba-77c1-9328-9ce987094fc7"
+        }
+      ]
+    }
+  ],
+  "original_result": {
+    "path": "live-results.json",
+    "sha256": "49193fb04cb66d64b35f2e0f14b96635eb5009f64306d02ae610411d66caeefd"
+  },
+  "schema_version": 2
+}

@@ -1,0 +1,131 @@
+{
+  "children": [
+    {
+      "agent_path": "/root/plan_migration_unavailable_unavailable",
+      "duration_ms": 8936,
+      "end_at": "2026-09-23T03:20:12.855Z",
+      "identity": {
+        "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+        "task_id": "the identical canonical purpose-model-effort name.",
+        "worker_name": "<canonical purpose-model-effort name>"
+      },
+      "model": "gpt-5.6-sol",
+      "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+      "reasoning_effort": "high",
+      "source_evidence_lines": [
+        11,
+        22,
+        34,
+        35,
+        37
+      ],
+      "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-03-01a0cc47-0b21-70e2-8781-e80f1899ced3.jsonl",
+      "source_sha256": "b5ba5be72c41abc06fdbdb395115ddff12c03c4672d4c652a8758a910d3ff561",
+      "start_at": "2026-09-23T03:20:03.408Z",
+      "thread_id": "01a0cc47-0b21-70e2-8781-e80f1899ced3"
+    },
+    {
+      "agent_path": "/root/update_schema_unavailable_unavailable",
+      "duration_ms": 19177,
+      "end_at": "2026-09-23T03:20:42.731Z",
+      "identity": {
+        "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+        "task_id": "the identical canonical purpose-model-effort name.",
+        "worker_name": "<canonical purpose-model-effort name>"
+      },
+      "model": "gpt-5.6-sol",
+      "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+      "reasoning_effort": "high",
+      "source_evidence_lines": [
+        11,
+        27,
+        48,
+        49,
+        51
+      ],
+      "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-22-01a0cc47-56f8-7f20-a598-83151165e798.jsonl",
+      "source_sha256": "f324ecabd031446eddb0db38387a32a46f2e63a15aca9c89fcc9845da89399fa",
+      "start_at": "2026-09-23T03:20:22.883Z",
+      "thread_id": "01a0cc47-56f8-7f20-a598-83151165e798"
+    },
+    {
+      "agent_path": "/root/update_api_unavailable_unavailable",
+      "duration_ms": 23361,
+      "end_at": "2026-09-23T03:21:16.580Z",
+      "identity": {
+        "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+        "task_id": "the identical canonical purpose-model-effort name.",
+        "worker_name": "<canonical purpose-model-effort name>"
+      },
+      "model": "gpt-5.6-sol",
+      "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+      "reasoning_effort": "high",
+      "source_evidence_lines": [
+        11,
+        31,
+        52,
+        53,
+        55
+      ],
+      "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-20-52-01a0cc47-cbef-7393-9a71-3e98922adb69.jsonl",
+      "source_sha256": "8278371144a687db4506db6ddd950fab020649e893a0f80eb7a0923ca903a5c7",
+      "start_at": "2026-09-23T03:20:52.738Z",
+      "thread_id": "01a0cc47-cbef-7393-9a71-3e98922adb69"
+    },
+    {
+      "agent_path": "/root/update_contract_test_unavailable_unavailable",
+      "duration_ms": 35838,
+      "end_at": "2026-09-23T03:22:04.498Z",
+      "identity": {
+        "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+        "task_id": "the identical canonical purpose-model-effort name.",
+        "worker_name": "<canonical purpose-model-effort name>"
+      },
+      "model": "gpt-5.6-sol",
+      "parent_thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66",
+      "reasoning_effort": "high",
+      "source_evidence_lines": [
+        11,
+        35,
+        61,
+        62,
+        64
+      ],
+      "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-21-28-01a0cc48-567a-77a0-96ac-0514c1577af7.jsonl",
+      "source_sha256": "08625aa0ed1dc27c7253cd45c1a7b4992ab612f95747461e31b7581bb5b73683",
+      "start_at": "2026-09-23T03:21:28.229Z",
+      "thread_id": "01a0cc48-567a-77a0-96ac-0514c1577af7"
+    }
+  ],
+  "parent": {
+    "agent_path": null,
+    "duration_ms": 178162,
+    "end_at": "2026-09-23T03:22:12.712Z",
+    "identity": {
+      "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+      "task_id": "the identical canonical purpose-model-effort name.",
+      "worker_name": "<canonical purpose-model-effort name>"
+    },
+    "model": "gpt-5.6-sol",
+    "parent_thread_id": null,
+    "reasoning_effort": "high",
+    "source_evidence_lines": [
+      4,
+      11,
+      16,
+      44,
+      55,
+      59,
+      68,
+      72,
+      80,
+      84,
+      92,
+      97
+    ],
+    "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-19-14-01a0cc46-4b8e-7813-8cbf-91450da29f66.jsonl",
+    "source_sha256": "96af8f148e6d9b7a46a75b83376c3f3ccf218ae0bbed8f5d1add9decb8372997",
+    "start_at": "2026-09-23T03:19:14.378Z",
+    "thread_id": "01a0cc46-4b8e-7813-8cbf-91450da29f66"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "children": [
+    {
+      "agent_path": "/root/architecture_author_unexposed_unexposed",
+      "duration_ms": 24326,
+      "end_at": "2026-09-23T03:35:31.865Z",
+      "identity": {
+        "native_task_name": null,
+        "task_id": "architecture-author-unexposed-unexposed",
+        "worker_name": "architecture-author-unexposed-unexposed"
+      },
+      "model": "gpt-5.6-sol",
+      "parent_thread_id": "01a0cc54-17ae-7bf1-a435-31437ae691af",
+      "reasoning_effort": "high",
+      "source_evidence_lines": [
+        4,
+        29,
+        30,
+        32
+      ],
+      "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-35-07-01a0cc54-d64a-7c92-97bd-aa50d719e578.jsonl",
+      "source_sha256": "440b7d29aa7ace8b5a2281b81d748dad8dcfbd25b8a13a1b9c240ded98954bf2",
+      "start_at": "2026-09-23T03:35:07.403Z",
+      "thread_id": "01a0cc54-d64a-7c92-97bd-aa50d719e578"
+    },
+    {
+      "agent_path": "/root/architecture_reviewer_unexposed_unexposed",
+      "duration_ms": 21105,
+      "end_at": "2026-09-23T03:36:13.007Z",
+      "identity": {
+        "native_task_name": null,
+        "task_id": "architecture-reviewer-unexposed-unexposed",
+        "worker_name": "architecture-reviewer-unexposed-unexposed"
+      },
+      "model": "gpt-5.6-sol",
+      "parent_thread_id": "01a0cc54-17ae-7bf1-a435-31437ae691af",
+      "reasoning_effort": "high",
+      "source_evidence_lines": [
+        4,
+        18,
+        19,
+        21
+      ],
+      "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-35-51-01a0cc55-83ba-77c1-9328-9ce987094fc7.jsonl",
+      "source_sha256": "a960876477359b5071269613c34d5cf5d40b9919c22abc27c7efe024cf1816fd",
+      "start_at": "2026-09-23T03:35:51.768Z",
+      "thread_id": "01a0cc55-83ba-77c1-9328-9ce987094fc7"
+    }
+  ],
+  "parent": {
+    "agent_path": null,
+    "duration_ms": 139050,
+    "end_at": "2026-09-23T03:36:38.272Z",
+    "identity": {
+      "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+      "task_id": "the identical canonical purpose-model-effort name.",
+      "worker_name": "<canonical purpose-model-effort name>"
+    },
+    "model": "gpt-5.6-sol",
+    "parent_thread_id": null,
+    "reasoning_effort": "high",
+    "source_evidence_lines": [
+      4,
+      11,
+      16,
+      34,
+      49,
+      55,
+      63,
+      70,
+      80
+    ],
+    "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-34-18-01a0cc54-17ae-7bf1-a435-31437ae691af.jsonl",
+    "source_sha256": "a9a0338d1db961f35f2832c05fae1471910a1306e31c838b978ccf67db5b841f",
+    "start_at": "2026-09-23T03:34:18.945Z",
+    "thread_id": "01a0cc54-17ae-7bf1-a435-31437ae691af"
+  }
+}

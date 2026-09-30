@@ -1,0 +1,1 @@
+{"schema_version":1,"decision":"separate-ownership-and-topology","ownership_first":true,"parallel_requires":["independent-tasks","no-dependencies","disjoint-write-scopes"],"verification":"independent-review"}

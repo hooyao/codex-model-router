@@ -1,0 +1,82 @@
+{
+  "children": [
+    {
+      "agent_path": "/root/investigate_authoritative_ttl_gpt_5_medium",
+      "duration_ms": 7090,
+      "end_at": "2026-09-23T03:17:25.366Z",
+      "identity": {
+        "native_task_name": null,
+        "task_id": "investigate-authoritative-ttl-gpt-5-medium",
+        "worker_name": "investigate-authoritative-ttl-gpt-5-medium"
+      },
+      "model": "gpt-5.6-sol",
+      "parent_thread_id": "01a0cc43-7862-7272-a436-c02bce690354",
+      "reasoning_effort": "high",
+      "source_evidence_lines": [
+        4,
+        24,
+        25,
+        27,
+        38,
+        39,
+        41
+      ],
+      "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-16-48-01a0cc44-101a-7d00-9540-72a56a8b61de.jsonl",
+      "source_sha256": "fce644975261c696bf761b13d495beeb0ca01637298faa7a59f615dc9db33d2f",
+      "start_at": "2026-09-23T03:16:48.055Z",
+      "thread_id": "01a0cc44-101a-7d00-9540-72a56a8b61de"
+    },
+    {
+      "agent_path": "/root/implement_cache_ttl_gpt_5_medium",
+      "duration_ms": 52783,
+      "end_at": "2026-09-23T03:18:29.038Z",
+      "identity": {
+        "native_task_name": null,
+        "task_id": "implement-cache-ttl-gpt-5-medium",
+        "worker_name": "implement-cache-ttl-gpt-5-medium"
+      },
+      "model": "gpt-5.6-sol",
+      "parent_thread_id": "01a0cc43-7862-7272-a436-c02bce690354",
+      "reasoning_effort": "high",
+      "source_evidence_lines": [
+        4,
+        43,
+        44,
+        46
+      ],
+      "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-17-36-01a0cc44-cbfb-7372-be9b-912f437d0080.jsonl",
+      "source_sha256": "e806815d18b5d9779d90cb5a1dc862a6f72b23bfa79957269ed0cb8a91613ae5",
+      "start_at": "2026-09-23T03:17:36.166Z",
+      "thread_id": "01a0cc44-cbfb-7372-be9b-912f437d0080"
+    }
+  ],
+  "parent": {
+    "agent_path": null,
+    "duration_ms": 146804,
+    "end_at": "2026-09-23T03:18:36.657Z",
+    "identity": {
+      "native_task_name": "the actual transport value: canonical for a hyphen-capable `name`, underscore-adapted for underscore-only `task_name`, or `unavailable`.",
+      "task_id": "the identical canonical purpose-model-effort name.",
+      "worker_name": "<canonical purpose-model-effort name>"
+    },
+    "model": "gpt-5.6-sol",
+    "parent_thread_id": null,
+    "reasoning_effort": "high",
+    "source_evidence_lines": [
+      4,
+      11,
+      16,
+      30,
+      41,
+      45,
+      56,
+      60,
+      69,
+      74
+    ],
+    "source_path": "C:\\Users\\yahu2\\.codex\\sessions\\2026\\09\\23\\rollout-2026-09-23T11-16-09-01a0cc43-7862-7272-a436-c02bce690354.jsonl",
+    "source_sha256": "87856b858b7a436394c55e4f91c8f5db307bce6aabbc16074df08ebd5fb2130a",
+    "start_at": "2026-09-23T03:16:09.559Z",
+    "thread_id": "01a0cc43-7862-7272-a436-c02bce690354"
+  }
+}

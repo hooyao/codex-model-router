@@ -7,32 +7,42 @@ contract.
 
 The plugin separates execution ownership from model routing. Before the first
 business action, the primary agent chooses DIRECT for genuinely local, bounded
-work or DELEGATE for nontrivial work. Only delegated work is matched to an
-available worker model and effort. A direct task that reveals complexity must
-be rerouted before the next business action.
+work or DELEGATE for nontrivial work. Within a delegated request, it can also
+execute an explicitly bounded easy stage after that stage passes its own DIRECT
+gate; it sends the hard kernel to a capable worker. A direct stage that reveals
+complexity is rerouted with a recorded trigger before further business work.
+Delegated work uses an isolated serial topology unless multiple bounded tasks
+are explicitly independent, dependency-free, and write-disjoint.
 
 ## What It Does
 
 - Repeats an explicit pre-business-action DIRECT/DELEGATE gate on
   `SessionStart` and `UserPromptSubmit`.
+- Records a versioned decision that separates ownership, delegate topology,
+  and verification requirements; unknown signals cannot take the direct path.
 - Injects a bounded worker contract on `SubagentStart`.
 - Loads, validates, and injects editable repo-local routing examples on every
   supported lifecycle event.
 - Gives every dispatch a deterministic user-visible
   `<purpose>-<model>-<effort>` name, with a packet/result fallback when native
   dispatch cannot name the worker card.
-- Routes clear and repeatable work toward Luna, everyday and read-heavy work
-  toward Terra, complex open-ended work toward Sol, and high-risk or
-  sustained-judgment work toward Astra.
+- Routes clear and repeatable work toward GPT-6 Luna, everyday coding and
+  read-heavy work toward GPT-6 Sol, and demanding hard-kernel work toward
+  GPT-6 Astra. Existing Terra workspace preferences load as Sol.
+- Records each stage's owner, dependencies, write scope, context budget,
+  acceptance criteria, and self-check. A lightweight primary may own a
+  qualifying easy stage; a cheap worker is preferable when local tool context
+  would burden the primary.
 - Starts with the lowest suitable reasoning effort and escalates only for
   ambiguity, risk, complexity, or failed verification.
-- Limits controller validation to worker-packet completeness and consistency;
-  workers own substantive review, testing, and integration.
+- Keeps the controller accountable for dependency order, conflict resolution,
+  verification status, and final synthesis. Workers validate their substantive
+  results; the controller self-checks any stage it owns.
 - Requires an independent high-capability reviewer for router meta-tasks and
   an implementation worker for requested changes.
-- Permits direct execution only for one local scope and one bounded known
-  outcome without network, monitoring, recovery, substantive investigation, or
-  independent-validation signals.
+- Permits direct execution of a whole request or a declared stage only for one
+  local scope and one bounded known outcome without network, monitoring,
+  recovery, substantive investigation, or independent-validation signals.
 - Requires delegation for multi-repository/system/source work, named multi-step
   runbooks, network synchronization, monitoring, failure/recovery, substantive
   investigation, and independent review or validation.
@@ -47,8 +57,8 @@ dispatch through `PreToolUse`, connect to an MCP server, call a network service,
 or store credentials.
 
 The execution-ownership contract is policy enforcement at the agent-instruction
-layer. Context injection cannot intercept tool calls and is not an OS/tool
-permission barrier. Offline tests check emitted instructions and schema behavior,
+layer. Context injection cannot erase history, intercept tool calls, create a
+sandbox, or act as an OS/tool permission barrier. Offline tests check emitted instructions and schema behavior,
 not live compliance.
 When a native dispatch API has no supported name field, the canonical worker
 name remains the worker packet Task ID and appears in the result, but the
@@ -92,12 +102,12 @@ Init validates the actual runtime and lifecycle hook command path and creates
 `.codex-model-router/routing.json` only when absent. It never overwrites edits.
 Hooks also initialize a missing file, discover existing config upward from a
 nested `cwd`, and fail clearly rather than falling back on invalid config. See
-the plugin README for the versioned schema, v1 compatibility, execution modes,
+the plugin README for the versioned schema, execution modes,
 discovery precedence, size budgets, and failure behavior. The default model
 routing policy follows official
 [Codex model guidance](https://learn.chatgpt.com/docs/models) and the
 [OpenAI model catalog](https://developers.openai.com/api/docs/models), consulted
-on 2026-09-21.
+on 2026-09-24.
 
 ## Validation
 
@@ -113,10 +123,11 @@ without requiring a network connection or a live Codex session. Neither this
 smoke test nor the unit suite demonstrates live agent routing behavior. The
 documented clean CLI experiment is
 [`plugins/codex-model-router/docs/live-cli-validation.md`](plugins/codex-model-router/docs/live-cli-validation.md).
-Its activation gate currently records `codex exec` plugin-hook support as a
-prerequisite: CLI `0.155.0-alpha.9.2` did not execute installed lifecycle hooks,
-while explicit non-ephemeral Skill dispatch did work. Automatic routing remains
-unverified on that CLI rather than being inferred from synthetic output.
+Its activation gate records `codex exec` plugin-hook execution as a
+prerequisite. The Windows launcher and config ACL issues that prevented earlier
+activation have been corrected. A fresh CLI `0.155.0-alpha.16` diagnostic
+created the config and emitted a validated `DIRECT` route before the business
+action. Each installed version still needs its own live gate.
 After source
 changes, bump the plugin's SemVer release version and reinstall from the confirmed local
 marketplace, then use a new task so Codex reloads the plugin. Reinstalling never
@@ -156,23 +167,26 @@ no Git history; run it from a checkout, or pass `--baseline <git-ref>` in CI.
 
 ## Evaluation
 
-Offline evaluation lives under [`evals`](evals/README.md). The strict v2 contract
-checks complete paired campaigns, hashes, provenance, accounting ledgers, and
-failure precedence. Exactly one fixture-backed task (`small-edit`) has an
-exact-tree grader; eight other scenarios remain draft. Validate the matrix with:
+Offline evaluation lives under [`evals`](evals/README.md). The strict scenario
+contract freezes five exact-tree tasks and compares forced direct, mandatory
+serial delegation, and selective execution. Validate and generate the matrix:
 
 ```powershell
-python evals/scripts/evaluate.py validate-cases --cases evals/cases.json
+python evals/scripts/evaluate.py validate-manifest --manifest evals/benchmark.json
+python evals/scripts/runner.py --manifest evals/benchmark.json --output evals/generated
 ```
 
-The existing strict v2 synthetic campaign predates execution-ownership routing
-and still models the earlier pure-orchestrator policy; it is retained as an
-integrity fixture, not evidence for current DIRECT/DELEGATE behavior.
-Ten reproducible synthetic campaigns test integrity and decision behavior without
-live models. Reports include pass rates, exploratory paired quality differences,
-ratios of mean cost/latency, and safety/policy counts. They do not establish router
-savings or authorize a release pass. The `ccusage` importer always produces
-unverified observations. See the evaluation README for commands and limitations.
+The scenarios target noisy investigation and receipt reuse, direct-to-delegate
+escalation, dependent serial work, safe parallelism with disjoint artifacts,
+independent architecture review, and one small direct calibration. Reports keep
+quality, route adherence, end-to-end wall time, context and receipt volume,
+tools/logs, retries, conflicts, failures, and measured versus estimated cost
+separate. Per-stage and critical-path timings are diagnostic attribution, not
+the comparative speed metric. A future paired run must use the same task and
+start state with common start/end boundaries; quality parity and total USD are
+primary, and repeated interleaved runs are required for a speed claim. Bundled
+observations are deterministic synthetic fixtures and do not establish live
+performance or savings.
 
 ## OpenSpec
 
@@ -184,5 +198,8 @@ The deterministic worker-name requirement is documented under
 The earlier evaluation and pure-orchestrator reconciliation is documented in
 [`openspec/changes/add-evaluation-integrity-fixture`](openspec/changes/add-evaluation-integrity-fixture).
 Those records describe completed historical changes and do not override the
-current execution-ownership policy. This implementation does not add or modify
-OpenSpec records.
+current execution-ownership policy.
+The current scenario benchmark replacement is specified under
+[`openspec/changes/replace-evalplus-with-router-scenarios`](openspec/changes/replace-evalplus-with-router-scenarios).
+Earlier EvalPlus records are historical only and no longer describe the active
+evaluation harness.

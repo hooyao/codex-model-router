@@ -1,0 +1,4 @@
+FAIL	go.flipt.io/flipt/internal/oci/ecr [setup failed]
+FAIL	go.flipt.io/flipt/internal/config [build failed]
+FAIL	go.flipt.io/flipt/internal/oci [build failed]
+FAIL

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "parallel-disjoint",
+  "grader_version": "exact-tree-v2",
+  "prompt": "Independently replace TODO with verified-alpha in reports/alpha.md, verified-beta in reports/beta.md, and verified-gamma in reports/gamma.md. Preserve headings and all other bytes. Assign one disjoint artifact to each unit and overlap them only when the treatment permits parallel execution.",
+  "initial": {
+    "path": "initial",
+    "tree": {
+      "files": {
+        "reports/alpha.md": "8cd5bf36ecdadb5f71120dde1abc04102b0375648729b8f99ab45e93cc769b87",
+        "reports/beta.md": "43b648c05a56c672c9bf83950b998e96ef7deaff29c14547997e9a41b8afac7d",
+        "reports/gamma.md": "cd429fc84c0fbe366f313934c8639bfce0524e98d9930092bf148f361f12a109"
+      },
+      "directories": ["reports"]
+    }
+  },
+  "reference": {
+    "path": "reference",
+    "tree": {
+      "files": {
+        "reports/alpha.md": "11b8f74edc32ed2f582ae31c993847339ba5f14269f37686d09483fa0805d2b2",
+        "reports/beta.md": "ef43ecf72af1579b7a10cc8ece75cbe40f63fe3f4760333f99e51867c5046fec",
+        "reports/gamma.md": "22370f86b889187238cdfbc4fc52cb709ea17ce45715642d476f522fd71b4d88"
+      },
+      "directories": ["reports"]
+    }
+  }
+}

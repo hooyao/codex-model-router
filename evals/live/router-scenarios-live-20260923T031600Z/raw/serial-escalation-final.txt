@@ -1,0 +1,13 @@
+Completed the serial escalation successfully.
+
+- Routes: `DIRECT` (`bounded-direct-fast-path`) → `DELEGATE` (`ISOLATED_SERIAL`, `scope-expanded`).
+- Order/timing: plan 0.04s → schema 10.15s → API 12.73s → contract-test 20.99s.
+- Receipt chain:
+  - Plan `e2450d…1499` → schema
+  - Schema `24c417…7fcc` → API
+  - API `20a4e6…cbd6` → contract-test
+  - Final `c4c4e1…252ab` → controller
+- Validation: worker confirmed all three JSON files parse; requested fields are integer `2`; other values/files were preserved; artifact hashes and dependency order matched.
+- Retries/failures: `0/0`.
+- Workers: native task paths were exposed; parent and child IDs were unavailable. Model/effort and measured USD cost were also unavailable.
+- Controller performed no business-artifact inspection or editing after delegation.

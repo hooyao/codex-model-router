@@ -1,0 +1,179 @@
+{
+  "bindings": {
+    "benign_pe_sha256": "97ac98b1a92c286054cce55239cfccdfc23a5517bd07fe693072c9ca96c7dabb",
+    "invocation": {
+      "environment": {
+        "CODEX_HOME": "/var/lib/cmr-codex-probe/.codex",
+        "HOME": "/var/lib/cmr-codex-probe",
+        "LOGNAME": "cmrprobe",
+        "PATH": "/opt/cmr-codex-linux-v0.144.1/runtime/bin:/usr/bin:/bin",
+        "SHELL": "/bin/sh",
+        "TMPDIR": "/var/lib/cmr-codex-probe/tmp",
+        "USER": "cmrprobe"
+      },
+      "identity": "cmrprobe",
+      "sandbox_prefix": [
+        "/opt/cmr-codex-linux-v0.144.1/runtime/bin/codex",
+        "sandbox",
+        "-P",
+        "cmr-offline",
+        "-C",
+        "/var/lib/cmr-codex-probe/workspace",
+        "--"
+      ]
+    },
+    "profile_sha256": "5f564f5d624a0b22239b4deb5808b89fe6c1001f791d34cdda35a7faf0e74b10",
+    "runtime_tree_sha256": "ef043e4b30d11731719b60c89b2fb771f2d826763b7a0f01bfc7639efbf2e57e",
+    "script_sha256": "951734acb3b76ff20f57619ed56344e848de143d30b510100c393fa4b2a1c2fb"
+  },
+  "identity": {
+    "gid": 989,
+    "groups": [
+      {
+        "gid": 989,
+        "name": "cmrprobe"
+      }
+    ],
+    "home": "/var/lib/cmr-codex-probe",
+    "name": "cmrprobe",
+    "shell": "/usr/sbin/nologin",
+    "uid": 999
+  },
+  "install": {
+    "files": {
+      "bin/codex": "a96f944d1a596dbfb7fdd84f482be5c50e34b04bb371126840d873e4ebf26902",
+      "bin/codex-code-mode-host": "107cc233a8d90a545ee9647c527c1161068512880f1ee4eda2415eb7d33a700b",
+      "codex-package.json": "aca661373fdc74d51a5a60bb3d6a258943dd326b7ab76bb01fdc18275137548d",
+      "codex-path/rg": "ebeaf56f8a25e102e9419933423738b3a2a613a444fd749d695e15eba53f71f2",
+      "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c",
+      "codex-resources/zsh/bin/zsh": "67faaaa89242c4a332e16e508a1977cffc24bf7fca31d4411cdfd101f3831ef3"
+    },
+    "package_sha256": "3fd50cf96809b1eea294bbfba0a5c3a576871b4876a1f0e91226e520c1923be1",
+    "runtime_tree_sha256": "ef043e4b30d11731719b60c89b2fb771f2d826763b7a0f01bfc7639efbf2e57e"
+  },
+  "negative_controls": {
+    "permission_widening_rejected": true,
+    "socket_second_route_allowed_rejected": true,
+    "unconfined_projection_rejected": true
+  },
+  "outside_positive_controls": {
+    "copied_pe": "not-executable",
+    "dummy_reads": "readable",
+    "network": "reachable",
+    "outside_write": "writable",
+    "wsl_interop": "executable"
+  },
+  "probes": {
+    "copied_pe": {
+      "inside": "pe-denied",
+      "outside": "not-executable",
+      "reason": "The copied PE is non-executable outside the sandbox.",
+      "verdict": "UNKNOWN"
+    },
+    "host_socket_inventory": [
+      "/mnt/wslg/.X11-unix/X0",
+      "/mnt/wslg/PulseAudioRDPSink",
+      "/mnt/wslg/PulseAudioRDPSource",
+      "/mnt/wslg/PulseServer",
+      "/mnt/wslg/distro/var/lib/cmr-codex-probe-protected/host-service-canary.sock",
+      "/mnt/wslg/distro/var/lib/cmr-codex-probe/workspace/host-service-canary.sock",
+      "/mnt/wslg/run/user/0/bus",
+      "/mnt/wslg/run/user/0/gnupg/S.dirmngr",
+      "/mnt/wslg/run/user/0/gnupg/S.gpg-agent",
+      "/mnt/wslg/run/user/0/gnupg/S.gpg-agent.browser",
+      "/mnt/wslg/run/user/0/gnupg/S.gpg-agent.extra",
+      "/mnt/wslg/run/user/0/gnupg/S.gpg-agent.ssh",
+      "/mnt/wslg/run/user/0/gnupg/S.keyboxd",
+      "/mnt/wslg/run/user/0/pk-debconf-socket",
+      "/mnt/wslg/run/user/0/snapd-session-agent.socket",
+      "/mnt/wslg/run/user/0/systemd/inaccessible/sock",
+      "/mnt/wslg/run/user/0/systemd/notify",
+      "/mnt/wslg/run/user/0/systemd/private",
+      "/mnt/wslg/runtime-dir/pulse/native",
+      "/mnt/wslg/runtime-dir/wayland-0",
+      "/run/WSL/2_interop",
+      "/run/WSL/301_interop",
+      "/run/apport.socket",
+      "/run/dbus/system_bus_socket",
+      "/run/snapd-snap.socket",
+      "/run/snapd.socket",
+      "/run/systemd/inaccessible/sock",
+      "/run/systemd/io.systemd.ManagedOOM",
+      "/run/systemd/io.systemd.sysext",
+      "/run/systemd/journal/dev-log",
+      "/run/systemd/journal/io.systemd.journal",
+      "/run/systemd/journal/socket",
+      "/run/systemd/journal/stdout",
+      "/run/systemd/journal/syslog",
+      "/run/systemd/notify",
+      "/run/systemd/private",
+      "/run/systemd/resolve/io.systemd.Resolve",
+      "/run/systemd/resolve/io.systemd.Resolve.Monitor",
+      "/run/systemd/userdb/io.systemd.DynamicUser",
+      "/run/udev/control",
+      "/run/user/0/bus",
+      "/run/user/0/gnupg/S.dirmngr",
+      "/run/user/0/gnupg/S.gpg-agent",
+      "/run/user/0/gnupg/S.gpg-agent.browser",
+      "/run/user/0/gnupg/S.gpg-agent.extra",
+      "/run/user/0/gnupg/S.gpg-agent.ssh",
+      "/run/user/0/gnupg/S.keyboxd",
+      "/run/user/0/pk-debconf-socket",
+      "/run/user/0/snapd-session-agent.socket",
+      "/run/user/0/systemd/inaccessible/sock",
+      "/run/user/0/systemd/notify",
+      "/run/user/0/systemd/private",
+      "/run/uuidd/request",
+      "/var/lib/cmr-codex-probe-protected/host-service-canary.sock",
+      "/var/lib/cmr-codex-probe/workspace/host-service-canary.sock"
+    ],
+    "isolation": {
+      "inside": [
+        "mnt:[4026532227]",
+        "net:[4026532262]",
+        "pid:[4026532228]",
+        "NoNewPrivs:\t1",
+        "Seccomp:\t2"
+      ],
+      "outside": [
+        "mnt:[4026532215]",
+        "net:[4026531840]",
+        "pid:[4026532217]"
+      ]
+    },
+    "nested": "nested-bounded",
+    "network": "network-denied",
+    "protected_reads": "reads-denied",
+    "sandbox_visible_host_sockets": [
+      "/var/lib/cmr-codex-probe/workspace/host-service-canary.sock"
+    ],
+    "unix_sockets": {
+      "protected": {
+        "attempted": true,
+        "inside_denied": true,
+        "outside_connectable": true,
+        "path": "/var/lib/cmr-codex-probe-protected/host-service-canary.sock"
+      },
+      "workspace": {
+        "attempted": true,
+        "inside_denied": true,
+        "outside_connectable": true,
+        "path": "/var/lib/cmr-codex-probe/workspace/host-service-canary.sock"
+      }
+    },
+    "workspace_marker": "probe-write-743423544ce742afb4ea0b7bd2f926e5.txt",
+    "writes": "writes-bounded",
+    "wsl_interop": "interop-denied"
+  },
+  "schema_version": 2,
+  "status": "PARTIAL",
+  "timestamp_utc": "2026-09-24T13:14:15.775651+00:00",
+  "version": "codex-cli 0.144.1",
+  "wsl_interop_configuration": [
+    "enabled",
+    "interpreter /init",
+    "flags: PF",
+    "offset 0",
+    "magic 4d5a"
+  ]
+}

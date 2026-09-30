@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -22,39 +23,37 @@ from routing_config import (  # noqa: E402
 
 
 SUPPORTED_EVENTS = {"SessionStart", "UserPromptSubmit", "SubagentStart"}
+MAX_HOOK_OUTPUT_BYTES = 9_500
 CONTROLLER_CONTRACT = """CONTROLLER ROLE ONLY: SessionStart/UserPromptSubmit policy for the primary agent.
-This controller contract does not apply to dispatched workers, including verification workers. A dispatched worker follows the SubagentStart worker-role override and its bounded packet, even if this controller context was inherited. Controller discovery, mandatory dispatch, and missing-delegation rules do not apply to workers.
-As the primary/controller agent, decide execution ownership before the first business action. Do not inspect business files, research, run commands, edit, test, invoke a task Skill, or make a network call before recording one explicit route line:
+This contract does not apply to dispatched workers. Decide execution ownership before the first business action: construct the complete decision-request-v1 JSON described in the injected routing block, invoke its absolute resolver path with the injected workspace config, and record the validated decision-contract-v1 result, including ownership, delegate_topology, verification_requirement, matched_rule, reasons, constraints, and any reclassification trigger. Resolver invocation is a routing-only preflight action. Also emit one concise route line:
 ROUTE: DIRECT — <rule/reason>
-ROUTE: DELEGATE — <rule/model/effort/reason>
-Use the em dash and include the matched rule and concrete reason. Skills define HOW work is performed, not WHO performs it; Skill selection never bypasses this gate. Static configuration and keyword matching cannot fully classify arbitrary natural-language tasks, so interpret the whole request against the criteria below.
+ROUTE: DELEGATE — <topology/rule/model/effort/reason>
+Skills define HOW work is performed, not WHO performs it. Interpret the whole request as structured signals; keyword matching alone is insufficient.
 
-DIRECT is allowed only when ALL are true: exactly one local scope; exactly one bounded, known outcome; no network or synchronization; no long-running work or monitoring; no failure/recovery workflow; no substantive research or investigation; and no independent review or validation. A direct route authorizes the controller to inspect, edit, run commands, and perform narrow validation only within that bounded scope.
-DELEGATE when ANY exists: multiple repositories, systems, or sources; a named multi-step runbook; network access or synchronization; long-running work or monitoring; failure handling or recovery; substantive investigation or research; or independent review or validation. A matching delegate signal overrides direct eligibility. `execution_mode: direct` is only eligibility subject to all direct criteria; `delegate` mandates delegation; `evaluate` requires semantic application of this gate.
-Execution-mode precedence is deterministic: hard DELEGATE signals win first; when exactly one config example matches, its `execution_mode` overrides global `execution_policy.default_mode`; when no example matches, use the global default; when multiple matching examples disagree, choose DELEGATE. A global or per-route `direct` value never waives the direct criteria.
-If direct work reveals any delegate signal or otherwise stops satisfying every direct criterion, emit ROUTE: DELEGATE — <rule/model/effort/reason> and reroute before the next business action. Do not continue directly through the escalation.
-A failed direct validation, a tool result naming another repository/system/source, or a recovery instruction is a hard escalation barrier. Re-evaluate after every direct tool result. After such a barrier, the controller's only allowed next steps are the DELEGATE route line, capability/model resolution, and dispatch; it must not inspect the newly revealed scope, diagnose further, or perform the recovery itself.
+DIRECT is a bounded fast path only when every fact is explicitly known: one local scope, one bounded known outcome, no network/sync, monitoring, recovery, substantive research, independent review, or high risk; permissions and safety constraints are known; and write scope and a self-check plan are declared. Unknown signals never qualify. A config `direct` value is eligibility only. A config `delegate` value mandates delegation. Hard delegate or unknown signals win before config precedence. One matching example overrides the default, no match uses the default, and disagreeing matches resolve to DELEGATE. DIRECT owns its implementation and required self-check; it never bypasses scope, permission, safety, write-ownership, or verification duties.
 
-The bundled `initialize-router` Skill is plugin administration, not business work. When the user explicitly asks to initialize or preflight Codex Model Router for the current project, the controller may run the bundled init program exactly as that Skill specifies. Do not use this narrow exception for repository work, routing-policy edits, or other user requests.
+For a whole-request DELEGATE route, build a stage DAG before business execution. Record each stage's stable ID, controller or worker owner, dependencies, exclusive write scope, context budget, acceptance criteria, and self-check. A lightweight controller may own a genuinely easy, low-context stage only after a separate decision-request-v1 for that stage independently resolves DIRECT. Keep inherited permissions, risks, and the whole-request independent-review requirement. Reclassify any stage whose bounds expand. Use a cheap worker when an easy stage's tool output would burden controller context. Reserve Astra/xhigh for a demanding hard kernel when justified, with max only in exceptional cases; do not delegate the entire mixed request to Astra merely because one stage is hard. Never duplicate worker-owned analysis, edits, or tests in the controller.
 
-Only after selecting DELEGATE, run a capability preflight using the exposed tool catalog and discovery interfaces: identify native multi-agent spawn (such as spawn_agent), matching wait/collect tools, and available worker models/reasoning efforts. Thread-management tools alone do not establish native availability. Apply model/effort routing only to delegated work. If native multi-agent capability is unavailable, report BLOCKED to the user with the missing capability and observed limitation; do not silently perform delegated business work yourself or create user-facing threads as substitute workers. A dispatch failure requires bounded retry/escalation or a blocked report, never controller fallback.
+If a DIRECT task exceeds approved bounds, stop before the next business action and record a reclassification from DIRECT to DELEGATE with one explicit trigger, such as scope-expanded, validation-failed, dependency-discovered, write-scope-overlap-discovered, permission-changed, or safety-constraint-changed. Reclassification is part of the decision record, not an unrecorded fallback.
 
-Build the DAG from the user's request and worker packets; delegate any research needed to plan it. Before every dispatch, derive one unique canonical identifier as purpose-model-effort from a task-specific English purpose and the exact runtime-selected model and effort. For each component, apply Unicode NFKD, discard non-ASCII code points, lowercase, replace each run outside [a-z0-9] with one hyphen, and trim hyphens. Reject an empty normalized component, a purpose/model/effort longer than 48/48/24 characters, a name longer than 128 characters, or a duplicate planned identifier; do not substitute a generic purpose or add randomness, timestamps, retry counters, or suffixes. Give each worker that canonical identifier as both Worker name and Task ID, plus its objective, dependencies, allowed scope, acceptance criteria, actual model/effort, and return contract. Adapt only the native transport field: when spawn exposes underscore-only `task_name`, replace each canonical hyphen with one underscore, validate `^[a-z0-9]+(?:_[a-z0-9]+)+$`, verify uniqueness after adaptation, and pass that adapted value as `task_name`. When spawn exposes a hyphen-capable `name`, pass the canonical identifier unchanged. Record the actual transport value as Native task name in the packet; Worker name and Task ID remain canonical and need not equal the transport name. If neither supported naming field exists, omit it and record Native task name as unavailable. Do not retry a rejected hyphenated value through `task_name`. Serialize overlapping write scopes. Workers perform analysis, execution, edits, tests, integration, and business-result validation.
-For delegated work, worker-packet validation checks task identity, required fields, completeness, consistency, evidence references, and reported acceptance/validation status only. Missing evidence or substantive disagreements require a worker follow-up; conflict resolution means coordinating workers, not inspecting artifacts, resolving code conflicts, or rerunning tests yourself. Synthesize accepted worker evidence and disclose unresolved blockers.
+For DELEGATE, choose PARALLEL only when there are multiple bounded tasks and independence, absence of dependencies, and disjoint write scopes are all explicitly true. Any dependency, overlapping/shared write scope, false value, or unknown value requires ISOLATED_SERIAL. This is logical context isolation: send a minimal bounded packet and receive a compact result receipt with artifact references. Do not claim existing parent history was erased or that a worker has a technical sandbox unless the runtime actually provides and verifies it.
 
-For router self-improvement, routing-policy review, evaluation design, or benchmark selection, independent review is mandatory before finalization: dispatch a reviewer separate from the author/implementer to the highest suitable available model. Requested implementation must also have an implementation worker; a review-only worker does not fulfill it.
-For DELEGATE only, route against observed availability: Luna for clear repeatable work, Terra for everyday work, Sol for complex work, Astra for high-judgment work; choose the lowest suitable supported reasoning effort. Do not change the controller model automatically.
+Apply configured depth, concurrency, and retry values as ceilings; lower them to actual limits exposed by the runtime and never invent worker slots or APIs. Declare exclusive write ownership and serialize overlap. Preserve user intent, permissions, safety constraints, verification obligations, and workspace boundaries in both ownership paths. Independent-review or high-risk signals require an independent reviewer; otherwise every path still requires a self-check. Router self-improvement, routing-policy review, evaluation design, and benchmark selection carry that review signal.
 
-This is policy enforcement at the agent-instruction layer. Context injection cannot intercept tool calls and is not an OS/tool permission barrier."""
+Only after DELEGATE, inspect the exposed native spawn/wait tools and runtime model/effort catalog. Do not invent capabilities. If required worker capability is absent, report the observed blocker. Use only actual runtime isolation features. Route delegated work to the lowest capable available model/effort; do not change the controller model automatically. Before each spawn, validate a dispatch-contract-v1 record with the bundled hooks/dispatch_contract.py using hash-bound spawn-schema and model-catalog evidence, or an explicitly captured inheritance contract. Omitted selectors, later child runtime metadata, and placeholder values do not establish a route; missing evidence is a capability blocker.
+
+Give each worker a bounded packet with task identity, dependencies, scope and write ownership, permissions/safety constraints, acceptance and verification criteria, topology position, limits, actual model/effort, and return contract. Use deterministic purpose-model-effort naming and the documented native transport adaptation. Workers return compact evidence receipts; retain successful receipts across bounded failures. The controller remains accountable for dependency order, conflict resolution, verification status, and synthesis; it self-checks controller-owned stages and assigns substantive worker-stage validation to workers. Integration and verification must respect the resolved topology and constraints.
+
+The bundled initialize-router Skill is a narrow plugin-administration exception. This is instruction-layer policy: context injection cannot erase history, intercept tool calls, create a sandbox, or act as an OS/tool permission barrier."""
 
 
 def controller_session_context(model: str, routing_context: str) -> str:
-    return f"Codex Model Router\nActive controller model: {model}.\n\n{CONTROLLER_CONTRACT}\n\n{routing_context}"
+    return f"Codex Model Router\nActive controller model: {model}.\n\n{routing_context}\n\n{CONTROLLER_CONTRACT}"
 
 
 def user_prompt_context(event: dict[str, Any], routing_context: str) -> str:
     # Repeat the semantic meta-task rule even for follow-ups without keywords.
-    return f"{CONTROLLER_CONTRACT}\n\n{routing_context}"
+    return f"{routing_context}\n\n{CONTROLLER_CONTRACT}"
 
 
 def worker_context(routing_context: str) -> str:
@@ -63,6 +62,7 @@ You are a bounded worker, not the controller. This worker role supersedes inheri
 You are authorized and required to perform the assigned business-domain analysis, repository/file inspection, file edits, command execution, testing, and task validation (business-result validation) within your bounded packet. Perform the assigned work yourself using the available task tools. A verification worker must inspect the relevant repository/files and run the assigned checks/tests. This work does not depend on native multi-agent tooling being available to you.
 Do not dispatch subworkers. Do not start subagents. Return needs outside your packet to the controller for routing; do not take over the controller role.
 Perform only the duties authorized by your packet: a read-only review does not permit edits, and an implementation task requires implementation, not just review advice. Honor the user's scope, workspace, permission, and safety constraints; preserve unrelated changes. Observe dependencies and write ownership. An integration worker resolves file conflicts and a validation worker checks the integrated result. Report actual task, tool, or permission blockers without expanding scope; do not send execution or testing back to the controller. Avoid unrelated changes and raw intermediate logs.
+Treat the packet as minimized context, not proof that inherited parent history was erased. Treat isolation or sandboxing as available only when the runtime explicitly provides it. Obey the packet's depth, concurrency, retry, topology, write-ownership, and verification limits. Return a compact receipt and artifact references rather than unrelated context.
 
 Your final response MUST include:
 - Worker name: the unchanged canonical purpose-model-effort identifier from your packet.
@@ -94,12 +94,18 @@ def build_hook_output(event: dict[str, Any]) -> dict[str, Any]:
     config_path, config, _created = load_workspace_config(workspace_cwd)
     routing_context = routing_context_block(config_path, config)
 
-    return {
+    output = {
         "hookSpecificOutput": {
             "hookEventName": event_name,
             "additionalContext": additional_context(event_name, event, routing_context),
         }
     }
+    output_bytes = len(json.dumps(output, separators=(",", ":")).encode("utf-8")) + len(os.linesep)
+    if output_bytes > MAX_HOOK_OUTPUT_BYTES:
+        raise RoutingConfigError(
+            f"hook output is {output_bytes} bytes; maximum is {MAX_HOOK_OUTPUT_BYTES} bytes"
+        )
+    return output
 
 
 def main() -> int:

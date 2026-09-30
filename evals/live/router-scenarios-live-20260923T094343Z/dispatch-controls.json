@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "outcomes": [
+    {
+      "control": "supported-selection",
+      "model": "gpt-6-luna",
+      "exit_code": 0,
+      "expected": "zero",
+      "passed": true,
+      "input_sha256": "c6be8266cf246338b8d5e82dc50213b6f7fc207ba73812a7f6ec63e1363210e0"
+    },
+    {
+      "control": "negative-capability",
+      "model": "not-a-runtime-model",
+      "exit_code": 1,
+      "expected": "nonzero",
+      "passed": true,
+      "input_sha256": "bd095748c26c7014900fc30a77a1de8b30d4e08d235058eb4ca66e0e236ff6d7"
+    }
+  ],
+  "all_passed": true
+}
