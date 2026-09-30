@@ -36,7 +36,19 @@ class TrainingResourceTests(unittest.TestCase):
                 os.ftruncate(descriptor, 4096)
             finally:
                 os.close(descriptor)
-            with mock.patch("evals.scripts.provision_training_resources.IMAGE_BYTES", 4096):
+            image.chmod(0o600)
+            original_lstat = Path.lstat
+
+            def root_owned_lstat(path: Path):
+                metadata = original_lstat(path)
+                if path != image:
+                    return metadata
+                return mock.Mock(st_uid=0, st_gid=0, **{
+                    field: getattr(metadata, field) for field in
+                    ("st_mode", "st_nlink", "st_size", "st_dev", "st_ino", "st_blocks")})
+
+            with mock.patch("evals.scripts.provision_training_resources.IMAGE_BYTES", 4096), \
+                    mock.patch.object(Path, "lstat", autospec=True, side_effect=root_owned_lstat):
                 identity = image_identity(image)
                 self.assertEqual(4096, identity["bytes"])
                 linked = Path(directory) / "linked.ext4"

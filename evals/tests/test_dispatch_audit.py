@@ -105,6 +105,8 @@ class DispatchAuditTests(unittest.TestCase):
         fixture = json.loads((Path(__file__).parent / "fixtures" /
                               "v2-dispatch-observed.json").read_text(encoding="utf-8"))
         source = ROOT / fixture["provenance"]["source_receipt"]
+        if not source.is_file():
+            self.skipTest("optional live dispatch receipt is unavailable")
         self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(),
                          fixture["provenance"]["source_sha256"])
 
