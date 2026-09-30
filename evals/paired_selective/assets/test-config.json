@@ -1,0 +1,5 @@
+{
+  "fail_to_pass": "['TestLoad', 'TestWithCredentials', 'TestWithManifestVersion', 'TestAuthenicationTypeIsValid', 'TestECRCredential', 'TestCredentialFunc']",
+  "pass_to_pass": "[]",
+  "selected_test_files_to_run": "[\"TestCredentialFunc\", \"TestWithCredentials\", \"TestStore_Fetch\", \"TestECRCredential\", \"TestScheme\", \"TestLogEncoding\", \"TestCacheBackend\", \"TestTracingExporter\", \"TestParseReference\", \"TestDefaultDatabaseRoot\", \"TestFile\", \"TestMarshalYAML\", \"Test_mustBindEnv\", \"TestAnalyticsClickhouseConfiguration\", \"TestStore_List\", \"TestServeHTTP\", \"TestJSONSchema\", \"TestLoad\", \"TestStore_Fetch_InvalidMediaType\", \"TestWithManifestVersion\", \"TestDatabaseProtocol\", \"TestStore_Build\", \"TestAuthenicationTypeIsValid\", \"TestStore_Copy\"]"
+}

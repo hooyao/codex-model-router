@@ -39,6 +39,28 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^(Agent|spawn_agent|collaborationspawn_agent)$",
+        "hooks": [{
+          "type": "command",
+          "command": "python3 \"$PLUGIN_ROOT/hooks/dispatch_audit.py\"",
+          "commandWindows": "cmd.exe /d /c python \"%PLUGIN_ROOT%\\hooks\\dispatch_audit.py\"",
+          "timeout": 5
+        }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(Agent|spawn_agent|collaborationspawn_agent)$",
+        "hooks": [{
+          "type": "command",
+          "command": "python3 \"$PLUGIN_ROOT/hooks/dispatch_audit.py\"",
+          "commandWindows": "cmd.exe /d /c python \"%PLUGIN_ROOT%\\hooks\\dispatch_audit.py\"",
+          "timeout": 5
+        }]
+      }
     ]
   }
 }

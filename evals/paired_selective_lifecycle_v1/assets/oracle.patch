@@ -1,0 +1,852 @@
+diff --git a/internal/config/config_test.go b/internal/config/config_test.go
+index 9ee5f49..fbb63ca 100644
+--- a/internal/config/config_test.go
++++ b/internal/config/config_test.go
+@@ -875,7 +875,7 @@ func TestLoad(t *testing.T) {
+ 			},
+ 		},
+ 		{
+-			name: "OCI AWS ECR authentication",
++			name: "OCI config provided AWS ECR",
+ 			path: "./testdata/storage/oci_provided_aws_ecr.yml",
+ 			expected: func() *Config {
+ 				cfg := Default()
+@@ -884,16 +884,18 @@ func TestLoad(t *testing.T) {
+ 					OCI: &OCI{
+ 						Repository:       "some.target/repository/abundle:latest",
+ 						BundlesDirectory: "/tmp/bundles",
+-						Authentication:   &OCIAuthentication{Type: oci.AuthenticationTypeAWSECR},
+-						PollInterval:     5 * time.Minute,
+-						ManifestVersion:  OCIManifestVersion11,
++						Authentication: &OCIAuthentication{
++							Type: oci.AuthenticationTypeAWSECR,
++						},
++						PollInterval:    5 * time.Minute,
++						ManifestVersion: "1.1",
+ 					},
+ 				}
+ 				return cfg
+ 			},
+ 		},
+ 		{
+-			name: "OCI without authentication",
++			name: "OCI config provided with no authentication",
+ 			path: "./testdata/storage/oci_provided_no_auth.yml",
+ 			expected: func() *Config {
+ 				cfg := Default()
+@@ -903,14 +905,14 @@ func TestLoad(t *testing.T) {
+ 						Repository:       "some.target/repository/abundle:latest",
+ 						BundlesDirectory: "/tmp/bundles",
+ 						PollInterval:     5 * time.Minute,
+-						ManifestVersion:  OCIManifestVersion11,
++						ManifestVersion:  "1.1",
+ 					},
+ 				}
+ 				return cfg
+ 			},
+ 		},
+ 		{
+-			name:    "OCI unsupported authentication",
++			name:    "OCI config provided with invalid authentication type",
+ 			path:    "./testdata/storage/oci_provided_invalid_auth.yml",
+ 			wantErr: errors.New("oci authentication type is not supported"),
+ 		},
+diff --git a/internal/oci/ecr/ecr_test.go b/internal/oci/ecr/ecr_test.go
+index cd8c5ce..cbedada 100644
+--- a/internal/oci/ecr/ecr_test.go
++++ b/internal/oci/ecr/ecr_test.go
+@@ -3,96 +3,90 @@ package ecr
+ import (
+ 	"context"
+ 	"encoding/base64"
+-	"errors"
+-	"os"
+-	"path/filepath"
+-	"strings"
++	"io"
+ 	"testing"
+ 
+ 	"github.com/aws/aws-sdk-go-v2/service/ecr"
+ 	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
+ 	"github.com/stretchr/testify/assert"
+-	"github.com/stretchr/testify/require"
++	"github.com/stretchr/testify/mock"
+ 	"oras.land/oras-go/v2/registry/remote/auth"
+ )
+ 
+-var _ Client = (*MockClient)(nil)
++func ptr[T any](a T) *T {
++	return &a
++}
+ 
+-func TestFetchCredential(t *testing.T) {
+-	clientErr := errors.New("ECR unavailable")
+-	response := func(token string) *ecr.GetAuthorizationTokenOutput {
+-		return &ecr.GetAuthorizationTokenOutput{
+-			AuthorizationData: []types.AuthorizationData{{AuthorizationToken: &token}},
+-		}
+-	}
++func TestECRCredential(t *testing.T) {
+ 	for _, tt := range []struct {
+-		name      string
+-		output    *ecr.GetAuthorizationTokenOutput
+-		clientErr error
+-		want      auth.Credential
+-		wantErr   error
++		name     string
++		token    *string
++		username string
++		password string
++		err      error
+ 	}{
+-		{name: "client error", clientErr: clientErr, wantErr: clientErr},
+-		{name: "nil output", wantErr: ErrNoAWSECRAuthorizationData},
+-		{name: "no authorization data", output: &ecr.GetAuthorizationTokenOutput{}, wantErr: ErrNoAWSECRAuthorizationData},
+-		{name: "nil token", output: &ecr.GetAuthorizationTokenOutput{AuthorizationData: []types.AuthorizationData{{}}}, wantErr: auth.ErrBasicCredentialNotFound},
+-		{name: "empty token", output: response(""), wantErr: auth.ErrBasicCredentialNotFound},
+-		{name: "invalid base64", output: response("!invalid"), wantErr: base64.CorruptInputError(0)},
+-		{name: "missing separator", output: response(base64.StdEncoding.EncodeToString([]byte("userpass"))), wantErr: auth.ErrBasicCredentialNotFound},
+-		{name: "valid token", output: response(base64.StdEncoding.EncodeToString([]byte("AWS:password"))), want: auth.Credential{Username: "AWS", Password: "password"}},
+-		{name: "password with colon", output: response(base64.StdEncoding.EncodeToString([]byte("user:pass:word"))), want: auth.Credential{Username: "user", Password: "pass:word"}},
++		{
++			name:  "nil token",
++			token: nil,
++			err:   auth.ErrBasicCredentialNotFound,
++		},
++		{
++			name:  "invalid base64 token",
++			token: ptr("invalid"),
++			err:   base64.CorruptInputError(4),
++		},
++		{
++			name:  "invalid format token",
++			token: ptr("dXNlcl9uYW1lcGFzc3dvcmQ="),
++			err:   auth.ErrBasicCredentialNotFound,
++		},
++		{
++			name:     "valid token",
++			token:    ptr("dXNlcl9uYW1lOnBhc3N3b3Jk"),
++			username: "user_name",
++			password: "password",
++		},
+ 	} {
+ 		t.Run(tt.name, func(t *testing.T) {
+-			ctx := context.Background()
+ 			client := NewMockClient(t)
+-			client.On("GetAuthorizationToken", ctx, &ecr.GetAuthorizationTokenInput{}).Return(tt.output, tt.clientErr).Once()
+-			provider := ECR{client: client}
+-			credential, err := provider.fetchCredential(ctx)
+-			assert.Equal(t, tt.want, credential)
+-			assert.Equal(t, tt.wantErr, err)
++			client.On("GetAuthorizationToken", mock.Anything, mock.Anything).Return(&ecr.GetAuthorizationTokenOutput{
++				AuthorizationData: []types.AuthorizationData{
++					{AuthorizationToken: tt.token},
++				},
++			}, nil)
++			r := &ECR{
++				client: client,
++			}
++			credential, err := r.fetchCredential(context.Background())
++			assert.Equal(t, tt.err, err)
++			assert.Equal(t, tt.username, credential.Username)
++			assert.Equal(t, tt.password, credential.Password)
+ 		})
+ 	}
++	t.Run("empty array", func(t *testing.T) {
++		client := NewMockClient(t)
++		client.On("GetAuthorizationToken", mock.Anything, mock.Anything).Return(&ecr.GetAuthorizationTokenOutput{
++			AuthorizationData: []types.AuthorizationData{},
++		}, nil)
++		r := &ECR{
++			client: client,
++		}
++		_, err := r.fetchCredential(context.Background())
++		assert.Equal(t, ErrNoAWSECRAuthorizationData, err)
++	})
++	t.Run("general error", func(t *testing.T) {
++		client := NewMockClient(t)
++		client.On("GetAuthorizationToken", mock.Anything, mock.Anything).Return(nil, io.ErrUnexpectedEOF)
++		r := &ECR{
++			client: client,
++		}
++		_, err := r.fetchCredential(context.Background())
++		assert.Equal(t, io.ErrUnexpectedEOF, err)
++	})
+ }
+ 
+-func TestFetchCredentialRefreshesToken(t *testing.T) {
+-	ctx := context.Background()
+-	client := NewMockClient(t)
+-	provider := ECR{client: client}
+-	for _, password := range []string{"first", "refreshed"} {
+-		token := base64.StdEncoding.EncodeToString([]byte("AWS:" + password))
+-		client.On("GetAuthorizationToken", ctx, &ecr.GetAuthorizationTokenInput{}).Return(&ecr.GetAuthorizationTokenOutput{
+-			AuthorizationData: []types.AuthorizationData{{AuthorizationToken: &token}},
+-		}, nil).Once()
+-		credential, err := provider.fetchCredential(ctx)
+-		require.NoError(t, err)
+-		assert.Equal(t, password, credential.Password)
+-	}
+-}
+-
+-func TestCredentialAWSConfigurationErrors(t *testing.T) {
+-	for _, name := range []string{"missing profile", "missing credentials"} {
+-		t.Run(name, func(t *testing.T) {
+-			for _, env := range os.Environ() {
+-				key, _, _ := strings.Cut(env, "=")
+-				if strings.HasPrefix(key, "AWS_") {
+-					t.Setenv(key, "")
+-				}
+-			}
+-			dir := t.TempDir()
+-			t.Setenv("AWS_CONFIG_FILE", filepath.Join(dir, "config"))
+-			t.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join(dir, "credentials"))
+-			t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
+-			t.Setenv("AWS_REGION", "us-east-1")
+-			if name == "missing profile" {
+-				t.Setenv("AWS_PROFILE", "nonexistent")
+-			}
+-			provider := &ECR{}
+-			credential, err := provider.Credential(context.Background(), "registry.example.com")
+-			require.Error(t, err)
+-			assert.Equal(t, auth.EmptyCredential, credential)
+-			if name == "missing profile" {
+-				assert.Nil(t, provider.client)
+-			}
+-		})
+-	}
++func TestCredentialFunc(t *testing.T) {
++	r := &ECR{}
++	_, err := r.Credential(context.Background(), "")
++	assert.Error(t, err)
+ }
+diff --git a/internal/oci/ecr/lifecycle_oracle_test.go b/internal/oci/ecr/lifecycle_oracle_test.go
+new file mode 100644
+index 0000000..132fd4b
+--- /dev/null
++++ b/internal/oci/ecr/lifecycle_oracle_test.go
+@@ -0,0 +1,433 @@
++package ecr_test
++
++import (
++	"context"
++	"encoding/base64"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"strings"
++	"sync"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	provider "go.flipt.io/flipt/internal/oci/ecr"
++	"oras.land/oras-go/v2/registry/remote/auth"
++)
++
++const lifecycleA = "111111111111.dkr.ecr.us-east-1.amazonaws.com"
++const lifecycleB = "222222222222.dkr.ecr.us-east-1.amazonaws.com"
++
++type lifecycleResult struct {
++	credential auth.Credential
++	err        error
++}
++
++func lifecycleEndpoint(t *testing.T, handler http.HandlerFunc) *atomic.Int32 {
++	t.Helper()
++	for _, entry := range os.Environ() {
++		key, _, _ := strings.Cut(entry, "=")
++		if strings.HasPrefix(key, "AWS_") {
++			t.Setenv(key, "")
++		}
++	}
++	var calls atomic.Int32
++	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		calls.Add(1)
++		if r.Header.Get("X-Amz-Target") != "AmazonEC2ContainerRegistry_V20150921.GetAuthorizationToken" {
++			t.Errorf("unexpected ECR operation: %q", r.Header.Get("X-Amz-Target"))
++		}
++		handler(w, r)
++	}))
++	t.Cleanup(server.Close)
++	dir := t.TempDir()
++	t.Setenv("AWS_CONFIG_FILE", filepath.Join(dir, "config"))
++	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join(dir, "credentials"))
++	t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
++	t.Setenv("AWS_ACCESS_KEY_ID", "lifecycle-test-key")
++	t.Setenv("AWS_SECRET_ACCESS_KEY", "lifecycle-test-secret")
++	t.Setenv("AWS_REGION", "us-east-1")
++	t.Setenv("AWS_MAX_ATTEMPTS", "1")
++	t.Setenv("AWS_ENDPOINT_URL_ECR", server.URL)
++	return &calls
++}
++
++func lifecycleRecord(host, password string, expiry *time.Time) map[string]any {
++	record := map[string]any{
++		"authorizationToken": base64.StdEncoding.EncodeToString([]byte("AWS:" + password)),
++		"proxyEndpoint":      "https://" + host + "/",
++	}
++	if expiry != nil {
++		record["expiresAt"] = float64(expiry.UnixNano()) / 1e9
++	}
++	return record
++}
++
++func lifecycleReply(w http.ResponseWriter, records ...map[string]any) {
++	w.Header().Set("Content-Type", "application/x-amz-json-1.1")
++	_ = json.NewEncoder(w).Encode(map[string]any{"authorizationData": records})
++}
++
++func lifecycleAsync(ctx context.Context, call auth.CredentialFunc, host string) <-chan lifecycleResult {
++	result := make(chan lifecycleResult, 1)
++	go func() {
++		credential, err := call(ctx, host)
++		result <- lifecycleResult{credential, err}
++	}()
++	return result
++}
++
++func lifecycleAwait(t *testing.T, result <-chan lifecycleResult) lifecycleResult {
++	t.Helper()
++	select {
++	case value := <-result:
++		return value
++	case <-time.After(3 * time.Second):
++		t.Fatal("credential lookup did not complete")
++		return lifecycleResult{}
++	}
++}
++
++func lifecycleWant(t *testing.T, value lifecycleResult, password string) {
++	t.Helper()
++	if value.err != nil || value.credential.Username != "AWS" || value.credential.Password != password {
++		t.Fatalf("got credential=%+v error=%v; want AWS:%s", value.credential, value.err, password)
++	}
++}
++
++func lifecycleCall(ctx context.Context, call auth.CredentialFunc, host string) lifecycleResult {
++	credential, err := call(ctx, host)
++	return lifecycleResult{credential, err}
++}
++
++func TestLifecycleReuseAndExpiry(t *testing.T) {
++	expiry := time.Now().Add(1500 * time.Millisecond)
++	var sequence atomic.Int32
++	calls := lifecycleEndpoint(t, func(w http.ResponseWriter, _ *http.Request) {
++		n := sequence.Add(1)
++		until := expiry
++		if n > 1 {
++			until = time.Now().Add(time.Hour)
++		}
++		lifecycleReply(w, lifecycleRecord(lifecycleA, fmt.Sprintf("token-%d", n), &until))
++	})
++	p := &provider.ECR{}
++	ctx := context.Background()
++	lifecycleWant(t, lifecycleCall(ctx, p.Credential, lifecycleA), "token-1")
++	lifecycleWant(t, lifecycleCall(ctx, p.CredentialFunc(lifecycleA), lifecycleA), "token-1")
++	lifecycleWant(t, lifecycleCall(ctx, p.CredentialFunc(lifecycleA), lifecycleA), "token-1")
++	if calls.Load() != 1 {
++		t.Fatalf("valid credential was fetched %d times", calls.Load())
++	}
++	time.Sleep(time.Until(expiry.Add(80 * time.Millisecond)))
++	lifecycleWant(t, lifecycleCall(ctx, p.Credential, lifecycleA), "token-2")
++	lifecycleWant(t, lifecycleCall(ctx, p.Credential, lifecycleA), "token-2")
++	if calls.Load() != 2 {
++		t.Fatalf("expiry should cause one refresh; got %d requests", calls.Load())
++	}
++}
++
++func TestLifecycleRegistrySelectionAndIsolation(t *testing.T) {
++	expiry := time.Now().Add(time.Hour)
++	calls := lifecycleEndpoint(t, func(w http.ResponseWriter, _ *http.Request) {
++		lifecycleReply(w, lifecycleRecord(lifecycleB, "B-only", &expiry), lifecycleRecord(lifecycleA, "A-only", &expiry))
++	})
++	p := &provider.ECR{}
++	ctx := context.Background()
++	lifecycleWant(t, lifecycleCall(ctx, p.Credential, lifecycleA), "A-only")
++	lifecycleWant(t, lifecycleCall(ctx, p.Credential, lifecycleB), "B-only")
++	lifecycleWant(t, lifecycleCall(ctx, p.Credential, lifecycleA), "A-only")
++	lifecycleWant(t, lifecycleCall(ctx, p.Credential, lifecycleB), "B-only")
++	// A provider may retain all correctly scoped records from one response.
++	if calls.Load() < 1 || calls.Load() > 2 {
++		t.Fatalf("valid registry credentials were fetched redundantly: %d", calls.Load())
++	}
++	before := calls.Load()
++	value := lifecycleCall(ctx, p.CredentialFunc(lifecycleA), lifecycleB)
++	if value.err != nil || value.credential != auth.EmptyCredential || calls.Load() != before {
++		t.Fatalf("bound function leaked credentials or performed a fetch: %+v", value)
++	}
++	value = lifecycleCall(ctx, p.Credential, "333333333333.dkr.ecr.us-east-1.amazonaws.com")
++	if value.err == nil || value.credential != auth.EmptyCredential {
++		t.Fatalf("unmatched registry received credentials: %+v", value)
++	}
++}
++
++func TestLifecycleConcurrentRefresh(t *testing.T) {
++	expiry := time.Now().Add(time.Hour)
++	entered, release := make(chan struct{}, 32), make(chan struct{})
++	var once sync.Once
++	finish := func() { once.Do(func() { close(release) }) }
++	calls := lifecycleEndpoint(t, func(w http.ResponseWriter, r *http.Request) {
++		entered <- struct{}{}
++		select {
++		case <-release:
++			lifecycleReply(w, lifecycleRecord(lifecycleA, "shared", &expiry))
++		case <-r.Context().Done():
++		}
++	})
++	defer finish()
++	p := &provider.ECR{}
++	results := make([]<-chan lifecycleResult, 16)
++	for i := range results {
++		call := p.CredentialFunc(lifecycleA)
++		if i%2 == 0 {
++			call = p.Credential
++		}
++		results[i] = lifecycleAsync(context.Background(), call, lifecycleA)
++	}
++	select {
++	case <-entered:
++	case <-time.After(3 * time.Second):
++		t.Fatal("refresh never reached AWS endpoint")
++	}
++	time.Sleep(100 * time.Millisecond)
++	if calls.Load() != 1 {
++		t.Errorf("overlapping requests started %d fetches", calls.Load())
++	}
++	finish()
++	for _, result := range results {
++		lifecycleWant(t, lifecycleAwait(t, result), "shared")
++	}
++	if calls.Load() != 1 {
++		t.Fatalf("one refresh wave made %d AWS requests", calls.Load())
++	}
++}
++
++func TestLifecycleIndependentRegistryProgress(t *testing.T) {
++	expiry := time.Now().Add(time.Hour)
++	entered, release := make(chan struct{}), make(chan struct{})
++	var once sync.Once
++	finish := func() { once.Do(func() { close(release) }) }
++	var sequence atomic.Int32
++	lifecycleEndpoint(t, func(w http.ResponseWriter, r *http.Request) {
++		if sequence.Add(1) == 1 {
++			close(entered)
++			select {
++			case <-release:
++			case <-r.Context().Done():
++				return
++			}
++		}
++		lifecycleReply(w, lifecycleRecord(lifecycleA, "A", &expiry), lifecycleRecord(lifecycleB, "B", &expiry))
++	})
++	defer finish()
++	p := &provider.ECR{}
++	a := lifecycleAsync(context.Background(), p.Credential, lifecycleA)
++	select {
++	case <-entered:
++	case <-time.After(3 * time.Second):
++		t.Fatal("registry A fetch never began")
++	}
++	b := lifecycleAsync(context.Background(), p.Credential, lifecycleB)
++	select {
++	case value := <-b:
++		lifecycleWant(t, value, "B")
++	case <-time.After(time.Second):
++		t.Error("registry B was blocked by registry A")
++	}
++	finish()
++	lifecycleWant(t, lifecycleAwait(t, a), "A")
++}
++
++func TestLifecycleSharedFailureAndRetry(t *testing.T) {
++	entered, release := make(chan struct{}), make(chan struct{})
++	var once sync.Once
++	finish := func() { once.Do(func() { close(release) }) }
++	var sequence atomic.Int32
++	calls := lifecycleEndpoint(t, func(w http.ResponseWriter, r *http.Request) {
++		if sequence.Add(1) == 1 {
++			close(entered)
++			select {
++			case <-release:
++			case <-r.Context().Done():
++				return
++			}
++			w.Header().Set("Content-Type", "application/x-amz-json-1.1")
++			w.WriteHeader(http.StatusBadRequest)
++			_, _ = w.Write([]byte(`{"__type":"InvalidParameterException","message":"shared failure"}`))
++			return
++		}
++		expiry := time.Now().Add(time.Hour)
++		lifecycleReply(w, lifecycleRecord(lifecycleA, "retry", &expiry))
++	})
++	defer finish()
++	p := &provider.ECR{}
++	results := make([]<-chan lifecycleResult, 8)
++	for i := range results {
++		results[i] = lifecycleAsync(context.Background(), p.Credential, lifecycleA)
++	}
++	select {
++	case <-entered:
++	case <-time.After(3 * time.Second):
++		t.Fatal("refresh never began")
++	}
++	time.Sleep(100 * time.Millisecond)
++	finish()
++	for _, result := range results {
++		value := lifecycleAwait(t, result)
++		if value.err == nil || value.credential != auth.EmptyCredential || !strings.Contains(value.err.Error(), "shared failure") {
++			t.Errorf("overlapping caller did not share refresh error: %+v", value)
++		}
++	}
++	if calls.Load() != 1 {
++		t.Errorf("failed refresh wave made %d requests", calls.Load())
++	}
++	lifecycleWant(t, lifecycleCall(context.Background(), p.Credential, lifecycleA), "retry")
++	lifecycleWant(t, lifecycleCall(context.Background(), p.Credential, lifecycleA), "retry")
++	if calls.Load() != 2 {
++		t.Errorf("subsequent retry was not cached; calls=%d", calls.Load())
++	}
++}
++
++func TestLifecycleCancellation(t *testing.T) {
++	for _, initiator := range []bool{false, true} {
++		t.Run(fmt.Sprintf("cancel-initiator-%t", initiator), func(t *testing.T) {
++			expiry := time.Now().Add(time.Hour)
++			entered, release := make(chan struct{}, 8), make(chan struct{})
++			var once sync.Once
++			finish := func() { once.Do(func() { close(release) }) }
++			calls := lifecycleEndpoint(t, func(w http.ResponseWriter, r *http.Request) {
++				entered <- struct{}{}
++				select {
++				case <-release:
++					lifecycleReply(w, lifecycleRecord(lifecycleA, "survivor", &expiry))
++				case <-r.Context().Done():
++				}
++			})
++			defer finish()
++			ctx, cancel := context.WithCancel(context.Background())
++			defer cancel()
++			p := &provider.ECR{}
++			first, second := context.Background(), ctx
++			if initiator {
++				first, second = ctx, context.Background()
++			}
++			one := lifecycleAsync(first, p.CredentialFunc(lifecycleA), lifecycleA)
++			select {
++			case <-entered:
++			case <-time.After(3 * time.Second):
++				t.Fatal("refresh never began")
++			}
++			two := lifecycleAsync(second, p.Credential, lifecycleA)
++			time.Sleep(100 * time.Millisecond)
++			cancel()
++			cancelled, survivor := two, one
++			if initiator {
++				cancelled, survivor = one, two
++			}
++			select {
++			case value := <-cancelled:
++				if !errors.Is(value.err, context.Canceled) || value.credential != auth.EmptyCredential {
++					t.Errorf("cancelled caller got %+v", value)
++				}
++			case <-time.After(time.Second):
++				t.Error("cancelled caller remained blocked by AWS request")
++			}
++			finish()
++			lifecycleWant(t, lifecycleAwait(t, survivor), "survivor")
++			lifecycleWant(t, lifecycleCall(context.Background(), p.Credential, lifecycleA), "survivor")
++			if calls.Load() != 1 {
++				t.Errorf("cancelling one caller caused %d fetches", calls.Load())
++			}
++		})
++	}
++}
++
++func TestLifecycleAlreadyCancelled(t *testing.T) {
++	expiry := time.Now().Add(time.Hour)
++	calls := lifecycleEndpoint(t, func(w http.ResponseWriter, _ *http.Request) {
++		lifecycleReply(w, lifecycleRecord(lifecycleA, "cached", &expiry))
++	})
++	p := &provider.ECR{}
++	ctx, cancel := context.WithCancel(context.Background())
++	cancel()
++	for _, warmed := range []bool{false, true} {
++		if warmed {
++			lifecycleWant(t, lifecycleCall(context.Background(), p.Credential, lifecycleA), "cached")
++		}
++		before := calls.Load()
++		value := lifecycleCall(ctx, p.Credential, lifecycleA)
++		if !errors.Is(value.err, context.Canceled) || value.credential != auth.EmptyCredential || calls.Load() != before {
++			t.Errorf("already cancelled call (warm=%t) returned %+v, requests %d -> %d", warmed, value, before, calls.Load())
++		}
++	}
++}
++
++func TestLifecycleFailedRefreshRecovery(t *testing.T) {
++	expiry := time.Now().Add(1500 * time.Millisecond)
++	var sequence atomic.Int32
++	calls := lifecycleEndpoint(t, func(w http.ResponseWriter, _ *http.Request) {
++		n := sequence.Add(1)
++		if n == 2 {
++			w.Header().Set("Content-Type", "application/x-amz-json-1.1")
++			w.WriteHeader(http.StatusBadRequest)
++			_, _ = w.Write([]byte(`{"__type":"InvalidParameterException","message":"lifecycle failure"}`))
++			return
++		}
++		until := expiry
++		if n > 2 {
++			until = time.Now().Add(time.Hour)
++		}
++		lifecycleReply(w, lifecycleRecord(lifecycleA, fmt.Sprintf("token-%d", n), &until))
++	})
++	p := &provider.ECR{}
++	lifecycleWant(t, lifecycleCall(context.Background(), p.Credential, lifecycleA), "token-1")
++	time.Sleep(time.Until(expiry.Add(80 * time.Millisecond)))
++	failed := lifecycleCall(context.Background(), p.Credential, lifecycleA)
++	if failed.err == nil || failed.credential != auth.EmptyCredential {
++		t.Fatalf("refresh failure exposed stale credentials: %+v", failed)
++	}
++	lifecycleWant(t, lifecycleCall(context.Background(), p.Credential, lifecycleA), "token-3")
++	lifecycleWant(t, lifecycleCall(context.Background(), p.Credential, lifecycleA), "token-3")
++	if calls.Load() != 3 {
++		t.Fatalf("failure prevented successful caching, requests=%d", calls.Load())
++	}
++}
++
++func TestLifecycleInvalidResponsesAndMissingExpiry(t *testing.T) {
++	for _, kind := range []string{"missing-expiry", "expired", "malformed", "missing-records", "wrong-endpoint"} {
++		t.Run(kind, func(t *testing.T) {
++			var sequence atomic.Int32
++			calls := lifecycleEndpoint(t, func(w http.ResponseWriter, _ *http.Request) {
++				n := sequence.Add(1)
++				expiry := time.Now().Add(time.Hour)
++				record := lifecycleRecord(lifecycleA, "recovered", &expiry)
++				if n == 1 {
++					switch kind {
++					case "missing-expiry":
++						record = lifecycleRecord(lifecycleA, "one-shot", nil)
++					case "expired":
++						past := time.Now().Add(-time.Hour)
++						record = lifecycleRecord(lifecycleA, "expired", &past)
++					case "malformed":
++						record["authorizationToken"] = "!invalid-base64"
++					case "missing-records":
++						lifecycleReply(w)
++						return
++					case "wrong-endpoint":
++						record["proxyEndpoint"] = "https://" + lifecycleB
++					}
++				}
++				lifecycleReply(w, record)
++			})
++			p := &provider.ECR{}
++			first := lifecycleCall(context.Background(), p.Credential, lifecycleA)
++			if kind == "missing-expiry" {
++				lifecycleWant(t, first, "one-shot")
++			} else if first.err == nil || first.credential != auth.EmptyCredential {
++				t.Fatalf("invalid response accepted: %+v", first)
++			}
++			lifecycleWant(t, lifecycleCall(context.Background(), p.Credential, lifecycleA), "recovered")
++			lifecycleWant(t, lifecycleCall(context.Background(), p.Credential, lifecycleA), "recovered")
++			if calls.Load() != 2 {
++				t.Fatalf("recovered token was not cached; calls=%d", calls.Load())
++			}
++		})
++	}
++}
+diff --git a/internal/oci/lifecycle_oracle_test.go b/internal/oci/lifecycle_oracle_test.go
+new file mode 100644
+index 0000000..9634a48
+--- /dev/null
++++ b/internal/oci/lifecycle_oracle_test.go
+@@ -0,0 +1,79 @@
++package oci
++
++import (
++	"context"
++	"encoding/base64"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"strings"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"oras.land/oras-go/v2/registry/remote/auth"
++)
++
++func TestLifecycleStaticOptionCompatibility(t *testing.T) {
++	var options StoreOptions
++	option, err := WithCredentials(AuthenticationTypeStatic, "static-user", "pass:with:colon")
++	if err != nil {
++		t.Fatal(err)
++	}
++	option(&options)
++	for _, registry := range []string{"first.example", "second.example"} {
++		call := options.auth(registry)
++		value, err := call(context.Background(), registry)
++		if err != nil || value.Username != "static-user" || value.Password != "pass:with:colon" {
++			t.Fatalf("static credentials changed: %+v %v", value, err)
++		}
++		value, err = call(context.Background(), "other.example")
++		if err != nil || value != auth.EmptyCredential {
++			t.Fatalf("static credentials escaped registry scope: %+v %v", value, err)
++		}
++	}
++}
++
++func TestLifecycleAWSOptionSharesProvider(t *testing.T) {
++	for _, entry := range os.Environ() {
++		key, _, _ := strings.Cut(entry, "=")
++		if strings.HasPrefix(key, "AWS_") {
++			t.Setenv(key, "")
++		}
++	}
++	const registry = "111111111111.dkr.ecr.us-east-1.amazonaws.com"
++	var calls atomic.Int32
++	expiry := time.Now().Add(time.Hour)
++	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		calls.Add(1)
++		w.Header().Set("Content-Type", "application/x-amz-json-1.1")
++		_ = json.NewEncoder(w).Encode(map[string]any{"authorizationData": []map[string]any{{
++			"authorizationToken": base64.StdEncoding.EncodeToString([]byte("AWS:option")),
++			"proxyEndpoint":      "https://" + registry,
++			"expiresAt":          float64(expiry.UnixNano()) / 1e9,
++		}}})
++	}))
++	defer server.Close()
++	dir := t.TempDir()
++	t.Setenv("AWS_CONFIG_FILE", filepath.Join(dir, "config"))
++	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join(dir, "credentials"))
++	t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
++	t.Setenv("AWS_ACCESS_KEY_ID", "lifecycle-test-key")
++	t.Setenv("AWS_SECRET_ACCESS_KEY", "lifecycle-test-secret")
++	t.Setenv("AWS_REGION", "us-east-1")
++	t.Setenv("AWS_MAX_ATTEMPTS", "1")
++	t.Setenv("AWS_ENDPOINT_URL_ECR", server.URL)
++	var options StoreOptions
++	WithAWSECRCredentials()(&options)
++	for i := 0; i < 3; i++ {
++		value, err := options.auth(registry)(context.Background(), registry)
++		if err != nil || value.Username != "AWS" || value.Password != "option" {
++			t.Fatalf("AWS option credentials: %+v %v", value, err)
++		}
++	}
++	if calls.Load() != 1 {
++		t.Fatalf("credential functions from one option fetched %d times", calls.Load())
++	}
++}
+diff --git a/internal/oci/options_test.go b/internal/oci/options_test.go
+index f96dbc8..8d88636 100644
+--- a/internal/oci/options_test.go
++++ b/internal/oci/options_test.go
+@@ -1,76 +1,46 @@
+ package oci
+ 
+ import (
+-	"context"
+ 	"testing"
+ 
+ 	"github.com/stretchr/testify/assert"
+-	"github.com/stretchr/testify/require"
+-	"go.uber.org/zap/zaptest"
+ 	"oras.land/oras-go/v2"
+-	"oras.land/oras-go/v2/registry/remote"
+-	"oras.land/oras-go/v2/registry/remote/auth"
+ )
+ 
+-func TestAuthenticationTypeIsValid(t *testing.T) {
++func TestWithCredentials(t *testing.T) {
+ 	for _, tt := range []struct {
+-		kind  AuthenticationType
+-		valid bool
++		kind          AuthenticationType
++		user          string
++		pass          string
++		expectedError string
+ 	}{
+-		{AuthenticationTypeStatic, true},
+-		{AuthenticationTypeAWSECR, true},
+-		{AuthenticationType("unknown"), false},
+-		{AuthenticationType(""), false},
++		{kind: AuthenticationTypeStatic, user: "u", pass: "p"},
++		{kind: AuthenticationTypeAWSECR},
++		{kind: AuthenticationType("unknown"), expectedError: "unsupported auth type unknown"},
+ 	} {
+ 		t.Run(string(tt.kind), func(t *testing.T) {
+-			assert.Equal(t, tt.valid, tt.kind.IsValid())
+-		})
+-	}
+-}
+-
+-func TestWithCredentials(t *testing.T) {
+-	for _, kind := range []AuthenticationType{AuthenticationTypeStatic, AuthenticationTypeAWSECR} {
+-		t.Run(string(kind), func(t *testing.T) {
+-			option, err := WithCredentials(kind, "user", "pass")
+-			require.NoError(t, err)
+-			var opts StoreOptions
+-			option(&opts)
+-			require.NotNil(t, opts.auth)
+-			for _, registry := range []string{"registry.example.com", "another.example.com:5000"} {
+-				credential := opts.auth(registry)
+-				require.NotNil(t, credential)
+-				if kind == AuthenticationTypeStatic {
+-					got, err := credential(context.Background(), registry)
+-					require.NoError(t, err)
+-					assert.Equal(t, auth.Credential{Username: "user", Password: "pass"}, got)
+-				}
+-				got, err := credential(context.Background(), "unrelated.example.com")
+-				require.NoError(t, err)
+-				assert.Equal(t, auth.EmptyCredential, got)
++			o := &StoreOptions{}
++			opt, err := WithCredentials(tt.kind, tt.user, tt.pass)
++			if tt.expectedError != "" {
++				assert.EqualError(t, err, tt.expectedError)
++			} else {
++				assert.NoError(t, err)
++				opt(o)
++				assert.NotNil(t, o.auth)
++				assert.NotNil(t, o.auth("test"))
+ 			}
+ 		})
+ 	}
+-	option, err := WithCredentials(AuthenticationType("unknown"), "user", "pass")
+-	require.EqualError(t, err, "unsupported auth type unknown")
+-	assert.Nil(t, option)
+ }
+ 
+-func TestStoreStaticCredentials(t *testing.T) {
+-	store, err := NewStore(zaptest.NewLogger(t), t.TempDir(), WithStaticCredentials("user", "pass"))
+-	require.NoError(t, err)
+-	ref, err := ParseReference("registry.example.com/bundle:latest")
+-	require.NoError(t, err)
+-	target, err := store.getTarget(ref)
+-	require.NoError(t, err)
+-	credential, err := target.(*remote.Repository).Client.(*auth.Client).Credential(context.Background(), ref.Registry)
+-	require.NoError(t, err)
+-	assert.Equal(t, auth.Credential{Username: "user", Password: "pass"}, credential)
++func TestWithManifestVersion(t *testing.T) {
++	o := &StoreOptions{}
++	WithManifestVersion(oras.PackManifestVersion1_1)(o)
++	assert.Equal(t, oras.PackManifestVersion1_1, o.manifestVersion)
+ }
+ 
+-func TestWithManifestVersion(t *testing.T) {
+-	store, err := NewStore(zaptest.NewLogger(t), t.TempDir())
+-	require.NoError(t, err)
+-	assert.Equal(t, oras.PackManifestVersion1_1, store.opts.manifestVersion)
+-	WithManifestVersion(oras.PackManifestVersion1_0)(&store.opts)
+-	assert.Equal(t, oras.PackManifestVersion1_0, store.opts.manifestVersion)
++func TestAuthenicationTypeIsValid(t *testing.T) {
++	assert.True(t, AuthenticationTypeStatic.IsValid())
++	assert.True(t, AuthenticationTypeAWSECR.IsValid())
++	assert.False(t, AuthenticationType("").IsValid())
+ }

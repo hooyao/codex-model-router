@@ -203,6 +203,22 @@ class LiveEvidenceTests(unittest.TestCase):
         write_lines(path, self.activation_items)
         write_json(path.parent / "session-index.json", [index_record(path, "parent")])
 
+    def relocate_activation_resolver(self):
+        installed = self.root / "plugin-cache" / "versioned-install"
+        resolver = installed / "hooks" / "execution_decision.py"
+        resolver.parent.mkdir(parents=True)
+        manifest = installed / ".codex-plugin" / "plugin.json"
+        manifest.parent.mkdir(parents=True)
+        source = ROOT / "plugins" / "codex-model-router" / "hooks" / "execution_decision.py"
+        shutil.copyfile(source, resolver)
+        shutil.copyfile(self.root / "raw" / "plugin-manifest.json", manifest)
+        content = self.activation_items[1]["payload"]["content"][0]
+        content["text"] = content["text"].replace(
+            "Decision resolver program: " + str(source),
+            "Decision resolver program: " + str(resolver), 1)
+        self.write_activation_session()
+        return content, resolver, manifest
+
     def rewrite_case(self, case, parent_items=None, compact=None):
         parent_pair, children = self.pairs[case]
         if parent_items is not None:
@@ -581,6 +597,49 @@ class LiveEvidenceTests(unittest.TestCase):
             live.CONTROLLER_CONTRACT + "\nROUTING_CONFIG_BEGIN\nWorkspace routing config: " + str(self.config_path) +
             "\n{}\nROUTING_CONFIG_END")
         self.write_activation_session()
+        self.assert_activation_fails("actual-hook-context")
+
+    def test_activation_hook_config_digest_must_match(self):
+        content = self.activation_items[1]["payload"]["content"][0]
+        content["text"] = content["text"].replace(
+            "Validated config SHA256 (canonical JSON): ",
+            "Validated config SHA256 (canonical JSON): 0", 1)
+        self.write_activation_session()
+        self.assert_activation_fails("actual-hook-context")
+
+    def test_relocated_installed_resolver_passes_with_recomputed_session_index(self):
+        _content, resolver, _manifest = self.relocate_activation_resolver()
+        self.assertNotEqual(resolver, ROOT / "plugins" / "codex-model-router" / "hooks" / "execution_decision.py")
+        report = self.report()
+        self.assertEqual("pass", report["activation_gate"]["status"], report["activation_gate"])
+        self.assertTrue(self.validate_report(report)["campaign_pass"])
+
+    def test_relocated_hook_rejects_digest_policy_and_path_tampering(self):
+        content, resolver, _manifest = self.relocate_activation_resolver()
+        original = content["text"]
+        changes = {
+            "digest": original.replace("Validated config SHA256 (canonical JSON): ",
+                                       "Validated config SHA256 (canonical JSON): 0", 1),
+            "policy": original.replace("EFFECTIVE_EXECUTION_POLICY:{",
+                                       'EFFECTIVE_EXECUTION_POLICY:{"tampered":true,', 1),
+            "config-path": original.replace("Workspace routing config: " + str(self.config_path),
+                                            "Workspace routing config: " + str(self.root / "wrong-routing.json"), 1),
+            "resolver-path": original.replace("Decision resolver program: " + str(resolver),
+                                              "Decision resolver program: " + str(resolver.with_name("other.py")), 1),
+        }
+        for label, changed in changes.items():
+            with self.subTest(label=label):
+                self.assertNotEqual(original, changed)
+                content["text"] = changed
+                self.write_activation_session()
+                self.assert_activation_fails("actual-hook-context")
+
+    def test_relocated_hook_requires_captured_manifest_and_source_resolver(self):
+        _content, resolver, manifest = self.relocate_activation_resolver()
+        manifest.write_text("{}", encoding="utf-8")
+        self.assert_activation_fails("actual-hook-context")
+        shutil.copyfile(self.root / "raw" / "plugin-manifest.json", manifest)
+        resolver.write_text("# changed resolver\n", encoding="utf-8")
         self.assert_activation_fails("actual-hook-context")
 
     def test_activation_requires_completed_result_and_unchanged_note(self):

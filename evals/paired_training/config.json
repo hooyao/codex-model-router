@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "benchmark": {
+    "name": "terminal-bench-2.1/train-fasttext",
+    "source_repository": "https://github.com/harbor-framework/terminal-bench-2-1.git",
+    "source_commit": "7131e4375048a0e408a8fb404b5f499d726b695b",
+    "instruction_path": "tasks/train-fasttext/instruction.md",
+    "image": "docker.io/alexgshaw/train-fasttext",
+    "image_digest": "sha256:3c77da9617e7fa577de04aef73fb1ac3114be32d7ffef72609c83929d842b157",
+    "platform": "linux/amd64"
+  },
+  "public_inputs": {
+    "train_path": "/app/data/train-00000-of-00001.parquet",
+    "train_sha256": "da3ca3dcc52b1e2e44195b53668610d645a59010a985dd45aa12e1109cd44601",
+    "train_bytes": 299436850,
+    "public_test_path": "/app/data/test-00000-of-00001.parquet",
+    "public_test_sha256": "715d70afd66faa5f95debeeac84a1a19b8d6e730918dcf3b7863cdd8a9f65b8c",
+    "public_test_bytes": 4844861
+  },
+  "fasttext": {
+    "repository": "https://github.com/facebookresearch/fastText.git",
+    "commit": "5b5943c118b0ec5fb9cd8d20587de2b2d3966dfe",
+    "tag": "v0.9.2"
+  },
+  "agent_environment": {
+    "base_rootfs_tree_id": "102e04806838d168297f3c86d9c76a6ddc62c2395a4c8f7d933530fc0bf708b8",
+    "fasttext_path": "/usr/local/bin/fasttext",
+    "fasttext_binary_sha256": "c66126460a7e2182c378562cc3ef4c7709c244466300aecc4e9276377982d56e",
+    "rootfs_tree_id": "21217a4f600fc2e4730139f024a80b0e9ce55085eac6b673c6886282601d1a40"
+  },
+  "oracle": {
+    "private_archive_sha256": "8397bce0c447bca9b73ea66a0f258143701817c4b850fd905166c30a61d2d0e4",
+    "private_examples": 40000,
+    "minimum_accuracy": 0.62,
+    "official_cli_significant_digits": 3,
+    "maximum_model_bytes_exclusive": 157286400,
+    "artifact_path": "/app/model.bin"
+  },
+  "limits": {
+    "cpus": 1,
+    "memory_mb": 4096,
+    "storage_mb": 10240,
+    "agent_timeout_seconds": 3600,
+    "verifier_timeout_seconds": 3600
+  }
+}

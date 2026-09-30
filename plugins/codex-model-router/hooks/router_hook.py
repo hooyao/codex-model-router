@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ from routing_config import (  # noqa: E402
 
 
 SUPPORTED_EVENTS = {"SessionStart", "UserPromptSubmit", "SubagentStart"}
+MAX_HOOK_OUTPUT_BYTES = 9_500
 CONTROLLER_CONTRACT = """CONTROLLER ROLE ONLY: SessionStart/UserPromptSubmit policy for the primary agent.
 This contract does not apply to dispatched workers. Decide execution ownership before the first business action: construct the complete decision-request-v1 JSON described in the injected routing block, invoke its absolute resolver path with the injected workspace config, and record the validated decision-contract-v1 result, including ownership, delegate_topology, verification_requirement, matched_rule, reasons, constraints, and any reclassification trigger. Resolver invocation is a routing-only preflight action. Also emit one concise route line:
 ROUTE: DIRECT — <rule/reason>
@@ -29,6 +31,8 @@ ROUTE: DELEGATE — <topology/rule/model/effort/reason>
 Skills define HOW work is performed, not WHO performs it. Interpret the whole request as structured signals; keyword matching alone is insufficient.
 
 DIRECT is a bounded fast path only when every fact is explicitly known: one local scope, one bounded known outcome, no network/sync, monitoring, recovery, substantive research, independent review, or high risk; permissions and safety constraints are known; and write scope and a self-check plan are declared. Unknown signals never qualify. A config `direct` value is eligibility only. A config `delegate` value mandates delegation. Hard delegate or unknown signals win before config precedence. One matching example overrides the default, no match uses the default, and disagreeing matches resolve to DELEGATE. DIRECT owns its implementation and required self-check; it never bypasses scope, permission, safety, write-ownership, or verification duties.
+
+For a whole-request DELEGATE route, build a stage DAG before business execution. Record each stage's stable ID, controller or worker owner, dependencies, exclusive write scope, context budget, acceptance criteria, and self-check. A lightweight controller may own a genuinely easy, low-context stage only after a separate decision-request-v1 for that stage independently resolves DIRECT. Keep inherited permissions, risks, and the whole-request independent-review requirement. Reclassify any stage whose bounds expand. Use a cheap worker when an easy stage's tool output would burden controller context. Reserve Astra/xhigh for a demanding hard kernel when justified, with max only in exceptional cases; do not delegate the entire mixed request to Astra merely because one stage is hard. Never duplicate worker-owned analysis, edits, or tests in the controller.
 
 If a DIRECT task exceeds approved bounds, stop before the next business action and record a reclassification from DIRECT to DELEGATE with one explicit trigger, such as scope-expanded, validation-failed, dependency-discovered, write-scope-overlap-discovered, permission-changed, or safety-constraint-changed. Reclassification is part of the decision record, not an unrecorded fallback.
 
@@ -38,18 +42,18 @@ Apply configured depth, concurrency, and retry values as ceilings; lower them to
 
 Only after DELEGATE, inspect the exposed native spawn/wait tools and runtime model/effort catalog. Do not invent capabilities. If required worker capability is absent, report the observed blocker. Use only actual runtime isolation features. Route delegated work to the lowest capable available model/effort; do not change the controller model automatically. Before each spawn, validate a dispatch-contract-v1 record with the bundled hooks/dispatch_contract.py using hash-bound spawn-schema and model-catalog evidence, or an explicitly captured inheritance contract. Omitted selectors, later child runtime metadata, and placeholder values do not establish a route; missing evidence is a capability blocker.
 
-Give each worker a bounded packet with task identity, dependencies, scope and write ownership, permissions/safety constraints, acceptance and verification criteria, topology position, limits, actual model/effort, and return contract. Use deterministic purpose-model-effort naming and the documented native transport adaptation. Workers return compact evidence receipts; retain successful receipts across bounded failures. Integration and verification must respect the resolved topology and constraints.
+Give each worker a bounded packet with task identity, dependencies, scope and write ownership, permissions/safety constraints, acceptance and verification criteria, topology position, limits, actual model/effort, and return contract. Use deterministic purpose-model-effort naming and the documented native transport adaptation. Workers return compact evidence receipts; retain successful receipts across bounded failures. The controller remains accountable for dependency order, conflict resolution, verification status, and synthesis; it self-checks controller-owned stages and assigns substantive worker-stage validation to workers. Integration and verification must respect the resolved topology and constraints.
 
 The bundled initialize-router Skill is a narrow plugin-administration exception. This is instruction-layer policy: context injection cannot erase history, intercept tool calls, create a sandbox, or act as an OS/tool permission barrier."""
 
 
 def controller_session_context(model: str, routing_context: str) -> str:
-    return f"Codex Model Router\nActive controller model: {model}.\n\n{CONTROLLER_CONTRACT}\n\n{routing_context}"
+    return f"Codex Model Router\nActive controller model: {model}.\n\n{routing_context}\n\n{CONTROLLER_CONTRACT}"
 
 
 def user_prompt_context(event: dict[str, Any], routing_context: str) -> str:
     # Repeat the semantic meta-task rule even for follow-ups without keywords.
-    return f"{CONTROLLER_CONTRACT}\n\n{routing_context}"
+    return f"{routing_context}\n\n{CONTROLLER_CONTRACT}"
 
 
 def worker_context(routing_context: str) -> str:
@@ -90,12 +94,18 @@ def build_hook_output(event: dict[str, Any]) -> dict[str, Any]:
     config_path, config, _created = load_workspace_config(workspace_cwd)
     routing_context = routing_context_block(config_path, config)
 
-    return {
+    output = {
         "hookSpecificOutput": {
             "hookEventName": event_name,
             "additionalContext": additional_context(event_name, event, routing_context),
         }
     }
+    output_bytes = len(json.dumps(output, separators=(",", ":")).encode("utf-8")) + len(os.linesep)
+    if output_bytes > MAX_HOOK_OUTPUT_BYTES:
+        raise RoutingConfigError(
+            f"hook output is {output_bytes} bytes; maximum is {MAX_HOOK_OUTPUT_BYTES} bytes"
+        )
+    return output
 
 
 def main() -> int:

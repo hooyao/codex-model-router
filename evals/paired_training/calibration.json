@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "status": "BLOCKED",
+  "calibration_revision": "historical-pre-rootfs-binding-control",
+  "environment": {
+    "image_digest": "sha256:3c77da9617e7fa577de04aef73fb1ac3114be32d7ffef72609c83929d842b157",
+    "platform": "linux/amd64",
+    "base_rootfs_tree_id": "102e04806838d168297f3c86d9c76a6ddc62c2395a4c8f7d933530fc0bf708b8",
+    "agent_rootfs_tree_id": "21217a4f600fc2e4730139f024a80b0e9ce55085eac6b673c6886282601d1a40",
+    "app_tree_id": "4a6c82dc42a27aef09281598ba000bd633a06c0cbc934854434e47b95feb49df",
+    "namespace_probe_pass": true,
+    "private_material_in_agent_workspaces": false
+  },
+  "oracle": {
+    "config_sha256": "67069c3a6140ada51a32ff63f203e839c0f479ed856879c0ce26fe1a0f6c523e",
+    "fasttext_commit": "5b5943c118b0ec5fb9cd8d20587de2b2d3966dfe",
+    "fasttext_binary_sha256": "c66126460a7e2182c378562cc3ef4c7709c244466300aecc4e9276377982d56e",
+    "private_archive_sha256": "8397bce0c447bca9b73ea66a0f258143701817c4b850fd905166c30a61d2d0e4"
+  },
+  "empty_negative": {
+    "pass": true,
+    "artifact_present": false,
+    "grade_published": false
+  },
+  "independent_reference_attempt": {
+    "model_sha256": "975f72335c09136abbec25b77c1903df1a4681cff858727e8c5d4bf54b96f2bd",
+    "model_bytes": 79928274,
+    "private_examples": 40000,
+    "exact_accuracy": 0.572525,
+    "exact_threshold_pass": false,
+    "official_cli_accuracy_text": "0.573",
+    "official_cli_accuracy": 0.573,
+    "official_cli_threshold_pass": false,
+    "minimum_accuracy": 0.62,
+    "quality_pass": false
+  },
+  "stage_g_public_search": {
+    "plan_sha256": "06007d96fe0c5dcf7ad29390ae97818a369b6c03bcfdcb17739361158a74a9f7",
+    "result_sha256": "d96f192ff68bb73553917e8a5fd2c20678b58c7e03b7b501abb1a4393c6caf30",
+    "configuration_count": 4,
+    "best_public_accuracy": 0.6224,
+    "required_public_accuracy": 0.63,
+    "selected_candidate": null,
+    "private_verifier_calls": 0
+  },
+  "blockers": [
+    "The frozen four-configuration public search produced no candidate at or above 0.63; the private verifier was not called.",
+    "The independent reference attempt did not meet the accuracy threshold; no reference-positive calibration exists.",
+    "The capped WSL arm images are intact but currently unmounted after the WSL distribution lifecycle restart.",
+    "Native Windows Codex cannot launch WSL from its working unelevated sandbox, so the proven Linux namespace is not yet an end-to-end agent-tool boundary.",
+    "Dispatch-audit provenance and independent semantic review remain prerequisites for a paid pair."
+  ]
+}

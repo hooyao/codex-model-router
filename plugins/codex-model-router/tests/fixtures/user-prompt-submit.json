@@ -3,6 +3,6 @@
   "session_id": "session-fixture",
   "turn_id": "turn-fixture",
   "cwd": ".",
-  "model": "gpt-5.6-terra",
+  "model": "gpt-6-sol",
   "prompt": "Review this feature request."
 }

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "maximum_configurations": 4,
+  "minimum_public_accuracy": 0.63,
+  "maximum_model_bytes_exclusive": 157286400,
+  "train_sha256": "da3ca3dcc52b1e2e44195b53668610d645a59010a985dd45aa12e1109cd44601",
+  "validation_sha256": "715d70afd66faa5f95debeeac84a1a19b8d6e730918dcf3b7863cdd8a9f65b8c",
+  "fasttext_binary_sha256": "c66126460a7e2182c378562cc3ef4c7709c244466300aecc4e9276377982d56e",
+  "configurations": [
+    {
+      "id": "bigram-16-e5",
+      "epoch": 5,
+      "learning_rate": 0.1,
+      "dimension": 16,
+      "bucket": 1000000,
+      "minimum_count": 2,
+      "word_ngrams": 2,
+      "minimum_character_ngram": 0,
+      "maximum_character_ngram": 0,
+      "loss": "softmax"
+    },
+    {
+      "id": "bigram-16-e10",
+      "epoch": 10,
+      "learning_rate": 0.1,
+      "dimension": 16,
+      "bucket": 1000000,
+      "minimum_count": 2,
+      "word_ngrams": 2,
+      "minimum_character_ngram": 0,
+      "maximum_character_ngram": 0,
+      "loss": "softmax"
+    },
+    {
+      "id": "bigram-24-e10",
+      "epoch": 10,
+      "learning_rate": 0.15,
+      "dimension": 24,
+      "bucket": 750000,
+      "minimum_count": 2,
+      "word_ngrams": 2,
+      "minimum_character_ngram": 0,
+      "maximum_character_ngram": 0,
+      "loss": "softmax"
+    },
+    {
+      "id": "subword-24-e10",
+      "epoch": 10,
+      "learning_rate": 0.1,
+      "dimension": 24,
+      "bucket": 750000,
+      "minimum_count": 2,
+      "word_ngrams": 2,
+      "minimum_character_ngram": 3,
+      "maximum_character_ngram": 5,
+      "loss": "softmax"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "grader": "local-hidden-test-replay-not-official-harbor",
+  "base_tree": "20121a7049c58571664b87989d1fc7bab8562884",
+  "candidate_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "candidate_patch_bytes": 0,
+  "test_patch_sha256": "b32fa3b601051584a419624459df7f96dcd7edd57ff0efb80a3449d89a75f268",
+  "oracle_config_sha256": "0327174f5a9e2e7a021aeaa06b0c3b6bf66fbbab8a5240e4cc20d508180bf800",
+  "test_paths_restored": [
+    "internal\\config\\config_test.go",
+    "internal\\oci\\ecr\\ecr_test.go",
+    "internal\\oci\\options_test.go"
+  ],
+  "go_test_exit_code": 1,
+  "packages": [
+    "./internal/config",
+    "./internal/oci",
+    "./internal/oci/ecr"
+  ],
+  "test_command": [
+    "wsl",
+    "-d",
+    "Ubuntu",
+    "--",
+    "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",
+    "test",
+    "-count=1",
+    "./internal/config",
+    "./internal/oci",
+    "./internal/oci/ecr"
+  ],
+  "stdout_sha256": "653c002aa9e717e1e399e9b66aed2b0ef92bd7c1eea7c66b1f43a9358636861f",
+  "stderr_sha256": "8a2e2b2e4e71d519c69c1a44428921e9679cab58ab3859d92153c45a4e4cafa6",
+  "go_test_wall_seconds": 17.659,
+  "quality_pass": false
+}

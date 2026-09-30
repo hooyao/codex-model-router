@@ -1,0 +1,27 @@
+approval_policy = "never"
+default_permissions = "cmr-offline"
+
+[permissions.cmr-offline]
+description = "Offline Stage W command sandbox probe."
+
+[permissions.cmr-offline.workspace_roots]
+"/var/lib/cmr-codex-probe/workspace" = true
+
+[permissions.cmr-offline.filesystem]
+":root" = "deny"
+":minimal" = "read"
+":tmpdir" = "deny"
+":slash_tmp" = "deny"
+"/opt/cmr-codex-linux-v0.144.1/runtime" = "read"
+"/var/lib/cmr-codex-probe-protected" = "deny"
+"/var/lib/cmr-codex-probe/outside-writable" = "deny"
+
+[permissions.cmr-offline.filesystem.":workspace_roots"]
+"." = "write"
+
+[permissions.cmr-offline.network]
+enabled = false
+
+[permissions.cmr-offline.network.unix_sockets]
+"/var/lib/cmr-codex-probe-protected/host-service-canary.sock" = "deny"
+"/var/lib/cmr-codex-probe/workspace/host-service-canary.sock" = "deny"

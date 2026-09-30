@@ -1,0 +1,116 @@
+{
+  "provenance": {
+    "source_receipt": "evals/live/router-hook-canary-20260929/integration-smoke-receipt.json",
+    "source_sha256": "325308774b71c80ddd2d20785050c916225d5e23f27bcf2649e29906afefe7db",
+    "note": "Observed runtime shapes. Opaque message replaced with test-only text; commitments recomputed. This fixture proves no plaintext or hook provenance."
+  },
+  "parent_id": "01a0ec96-4959-79f2-823e-7b9dd8f7a390",
+  "native": [
+    {
+      "type": "session_meta",
+      "payload": {
+        "id": "01a0ec96-4959-79f2-823e-7b9dd8f7a390"
+      }
+    },
+    {
+      "type": "turn_context",
+      "payload": {
+        "turn_id": "01a0ec96-4cd7-7670-b1de-c64993735e25",
+        "model": "gpt-6-sol",
+        "effort": "low"
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "function_call",
+        "name": "spawn_agent",
+        "namespace": "collaboration",
+        "arguments": "{\"task_name\": \"hook_smoke_gpt_6_astra_xhigh\", \"message\": \"opaque-v2-transport-fixture\", \"model\": \"gpt-6-astra\", \"reasoning_effort\": \"xhigh\", \"fork_turns\": \"none\"}",
+        "call_id": "call_rX14fgIE0HZugTgoP7hw3M8b"
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "item_completed",
+        "thread_id": "01a0ec96-4959-79f2-823e-7b9dd8f7a390",
+        "turn_id": "01a0ec96-4cd7-7670-b1de-c64993735e25",
+        "item": {
+          "type": "SubAgentActivity",
+          "id": "call_rX14fgIE0HZugTgoP7hw3M8b",
+          "kind": "started",
+          "agent_thread_id": "01a0ec96-bc32-7923-b622-e0991f89e623",
+          "agent_path": "/root/hook_smoke_gpt_6_astra_xhigh"
+        }
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "function_call_output",
+        "call_id": "call_rX14fgIE0HZugTgoP7hw3M8b",
+        "output": "{\"task_name\":\"/root/hook_smoke_gpt_6_astra_xhigh\"}"
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "item_completed",
+        "thread_id": "01a0ec96-4959-79f2-823e-7b9dd8f7a390",
+        "turn_id": "01a0ec96-4cd7-7670-b1de-c64993735e25",
+        "item": {
+          "type": "SubAgentActivity",
+          "id": "subagent-completed-01a0ec96-bda5-7b00-93bf-3a175d40c692",
+          "kind": "completed",
+          "agent_thread_id": "01a0ec96-bc32-7923-b622-e0991f89e623",
+          "agent_path": "/root/hook_smoke_gpt_6_astra_xhigh"
+        }
+      }
+    }
+  ],
+  "audit": [
+    {
+      "attempt_id": "call_rX14fgIE0HZugTgoP7hw3M8b",
+      "effort": "xhigh",
+      "fork_turns": "none",
+      "kind": "pre",
+      "message_bytes": 27,
+      "message_sha256": "fec97f295f52483e591a4acbd356f7d74e9a11428a9141385b4fcd5d5b07fef3",
+      "model": "gpt-6-astra",
+      "native_name": "hook_smoke_gpt_6_astra_xhigh",
+      "schema_version": 1,
+      "selector_state": "explicit",
+      "session_id": "01a0ec96-4959-79f2-823e-7b9dd8f7a390",
+      "tool_name": "collaborationspawn_agent",
+      "turn_id": "01a0ec96-4cd7-7670-b1de-c64993735e25"
+    },
+    {
+      "attempt_id": "call_rX14fgIE0HZugTgoP7hw3M8b",
+      "child_id": null,
+      "kind": "post",
+      "post_observed_input": {
+        "message_bytes": 27,
+        "message_sha256": "fec97f295f52483e591a4acbd356f7d74e9a11428a9141385b4fcd5d5b07fef3"
+      },
+      "result_observed": false,
+      "schema_version": 1,
+      "session_id": "01a0ec96-4959-79f2-823e-7b9dd8f7a390",
+      "tool_name": "collaborationspawn_agent",
+      "turn_id": "01a0ec96-4cd7-7670-b1de-c64993735e25"
+    }
+  ],
+  "children": [
+    {
+      "id": "01a0ec96-bc32-7923-b622-e0991f89e623",
+      "parent_id": "01a0ec96-4959-79f2-823e-7b9dd8f7a390",
+      "agent_path": "/root/hook_smoke_gpt_6_astra_xhigh",
+      "turns": [
+        {
+          "model": "gpt-6-astra",
+          "effort": "xhigh"
+        }
+      ]
+    }
+  ]
+}

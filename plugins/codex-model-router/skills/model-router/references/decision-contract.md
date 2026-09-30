@@ -49,6 +49,16 @@ or mandatory-delegation signals cannot qualify for DIRECT. A named multi-step
 runbook set to true or unknown therefore delegates. The example-match IDs must
 come from the injected config and must be unique.
 
+For a mixed request, resolve the whole request first and keep its DELEGATE
+result. Before a proposed controller-owned stage starts, submit another
+`phase: "initial"` request with a stable stage-specific `decision_id` and
+signals describing that stage. A stage can be DIRECT only when every direct
+criterion is independently true. Apply the original request's permissions,
+safety constraints, and independent-review obligation to the full stage plan;
+do not hide risk that applies to a stage or treat the stage decision as changing
+the whole-request result. Record owner, dependencies, exclusive write scope,
+context budget, acceptance criteria, and self-check next to the stage result.
+
 For reclassification, set `phase` to `reclassification`,
 `prior_ownership` to `DIRECT`, and `escalation_trigger` to one supported trigger
 documented by the routing policy. Initial decisions require both fields to be

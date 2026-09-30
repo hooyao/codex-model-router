@@ -46,6 +46,9 @@ SEMVER_PATTERN = re.compile(
 )
 WINDOWS_HOOK_COMMAND = 'cmd.exe /d /c python "%PLUGIN_ROOT%\\hooks\\router_hook.py"'
 POSIX_HOOK_COMMAND = 'python3 "$PLUGIN_ROOT/hooks/router_hook.py"'
+WINDOWS_AUDIT_COMMAND = 'cmd.exe /d /c python "%PLUGIN_ROOT%\\hooks\\dispatch_audit.py"'
+POSIX_AUDIT_COMMAND = 'python3 "$PLUGIN_ROOT/hooks/dispatch_audit.py"'
+AUDIT_MATCHER = "^(Agent|spawn_agent|collaborationspawn_agent)$"
 MINIMUM_CONTEXT_LIMIT = MAX_SERIALIZED_CONFIG_BYTES + 8_192
 VERSION_BUMP_IGNORED_PATH_PARTS = {"__pycache__", ".pytest_cache"}
 VERSION_BUMP_IGNORED_SUFFIXES = {".pyc", ".pyo"}
@@ -206,8 +209,30 @@ def validate_hook_configuration(plugin_root: Path, errors: list[str]) -> None:
                         f"{label} additionalContextLimit must be at least {MINIMUM_CONTEXT_LIMIT} bytes"
                     )
 
+    for event_name in ("PreToolUse", "PostToolUse"):
+        event_groups = hooks.get(event_name)
+        if not isinstance(event_groups, list) or len(event_groups) != 1:
+            errors.append(f"hook configuration requires one {event_name} audit group")
+            continue
+        group = event_groups[0]
+        if not isinstance(group, dict) or set(group) != {"matcher", "hooks"} or \
+                group.get("matcher") != AUDIT_MATCHER:
+            errors.append(f"{event_name} audit matcher must be {AUDIT_MATCHER}")
+            continue
+        handlers = group.get("hooks")
+        if not isinstance(handlers, list) or len(handlers) != 1:
+            errors.append(f"{event_name} requires one audit command hook")
+            continue
+        handler = handlers[0]
+        expected = {"type": "command", "command": POSIX_AUDIT_COMMAND,
+                    "commandWindows": WINDOWS_AUDIT_COMMAND, "timeout": 5}
+        if not isinstance(handler, dict) or handler != expected:
+            errors.append(f"{event_name} audit command differs from the exact allowlist")
+
     if not (plugin_root / "hooks" / "router_hook.py").is_file():
         errors.append("hook program is missing: hooks/router_hook.py")
+    if not (plugin_root / "hooks" / "dispatch_audit.py").is_file():
+        errors.append("audit hook program is missing: hooks/dispatch_audit.py")
     if not (plugin_root / "hooks" / "routing_config.py").is_file():
         errors.append("shared routing config module is missing: hooks/routing_config.py")
     if not (plugin_root / "hooks" / "execution_decision.py").is_file():

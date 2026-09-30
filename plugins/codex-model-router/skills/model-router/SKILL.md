@@ -15,9 +15,11 @@ worker, even if the worker inherits the controller's context or reads this Skill
 
 The primary agent decides execution ownership before its first business action.
 It may execute genuinely simple work directly only while every direct criterion
-below remains true. For delegated work it acts as the orchestrator: capability
-discovery, task DAG creation, dispatch, waiting/collection, packet validation,
-conflict coordination, and final synthesis.
+below remains true. A DELEGATE result for the whole request does not prohibit
+the controller from owning a separately declared easy stage that independently
+passes the same DIRECT gate. The controller owns capability discovery, the task
+DAG, dispatch, waiting/collection, verification status, conflict decisions, and
+final synthesis; it self-checks any stage it executes.
 
 The separate `initialize-router` Skill is plugin administration rather than
 business work. If the user explicitly requests router initialization or
@@ -40,11 +42,14 @@ The override does not expand user scope, permissions, or safety constraints.
 ## Workspace routing config
 
 Each `SessionStart`, `UserPromptSubmit`, and `SubagentStart` context contains a
-delimited `ROUTING_CONFIG_BEGIN`/`ROUTING_CONFIG_END` block loaded from the
-validated workspace `.codex-model-router/routing.json` on that invocation.
-Treat that JSON as the source of execution-policy inputs and routing examples.
-Use the absolute resolver/config paths and compact request schema included in
-that block. Read the [decision contract](references/decision-contract.md), send
+delimited `ROUTING_CONFIG_BEGIN`/`ROUTING_CONFIG_END` block with the validated
+workspace config path, a digest of its canonical in-memory JSON, effective
+execution policy, and resolver path.
+The full JSON is omitted from hook context to keep the routing contract within
+the model-visible output budget. Read that config file for routing examples and
+model guidance before selecting `matched_example_ids`; the resolver reads the
+same file. Use the absolute resolver/config paths and request schema included in
+the block. Read the [decision contract](references/decision-contract.md), send
 one decision-request-v1 JSON object to the bundled resolver, and use its
 validated result before emitting the route line. Resolver invocation is a
 routing-only preflight action, not business execution.
@@ -62,6 +67,8 @@ template only when the file is absent and never overwrites an existing file.
 Malformed, schema-invalid, oversized, unreadable, or uncreatable config is a
 hard hook error; do not reconstruct examples from this Skill or silently fall
 back to defaults.
+If an unusually long path or event value makes the complete serialized hook
+output exceed 9,500 bytes, the hook fails before emitting a truncated contract.
 
 ## Controller protocol
 
@@ -108,13 +115,22 @@ back to defaults.
    Before each spawn, read the [dispatch preflight contract](references/dispatch-contract.md),
    build a hash-bound `dispatch-contract-v1` record from the observed spawn
    schema and model catalog (or an explicitly observed inheritance contract),
-   and run the bundled `hooks/dispatch_contract.py`. Missing selectors,
-   catalogs, or inheritance proof are recorded capability blockers. Later
+   and run the bundled `hooks/dispatch_contract.py`. The separate
+   `verified_role_config` route in that contract is structurally checkable but
+   currently blocked from dispatch authorization until independently verifiable
+   CLI calibration and trusted hook provenance exist; do not treat it as
+   generic inheritance. Missing selectors, catalogs, role proof, or inheritance
+   proof are recorded capability blockers. Later
    runtime metadata cannot retroactively authorize the dispatch.
-7. Build a task DAG from the user's request and returned worker packets. If
-   decomposition needs repository knowledge or domain analysis, dispatch a
-   discovery/analysis worker first. Declare dependencies, acceptance criteria,
-   write ownership, and bounded retries before dispatch. Read the
+   For an opt-in paired benchmark, treat the preflight as planned intent only.
+   Use the redacted hook observations and external reconciliation described in
+   the dispatch contract; missing runtime provenance remains UNKNOWN.
+7. Build a task DAG from the user's request and returned worker packets. For
+   each stage, record a stable ID, controller or worker owner, dependencies,
+   exclusive write scope, context budget, acceptance criteria, and self-check.
+   A local discovery stage may be controller-owned only when it independently
+   qualifies for DIRECT; delegate substantive investigation. Declare bounded
+   retries before dispatch. Read the
    [routing policy](references/routing-policy.md) for model selection,
    meta-task review, and integration rules.
 8. Apply the configured maximum depth, concurrency, and retry count as ceilings,
@@ -127,15 +143,38 @@ back to defaults.
    fields, completeness, consistency, evidence references, and reported
    acceptance/validation status. It does not establish business correctness.
    Missing or inconsistent evidence requires a worker follow-up. Workers
-   perform substantive validation; the controller does not reopen artifacts
-   or rerun tests to check their claims.
-9. Resolve conflicts by scheduling workers and selecting among their supported
-   recommendations. Delegate substantive disagreements to a review worker
-   and file conflicts to an integration worker, followed by worker validation
-   of the integrated result. The controller does not repair or merge files.
+   perform substantive validation of their stages; the controller self-checks
+   its own stages and remains accountable for overall verification status.
+9. Resolve conflicts by selecting among supported worker recommendations and
+   enforcing write ownership. Delegate substantive disagreements to a review
+   worker. Assign a file conflict to an integration worker unless a bounded
+   controller-owned resolution stage independently passes DIRECT; validate
+   the integrated result through the responsible stage owner.
 10. Synthesize accepted worker evidence into the final user-facing response.
    Attribute validation to the workers and disclose unverified results or
    blockers. Do not invent analysis or claim checks the workers did not perform.
+
+## Selective stage ownership
+
+Classify the entire request first. For a DELEGATE request, partition only where
+the stages have clear outputs and dependencies. Reserve a worker with GPT-6
+Astra/xhigh for a demanding hard kernel when its capability is justified;
+`max` is exceptional, not a default. Do not send the entire request to Astra
+merely because one stage is hard. Route easy stages to the least expensive
+reliable executor. A lightweight controller can own a small local stage when
+its expected tool context fits a declared budget; choose a cheap worker when
+that stage would accumulate substantial tool output in the controller.
+
+Before a controller-owned stage starts, submit a separate decision-request-v1
+with that stage's signals and stable decision ID to the same resolver. Execute
+it only if the result is DIRECT, record its route and self-check, and stop or
+reclassify before further action if its bounds expand. The whole-request
+DELEGATE result, overall permissions, safety rules, and independent-review
+requirement remain in force. A stage may not be declared low risk by omitting
+inherited constraints. Worker-owned stages stay with workers; do not repeat
+their analysis, edits, or tests in the controller. Sequence dependencies,
+serialize overlapping writes, and use only runtime-confirmed parallel slots.
+Minimized packets are a logical context boundary, not technical erasure.
 
 ## Meta-tasks
 
@@ -193,8 +232,8 @@ routing inputs and MUST stop dispatch until corrected. Normalized purpose,
 model, and effort are limited to 48, 48, and 24 characters, and the complete
 name is limited to 128 characters. Join the three normalized components with
 single hyphens. For example, `Implement / Naming`,
-`GPT-5.6 Sol`, and `High` become
-`implement-naming-gpt-5-6-sol-high`.
+`GPT-6 Sol`, and `High` become
+`implement-naming-gpt-6-sol-high`.
 
 Validate before dispatch by recomputing from the recorded inputs, requiring
 exact equality, matching `^[a-z0-9]+(?:-[a-z0-9]+)*$`, enforcing the limits,

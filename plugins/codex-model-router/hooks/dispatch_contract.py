@@ -18,13 +18,22 @@ PLACEHOLDER = re.compile(
     r"(?:^|[-_])(unknown|unavailable|unexposed|unresolved|placeholder|default|auto|none|null)(?:$|[-_])",
     re.IGNORECASE,
 )
-EVIDENCE_KINDS = {"spawn_schema", "model_catalog", "inheritance_contract"}
-SELECTION_MODES = {"explicit", "verified_inheritance"}
+EVIDENCE_KINDS = {"spawn_schema", "model_catalog", "inheritance_contract",
+                  "role_binding", "role_file", "role_runtime", "role_calibration"}
+SELECTION_MODES = {"explicit", "verified_inheritance", "verified_role_config"}
+REASONING_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 SHA256 = re.compile(r"[0-9a-f]{64}")
+MAX_EVIDENCE_BYTES = 1_048_576
+ROLE_RUNTIME_VERSIONS = {"codex-cli 0.144.1": "collaborationspawn_agent"}
+TOML_STRING = re.compile(r'([a-z_]+)\s*=\s*("(?:[^"\\]|\\["\\nrt])*")\Z')
 
 
 class DispatchContractError(ValueError):
     """The planned dispatch is not supported by captured runtime evidence."""
+
+
+class RoleAuthorizationUnavailable(DispatchContractError):
+    """A role record is structurally sound but has no trusted runtime proof."""
 
 
 def require(condition: bool, message: str) -> None:
@@ -60,8 +69,44 @@ def parse_json(text: str, label: str) -> Any:
         raise DispatchContractError(f"invalid JSON in {label}: {error}") from error
 
 
-def file_sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def read_evidence(path: Path) -> bytes:
+    """Read once so the hash and parsed capabilities bind to identical bytes."""
+    with path.open("rb") as stream:
+        raw = stream.read(MAX_EVIDENCE_BYTES + 1)
+    require(0 < len(raw) <= MAX_EVIDENCE_BYTES,
+            f"capability evidence source must be 1..{MAX_EVIDENCE_BYTES} bytes: {path}")
+    return raw
+
+
+def parse_frozen_role_toml(raw: bytes, kind: str) -> dict[str, Any]:
+    """Accept only the small audited TOML subset used by this route."""
+    lines = [line.strip() for line in raw.decode("utf-8").splitlines() if line.strip()]
+    if kind == "role_binding":
+        require(lines and lines.pop(0) == "[agents.default]",
+                "role binding needs an exact [agents.default] section")
+        expected = {"description", "config_file"}
+    else:
+        expected = {"model", "model_reasoning_effort"}
+    result: dict[str, Any] = {"schema_version": 1, "kind": kind}
+    for line in lines:
+        match = TOML_STRING.fullmatch(line)
+        require(match is not None, "role TOML contains unsupported syntax")
+        key, encoded = match.groups()
+        require(key in expected and key not in result, "role TOML has duplicate or unsupported key")
+        result[key] = json.loads(encoded)
+    require(set(result) == {"schema_version", "kind"} | expected,
+            "role TOML is missing required fields")
+    for key in expected:
+        resolved(result[key], f"role TOML {key}")
+    return result
+
+
+def file_hash(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1_048_576), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _captured_at(value: Any, label: str) -> None:
@@ -100,7 +145,7 @@ def _validate_source(kind: str, value: Any, evidence_id: str) -> dict[str, Any]:
             require(model_id not in ids, f"duplicate model catalog id: {model_id}")
             ids.add(model_id)
             _string_array(model["reasoning_efforts"], f"model catalog entry {index} reasoning_efforts")
-    else:
+    elif kind == "inheritance_contract":
         exact_keys(value, {"schema_version", "kind", "tool", "inherits", "when_omitted"},
                    f"capability source {evidence_id}")
         resolved(value["tool"], f"capability source {evidence_id} tool")
@@ -110,8 +155,52 @@ def _validate_source(kind: str, value: Any, evidence_id: str) -> dict[str, Any]:
         exact_keys(value["inherits"], {"model", "reasoning_effort"},
                    f"capability source {evidence_id} inherits")
         resolved(value["inherits"]["model"], f"capability source {evidence_id} inherited model")
-        resolved(value["inherits"]["reasoning_effort"],
-                 f"capability source {evidence_id} inherited reasoning effort")
+        inherited_effort = resolved(value["inherits"]["reasoning_effort"],
+                                    f"capability source {evidence_id} inherited reasoning effort")
+        require(inherited_effort in REASONING_EFFORTS,
+                f"capability source {evidence_id} inherited reasoning effort is unsupported by the router")
+    elif kind in ("role_binding", "role_file"):
+        expected = ({"schema_version", "kind", "description", "config_file"}
+                    if kind == "role_binding" else
+                    {"schema_version", "kind", "model", "model_reasoning_effort"})
+        exact_keys(value, expected, f"capability source {evidence_id}")
+    elif kind == "role_runtime":
+        exact_keys(value, {"schema_version", "kind", "cli_version", "tool",
+                           "default_role", "role_file_precedence",
+                           "agent_type_omitted_uses_default"}, f"capability source {evidence_id}")
+        require(isinstance(value["cli_version"], str) and
+                value["cli_version"] in ROLE_RUNTIME_VERSIONS and
+                value["tool"] == ROLE_RUNTIME_VERSIONS[value["cli_version"]],
+                "role runtime version/tool is not in the audited allowlist")
+        require(value["default_role"] == "default" and
+                value["role_file_precedence"] == "role_file_over_explicit_spawn_and_agents_defaults" and
+                value["agent_type_omitted_uses_default"] is True,
+                "role runtime precedence is unverified")
+    else:
+        exact_keys(value, {"schema_version", "kind", "cli_version", "tool", "role_name",
+                           "binding_sha256", "role_file_sha256", "binary_sha256",
+                           "spawn_arguments", "child", "review"}, f"capability source {evidence_id}")
+        for field in ("binding_sha256", "role_file_sha256", "binary_sha256"):
+            require(isinstance(value[field], str) and SHA256.fullmatch(value[field]) is not None,
+                    f"role calibration {field} must be SHA-256")
+        arguments = value["spawn_arguments"]
+        require(isinstance(arguments, dict), "role calibration spawn_arguments must be an object")
+        exact_keys(arguments, {"fork_turns", "selector_fields", "agent_type"},
+                   "role calibration spawn_arguments")
+        require(arguments == {"fork_turns": "none", "selector_fields": [], "agent_type": None},
+                "role calibration did not observe omitted selectors and agent_type")
+        child = value["child"]
+        require(isinstance(child, dict), "role calibration child must be an object")
+        exact_keys(child, {"model", "reasoning_effort"}, "role calibration child")
+        review = value["review"]
+        require(isinstance(review, dict), "role calibration review must be an object")
+        exact_keys(review, {"status", "reviewer", "source", "sha256"}, "role calibration review")
+        require(review["status"] == "passed", "role calibration needs independent review")
+        resolved(review["reviewer"], "role calibration reviewer")
+        resolved(review["source"], "role calibration review source")
+        require(isinstance(review["sha256"], str) and SHA256.fullmatch(review["sha256"]) is not None and
+                review["sha256"] != "0" * 64,
+                "role calibration review needs SHA-256")
     return value
 
 
@@ -135,15 +224,18 @@ def validate_evidence(items: Any, source_root: Path | None = None) -> dict[str, 
                 expected_hash != "0" * 64, f"capability evidence {evidence_id} needs a nonzero lowercase SHA-256")
         _captured_at(item["captured_at"], f"capability evidence {evidence_id} captured_at")
         require(source.is_file(), f"capability evidence source does not exist: {source}")
-        require(source.stat().st_size > 0, f"capability evidence source is empty: {source}")
-        require(file_sha256(source) == expected_hash, f"capability evidence hash mismatch: {source}")
-        parsed = _validate_source(kind, parse_json(source.read_text(encoding="utf-8"), str(source)), evidence_id)
+        raw = read_evidence(source)
+        require(hashlib.sha256(raw).hexdigest() == expected_hash,
+                f"capability evidence hash mismatch: {source}")
+        parsed_source = (parse_frozen_role_toml(raw, kind) if kind in ("role_binding", "role_file")
+                         else parse_json(raw.decode("utf-8"), str(source)))
+        parsed = _validate_source(kind, parsed_source, evidence_id)
         result[evidence_id] = {"record": item, "path": source.resolve(), "value": parsed}
     return result
 
 
-def validate_dispatch_contract(value: Any, source_root: Path | None = None) -> dict[str, Any]:
-    """Validate a dispatch-contract-v1 using facts derived from source evidence."""
+def validate_dispatch_structure(value: Any, source_root: Path | None = None) -> dict[str, Any]:
+    """Check bounded evidence structure; this does not authorize role dispatch."""
     require(isinstance(value, dict), "dispatch contract must be an object")
     exact_keys(value, {"schema_version", "dispatch_id", "purpose", "canonical_name", "packet",
                        "native_dispatch", "selection", "capability_evidence"}, "dispatch contract")
@@ -154,16 +246,20 @@ def validate_dispatch_contract(value: Any, source_root: Path | None = None) -> d
 
     selection = value["selection"]
     require(isinstance(selection, dict), "selection must be an object")
-    exact_keys(selection, {"mode", "model", "reasoning_effort", "evidence_refs"}, "selection")
-    require(selection["mode"] in SELECTION_MODES, "selection.mode must be explicit or verified_inheritance")
+    require(selection.get("mode") in SELECTION_MODES, "unsupported selection.mode")
+    role_mode = selection["mode"] == "verified_role_config"
+    exact_keys(selection, {"mode", "model", "reasoning_effort", "evidence_refs"} |
+               ({"role"} if role_mode else set()), "selection")
     model = resolved(selection["model"], "selection.model")
     effort = resolved(selection["reasoning_effort"], "selection.reasoning_effort")
+    require(effort in REASONING_EFFORTS, f"reasoning effort {effort} is unsupported by the router")
     refs = _string_array(selection["evidence_refs"], "selection.evidence_refs")
     require(all(ref in evidence for ref in refs), "selection references missing capability evidence")
 
     native = value["native_dispatch"]
     require(isinstance(native, dict), "native_dispatch must be an object")
-    exact_keys(native, {"tool", "naming_field", "native_name", "schema_evidence_ref"}, "native_dispatch")
+    exact_keys(native, {"tool", "naming_field", "native_name", "schema_evidence_ref"} |
+               ({"planned_arguments"} if role_mode else set()), "native_dispatch")
     tool = resolved(native["tool"], "native_dispatch.tool")
     schema_ref = native["schema_evidence_ref"]
     require(schema_ref in evidence and evidence[schema_ref]["record"]["kind"] == "spawn_schema",
@@ -187,12 +283,76 @@ def validate_dispatch_contract(value: Any, source_root: Path | None = None) -> d
         require(matches, f"selected model is absent from model catalog: {model}")
         require(any(effort in entry["reasoning_efforts"] for entry in matches),
                 f"reasoning effort {effort} is unsupported for model {model}")
-    else:
+    elif selection["mode"] == "verified_inheritance":
         contracts = [item["value"] for item in selected if item["record"]["kind"] == "inheritance_contract"]
         require(contracts, "verified inheritance requires inheritance_contract evidence")
         require(all(item["tool"] == tool for item in contracts), "inheritance contract is for a different tool")
         require(any(item["inherits"] == {"model": model, "reasoning_effort": effort} for item in contracts),
                 "selected model/effort contradict verified inheritance evidence")
+    else:
+        role = selection["role"]
+        require(isinstance(role, dict), "selection.role must be an object")
+        exact_keys(role, {"name", "binding_ref", "file_ref", "runtime_ref", "calibration_ref",
+                          "binary_path", "binary_sha256"}, "selection.role")
+        require(role["name"] == "default", "verified role must be agents.default")
+        require(all(isinstance(role[field], str) for field in
+                    ("binding_ref", "file_ref", "runtime_ref", "calibration_ref")),
+                "role evidence references must be strings")
+        role_refs = {role[field] for field in ("binding_ref", "file_ref", "runtime_ref", "calibration_ref")}
+        require(set(refs) == role_refs and len(role_refs) == 4,
+                "role selection needs exactly four distinct evidence references")
+        for field, kind in (("binding_ref", "role_binding"), ("file_ref", "role_file"),
+                            ("runtime_ref", "role_runtime"), ("calibration_ref", "role_calibration")):
+            require(role[field] in evidence and evidence[role[field]]["record"]["kind"] == kind,
+                    f"role {field} needs {kind} evidence")
+        binding = evidence[role["binding_ref"]]
+        role_file = evidence[role["file_ref"]]
+        runtime = evidence[role["runtime_ref"]]["value"]
+        calibration = evidence[role["calibration_ref"]]["value"]
+        configured_path = Path(binding["value"]["config_file"])
+        require(configured_path.is_absolute() and configured_path.resolve() == role_file["path"],
+                "active agents.default binding differs from frozen role file")
+        require(role_file["value"]["model"] == model and
+                role_file["value"]["model_reasoning_effort"] == effort,
+                "role file model/effort differs from selection")
+        require(tool == runtime["tool"] and runtime["cli_version"] in ROLE_RUNTIME_VERSIONS,
+                "role runtime tool/version mismatch")
+        require({"task_name", "message", "fork_turns"}.issubset(arguments) and
+                not {"model", "reasoning_effort"}.intersection(arguments),
+                "role runtime spawn schema does not hide explicit selectors")
+        planned = native["planned_arguments"]
+        require(isinstance(planned, dict), "role planned_arguments must be an object")
+        exact_keys(planned, {"fork_turns", "model", "reasoning_effort", "agent_type",
+                             "message_sha256", "message_bytes"},
+                   "role planned_arguments")
+        require(all(planned[field] is None for field in ("model", "reasoning_effort", "agent_type")) and
+                planned["fork_turns"] == "none",
+                "role dispatch requires fork_turns none and omitted selectors/agent_type")
+        require(isinstance(planned["message_sha256"], str) and
+                SHA256.fullmatch(planned["message_sha256"]) is not None and
+                type(planned["message_bytes"]) is int and 0 < planned["message_bytes"] <= 65_536,
+                "role dispatch needs bounded exact packet commitment")
+        binary_path = Path(resolved(role["binary_path"], "role binary_path"))
+        binary_hash = role["binary_sha256"]
+        require(binary_path.is_absolute() and binary_path.is_file() and
+                isinstance(binary_hash, str) and SHA256.fullmatch(binary_hash) is not None and
+                file_hash(binary_path) == binary_hash,
+                "role runtime binary is missing or changed")
+        require(calibration["cli_version"] == runtime["cli_version"] and
+                calibration["tool"] == tool and calibration["role_name"] == "default" and
+                calibration["binding_sha256"] == binding["record"]["sha256"] and
+                calibration["role_file_sha256"] == role_file["record"]["sha256"] and
+                calibration["binary_sha256"] == binary_hash and
+                calibration["child"] == {"model": model, "reasoning_effort": effort},
+                "role calibration does not bind exact runtime/config/child selectors")
+        review = calibration["review"]
+        review_path = Path(review["source"])
+        if not review_path.is_absolute():
+            require(source_root is not None, "relative review source needs source root")
+            review_path = source_root / review_path
+        require(review_path.is_file() and
+                hashlib.sha256(read_evidence(review_path)).hexdigest() == review["sha256"],
+                "role calibration review evidence is missing or changed")
 
     canonical = build_subagent_name(purpose, model, effort)
     require(value["canonical_name"] == canonical, f"canonical_name must equal {canonical}")
@@ -208,9 +368,20 @@ def validate_dispatch_contract(value: Any, source_root: Path | None = None) -> d
     return value
 
 
-def capability_blocker(dispatch_id: str, errors: list[str]) -> dict[str, Any]:
+def validate_dispatch_contract(value: Any, source_root: Path | None = None) -> dict[str, Any]:
+    """Authorize only routes for which this preflight has a trusted proof."""
+    checked = validate_dispatch_structure(value, source_root)
+    if checked["selection"]["mode"] == "verified_role_config":
+        raise RoleAuthorizationUnavailable(
+            "verified_role_config has structural evidence only; independent CLI calibration "
+            "and trustworthy hook capture are not yet established")
+    return checked
+
+
+def capability_blocker(dispatch_id: str, errors: list[str],
+                       kind: str = "runtime-capability-evidence") -> dict[str, Any]:
     return {"schema_version": 1, "dispatch_id": dispatch_id, "status": "blocked",
-            "blocker_kind": "runtime-capability-evidence", "errors": errors}
+            "blocker_kind": kind, "errors": errors}
 
 
 def main() -> int:
@@ -226,7 +397,9 @@ def main() -> int:
         code = 0
     except (OSError, ValueError, KeyError, TypeError) as error:
         dispatch_id = value.get("dispatch_id", "unresolved") if isinstance(locals().get("value"), dict) else "unresolved"
-        output = capability_blocker(dispatch_id, [str(error)])
+        kind = ("role-runtime-authorization-unverified" if isinstance(error, RoleAuthorizationUnavailable)
+                else "runtime-capability-evidence")
+        output = capability_blocker(dispatch_id, [str(error)], kind)
         code = 1
     print(json.dumps(output, indent=2, sort_keys=True))
     return code

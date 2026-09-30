@@ -1,4 +1,12 @@
 # Fixture and campaign hashes are byte-sensitive across platforms.
 evals/** text eol=lf
+# Frozen benchmark inputs are hash-bound, including the binary OCI layer.
+# Preserve their original bytes even when core.autocrlf is enabled.
+evals/paired_selective/** -text -eol whitespace=cr-at-eol
+evals/paired_selective_lifecycle_v1/** -text -eol whitespace=cr-at-eol
+evals/paired_training/** -text -eol whitespace=cr-at-eol
+# Frozen upstream patch payloads contain Go tabs and byte-sensitive blank lines.
+evals/paired_selective/**/*.patch whitespace=cr-at-eol,-trailing-space,-space-before-tab
+evals/paired_selective_lifecycle_v1/**/*.patch whitespace=cr-at-eol,-trailing-space,-space-before-tab
 # Raw observed transcripts retain byte-exact whitespace for evidence hashing.
 evals/live/** whitespace=-trailing-space

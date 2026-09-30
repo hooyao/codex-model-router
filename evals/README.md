@@ -1,8 +1,35 @@
 # Router scenario benchmark
 
-This deterministic offline benchmark exercises Codex Model Router's actual
-product value rather than generic function generation. It includes five frozen
-fixture-backed scenarios:
+The primary performance question is a paired comparison against a single-agent
+`gpt-6-astra` baseline on **the same task and starting state**, with quality
+parity required before comparing wall time and total USD cost. See
+[PERFORMANCE_PROTOCOL.md](PERFORMANCE_PROTOCOL.md). The existing synthetic
+matrix and selective-only live evidence are functional diagnostics, not a
+performance result against Astra.
+
+Plugin changes additionally require a fresh paired comparison against the last
+accepted plugin artifact, using the same task suite to detect quality, time,
+and cost regressions. The current live collector does not yet implement either
+paired comparison or a release gate.
+
+The performance suite must use long-horizon repository tasks calibrated near
+the scale of roughly 100 natural Astra model calls; the five small fixtures
+below remain smoke/functional diagnostics only.
+
+A separate [paired SWE-bench Pro V2 pilot](live/paired-swepro-flipt-20260923/REPORT.md)
+now compares one real task on identical starting trees. It is a single-task,
+22-Astra-call pilot with a calibrated local hidden-test replay, not the
+approximately 100-call release benchmark or an official Harbor score.
+
+A [selective Astra/xhigh OCI/ECR pilot](paired_selective/DESIGN.md) is frozen
+for independent review. Its [operator runbook](paired_selective/RUNBOOK.md)
+defines the same-task Astra/xhigh versus calibrated lightweight-controller
+pair, offline collector, scope audit, and identical local replay. No paid run
+or performance result has been collected for this pilot.
+
+The existing deterministic offline smoke suite checks Codex Model Router's
+execution contracts rather than generic function generation. It includes five
+frozen fixture-backed scenarios:
 
 - `investigation-reuse`: noisy read-heavy evidence, a compact receipt, and a
   small downstream edit;

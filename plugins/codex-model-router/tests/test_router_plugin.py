@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -28,6 +29,7 @@ hook = load_module("router_hook", PLUGIN_ROOT / "hooks" / "router_hook.py")
 naming = load_module("subagent_naming", PLUGIN_ROOT / "hooks" / "subagent_naming.py")
 sys.path.insert(0, str(PLUGIN_ROOT / "hooks"))
 dispatch = load_module("dispatch_contract_under_test", PLUGIN_ROOT / "hooks" / "dispatch_contract.py")
+dispatch_audit = load_module("dispatch_audit_under_test", PLUGIN_ROOT / "hooks" / "dispatch_audit.py")
 config_module = load_module("routing_config_under_test", PLUGIN_ROOT / "hooks" / "routing_config.py")
 decision = load_module("execution_decision_under_test", PLUGIN_ROOT / "hooks" / "execution_decision.py")
 init_router = load_module("init_router_under_test", PLUGIN_ROOT / "scripts" / "init_router.py")
@@ -101,15 +103,17 @@ class RouterPluginTests(unittest.TestCase):
             "astra-image-analysis": ("Astra", "high"),
             "sol-code-reading-analysis": ("Sol", "high"),
             "luna-detailed-manual-procedure": ("Luna", "medium"),
-            "astra-architecture": ("Astra", "high"),
-            "astra-security": ("Astra", "high"),
-            "astra-complex-tools": ("Astra", "high"),
+            "astra-architecture": ("Astra", "xhigh"),
+            "astra-security": ("Astra", "xhigh"),
+            "astra-complex-tools": ("Astra", "xhigh"),
+            "astra-research-synthesis": ("Astra", "xhigh"),
             "sol-debugging": ("Sol", "high"),
             "sol-open-ended-implementation": ("Sol", "high"),
-            "terra-repository-discovery": ("Terra", "medium"),
-            "terra-everyday-implementation": ("Terra", "medium"),
-            "terra-documentation": ("Terra", "medium"),
-            "terra-test-triage": ("Terra", "medium"),
+            "sol-repository-discovery": ("Sol", "medium"),
+            "sol-everyday-implementation": ("Sol", "medium"),
+            "sol-documentation": ("Sol", "medium"),
+            "sol-test-triage": ("Sol", "medium"),
+            "sol-routine-review": ("Sol", "medium"),
             "luna-extraction": ("Luna", "low"),
             "luna-classification": ("Luna", "low"),
             "luna-normalization": ("Luna", "low"),
@@ -120,7 +124,41 @@ class RouterPluginTests(unittest.TestCase):
                 self.assertEqual(effort, examples[example_id]["reasoning_effort"])
         self.assertEqual("direct", examples["luna-local-bounded-change"]["execution_mode"])
         self.assertEqual("delegate", examples["astra-complex-tools"]["execution_mode"])
-        self.assertEqual("evaluate", examples["terra-documentation"]["execution_mode"])
+        self.assertEqual("evaluate", examples["sol-documentation"]["execution_mode"])
+        self.assertEqual({"Astra", "Sol", "Luna"}, {example["preferred_model_class"] for example in examples.values()})
+        self.assertIn("max", config["effort_guidance"])
+        self.assertTrue(any(example["reasoning_effort"] == "xhigh" for example in examples.values()))
+        self.assertTrue(all(example["reasoning_effort"] != "max" for example in examples.values()))
+
+    def test_existing_v3_terra_config_and_optional_max_guidance_remain_valid(self) -> None:
+        template = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        template["effort_guidance"].pop("max")
+        template["examples"][0]["preferred_model_class"] = "Terra"
+        self.assertEqual(template, config_module.validate_config(template))
+
+        template["effort_guidance"]["max"] = "Use only for extreme supported cases."
+        self.assertEqual(template, config_module.validate_config(template))
+        template["effort_guidance"]["unsupported"] = "not a valid effort"
+        with self.assertRaisesRegex(config_module.RoutingConfigError, "contains unknown fields"):
+            config_module.validate_config(template)
+
+    def test_existing_terra_workspace_is_loaded_as_sol_without_rewriting_file(self) -> None:
+        template = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        template["examples"][0]["preferred_model_class"] = "Terra"
+        config_path = self.policy_workspace / "legacy-routing.json"
+        config_path.write_text(json.dumps(template), encoding="utf-8")
+        original = config_path.read_bytes()
+        loaded = config_module.load_config(config_path)
+        self.assertEqual("Sol", loaded["examples"][0]["preferred_model_class"])
+        self.assertEqual(original, config_path.read_bytes())
+
+    def test_config_rejects_none_and_ultra_efforts(self) -> None:
+        for effort in ("none", "ultra"):
+            with self.subTest(effort=effort):
+                template = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+                template["examples"][0]["reasoning_effort"] = effort
+                with self.assertRaisesRegex(config_module.RoutingConfigError, "reasoning_effort"):
+                    config_module.validate_config(template)
 
     def test_execution_mode_precedence_is_deterministic(self) -> None:
         config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
@@ -199,6 +237,21 @@ class RouterPluginTests(unittest.TestCase):
             config, self.decision_request(signals={"high_risk": None})
         )
         self.assertEqual("INDEPENDENT_REVIEW", unknown_risk["verification_requirement"])
+
+    def test_delegated_request_can_contain_a_separately_qualified_direct_stage(self) -> None:
+        config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        whole = decision.resolve_routing_decision(
+            config,
+            self.decision_request(decision_id="whole", matched_example_ids=[],
+                                  signals={"network_or_sync": True, "multiple_bounded_tasks": True}),
+        )
+        stage = decision.resolve_routing_decision(
+            config,
+            self.decision_request(decision_id="easy-stage", matched_example_ids=["luna-local-bounded-change"]),
+        )
+        self.assertEqual("DELEGATE", whole["ownership"])
+        self.assertEqual("DIRECT", stage["ownership"])
+        self.assertEqual("SELF_CHECK", stage["verification_requirement"])
 
     def test_required_review_forces_delegate_and_independent_verification(self) -> None:
         config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
@@ -424,13 +477,15 @@ class RouterPluginTests(unittest.TestCase):
             config["selection_principle"] = "Unique reloaded selection principle."
             path.write_text(json.dumps(config, indent=2), encoding="utf-8")
             second = self.build_hook_output(event)["hookSpecificOutput"]["additionalContext"]
-            self.assertNotIn("Unique reloaded selection principle.", first)
-            self.assertIn("Unique reloaded selection principle.", second)
+            self.assertNotEqual(first, second)
+            self.assertIn("Validated config SHA256 (canonical JSON): ", second)
+            self.assertNotIn("Unique reloaded selection principle.", second)
+            self.assertIn("Read this config for routing examples", second)
             self.assertIn(str(path), second)
             self.assertEqual(1, second.count("ROUTING_CONFIG_BEGIN"))
             self.assertEqual(1, second.count("ROUTING_CONFIG_END"))
 
-    def test_all_supported_events_inject_the_same_serialized_config(self) -> None:
+    def test_all_supported_events_inject_the_same_compact_routing_block(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory).resolve()
             blocks = []
@@ -439,9 +494,76 @@ class RouterPluginTests(unittest.TestCase):
                     "hook_event_name": event_name,
                     "cwd": str(workspace),
                 })["hookSpecificOutput"]["additionalContext"]
-                blocks.append(context.split("ROUTING_CONFIG_BEGIN\n", 1)[1])
+                blocks.append(context.split("ROUTING_CONFIG_BEGIN\n", 1)[1].split("\nROUTING_CONFIG_END", 1)[0])
             self.assertEqual(blocks[0], blocks[1])
             self.assertEqual(blocks[1], blocks[2])
+
+    def test_hook_payload_keeps_routing_contract_within_visible_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            workspace = Path(temporary_directory).resolve()
+            config_path = workspace / ".codex-model-router" / "routing.json"
+            config_path.parent.mkdir()
+            config = json.loads((PLUGIN_ROOT / "defaults" / "default-routing.json").read_text(encoding="utf-8"))
+            config["selection_principle"] = "s" * 1_000
+            config["runtime_resolution"] = "r" * 1_000
+            for example in config["examples"][:12]:
+                example["rationale"] = "r" * 500
+            config_module.validate_config(config)
+            self.assertGreater(len(config_module.serialized_config(config).encode("utf-8")), 12_000)
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            expected_digest = hashlib.sha256(
+                config_module.serialized_config(config).encode("utf-8")
+            ).hexdigest()
+            resolver_path = PLUGIN_ROOT / "hooks" / "execution_decision.py"
+
+            for event_name in ("SessionStart", "UserPromptSubmit", "SubagentStart"):
+                with self.subTest(event=event_name):
+                    result = subprocess.run(
+                        [sys.executable, str(PLUGIN_ROOT / "hooks" / "router_hook.py")],
+                        input=json.dumps({"hook_event_name": event_name, "cwd": str(workspace)}),
+                        capture_output=True, text=True, timeout=10, check=False,
+                    )
+                    self.assertEqual(0, result.returncode, result.stderr)
+                    raw_output = result.stdout.encode("utf-8")
+                    self.assertLess(len(raw_output), 9_500)
+                    visible_prefix = raw_output[:10_000].decode("utf-8")
+                    for required in (
+                        "ROUTING_CONFIG_BEGIN", "ROUTING_CONFIG_END",
+                        str(config_path), str(resolver_path), expected_digest,
+                        "decision-request-v1", "EFFECTIVE_EXECUTION_POLICY:",
+                    ):
+                        self.assertIn(json.dumps(required)[1:-1], visible_prefix)
+                    output = json.loads(result.stdout)["hookSpecificOutput"]
+                    self.assertEqual(event_name, output["hookEventName"])
+                    self.assertNotIn('"examples":', output["additionalContext"])
+
+    def test_long_workspace_path_keeps_complete_output_bounded_or_fails_closed(self) -> None:
+        config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        long_path = Path("C:/" + "/".join(["d" * 91] * 10) + "/.codex-model-router/routing.json")
+        self.assertGreaterEqual(len(str(long_path)), 950)
+        self.assertLessEqual(len(str(long_path)), 970)
+        resolver_path = PLUGIN_ROOT / "hooks" / "execution_decision.py"
+
+        with mock.patch.object(hook, "load_workspace_config", return_value=(long_path, config, False)):
+            for event_name in ("SessionStart", "UserPromptSubmit", "SubagentStart"):
+                with self.subTest(event=event_name):
+                    output = self.build_hook_output({"hook_event_name": event_name})
+                    serialized = json.dumps(output, separators=(",", ":")) + os.linesep
+                    raw_output = serialized.encode("utf-8")
+                    self.assertLessEqual(len(raw_output), hook.MAX_HOOK_OUTPUT_BYTES)
+                    self.assertLess(len(raw_output), 10_000)
+                    context = json.loads(serialized)["hookSpecificOutput"]["additionalContext"]
+                    self.assertEqual(1, context.count(str(long_path)))
+                    for required in (
+                        "ROUTING_CONFIG_BEGIN", "ROUTING_CONFIG_END",
+                        str(resolver_path), "decision-request-v1", "EFFECTIVE_EXECUTION_POLICY:",
+                    ):
+                        self.assertIn(required, context)
+
+        oversized_path = Path("C:/" + "/".join(["d" * 91] * 50) + "/.codex-model-router/routing.json")
+        with mock.patch.object(hook, "load_workspace_config", return_value=(oversized_path, config, False)):
+            with self.assertRaisesRegex(hook.RoutingConfigError, "hook output is .* maximum is"):
+                self.build_hook_output({"hook_event_name": "SessionStart"})
 
     def test_malformed_invalid_oversized_and_non_regular_config_fail_clearly(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -904,10 +1026,26 @@ class RouterPluginTests(unittest.TestCase):
     def test_controller_context_contains_policy_roles(self) -> None:
         fixture = json.loads((PLUGIN_ROOT / "tests" / "fixtures" / "session-start.json").read_text(encoding="utf-8"))
         context = self.build_hook_output(fixture)["hookSpecificOutput"]["additionalContext"]
-        for expected in ("Active controller model", "Luna", "Terra", "Sol", "Astra", "native spawn/wait", "independent reviewer"):
+        for expected in ("Active controller model", "Astra", "native spawn/wait", "independent reviewer"):
             self.assertIn(expected, context)
-        self.assertIn(str(self.policy_workspace / ".codex-model-router" / "routing.json"), context)
+        workspace_config = self.policy_workspace / ".codex-model-router" / "routing.json"
+        self.assertIn(str(workspace_config), context)
+        configured_classes = {
+            example["preferred_model_class"] for example in config_module.load_config(workspace_config)["examples"]
+        }
+        self.assertTrue({"Luna", "Sol", "Astra"}.issubset(configured_classes))
         self.assertNotIn(str(PLUGIN_ROOT.parents[1] / ".codex-model-router" / "routing.json"), context)
+
+    def test_controller_context_declares_selective_stage_boundary(self) -> None:
+        for event_name, context in self.controller_contexts():
+            with self.subTest(event=event_name):
+                for required in (
+                    "separate decision-request-v1 for that stage independently resolves DIRECT",
+                    "exclusive write scope", "context budget", "self-check",
+                    "hard kernel", "Never duplicate worker-owned",
+                    "whole-request independent-review requirement",
+                ):
+                    self.assertIn(required, context)
 
     def controller_contexts(self):
         for event_name in ("SessionStart", "UserPromptSubmit"):
@@ -993,26 +1131,26 @@ class RouterPluginTests(unittest.TestCase):
                 ):
                     self.assertIn(expected.lower(), normalized_content)
         skill = (PLUGIN_ROOT / "skills" / "model-router" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("implement-naming-gpt-5-6-sol-high", skill)
+        self.assertIn("implement-naming-gpt-6-sol-high", skill)
 
     def test_worker_name_helper_builds_and_validates_canonical_name(self) -> None:
-        expected = "implement-naming-gpt-5-6-sol-high"
-        actual = naming.build_subagent_name("Implement / Naming", "GPT-5.6 Sol", "High")
+        expected = "implement-naming-gpt-6-sol-high"
+        actual = naming.build_subagent_name("Implement / Naming", "GPT-6 Sol", "High")
         self.assertEqual(expected, actual)
-        naming.validate_subagent_name(actual, "Implement / Naming", "GPT-5.6 Sol", "High")
-        self.assertEqual(actual, naming.build_subagent_name("Implement / Naming", "GPT-5.6 Sol", "High"))
+        naming.validate_subagent_name(actual, "Implement / Naming", "GPT-6 Sol", "High")
+        self.assertEqual(actual, naming.build_subagent_name("Implement / Naming", "GPT-6 Sol", "High"))
         self.assertEqual(
-            "implement_naming_gpt_5_6_sol_high",
+            "implement_naming_gpt_6_sol_high",
             naming.native_task_name(actual),
         )
-        naming.validate_unique_native_task_names((actual, "review_naming_gpt_5_6_sol_high".replace("_", "-")))
+        naming.validate_unique_native_task_names((actual, "review_naming_gpt_6_sol_high".replace("_", "-")))
 
     def test_worker_name_helper_rejects_invalid_components_and_duplicate_dag_names(self) -> None:
-        for purpose, model, effort in (("修复", "gpt-5.6-terra", "low"), ("implement naming", "", "low"), ("implement naming", "gpt-5.6-terra", "修复")):
+        for purpose, model, effort in (("修复", "gpt-6-sol", "low"), ("implement naming", "", "low"), ("implement naming", "gpt-6-sol", "修复")):
             with self.subTest(purpose=purpose, model=model, effort=effort):
                 with self.assertRaises(ValueError):
                     naming.build_subagent_name(purpose, model, effort)
-        for purpose, model, effort in (("a" * 49, "terra", "low"), ("review", "b" * 49, "low"), ("review", "terra", "c" * 25)):
+        for purpose, model, effort in (("a" * 49, "sol", "low"), ("review", "b" * 49, "low"), ("review", "sol", "c" * 25)):
             with self.subTest(purpose=purpose, model=model, effort=effort):
                 with self.assertRaisesRegex(ValueError, "at most"):
                     naming.build_subagent_name(purpose, model, effort)
@@ -1020,14 +1158,14 @@ class RouterPluginTests(unittest.TestCase):
             naming.validate_subagent_name(("a" * 126) + "-b-c")
         with self.assertRaises(ValueError):
             naming.validate_subagent_name(
-                "review-naming-gpt-5-6-sol-high",
-                "implement naming", "gpt-5.6-sol", "high",
+                "review-naming-gpt-6-sol-high",
+                "implement naming", "gpt-6-sol", "high",
             )
-        name = naming.build_subagent_name("review naming", "gpt-5.6-sol", "high")
+        name = naming.build_subagent_name("review naming", "gpt-6-sol", "high")
         with self.assertRaisesRegex(ValueError, "unique"):
             naming.validate_unique_subagent_names((name, name))
         with self.assertRaises(ValueError):
-            naming.native_task_name("review_naming_gpt_5_6_sol_high")
+            naming.native_task_name("review_naming_gpt_6_sol_high")
 
     def test_meta_prompt_requires_high_capability_independent_review(self) -> None:
         for prompt in (
@@ -1199,6 +1337,59 @@ class RouterPluginTests(unittest.TestCase):
         errors = validator.validate_hook_output("not json", "SessionStart", "malformed fixture")
         self.assertTrue(any("malformed fixture: invalid JSON hook output" in error for error in errors))
 
+    def test_audit_hook_manifest_requires_exact_commands_matcher_and_program(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            plugin_root = Path(directory)
+            hook_dir = plugin_root / "hooks"
+            hook_dir.mkdir()
+            for name in ("hooks.json", "router_hook.py", "routing_config.py",
+                         "execution_decision.py", "dispatch_audit.py"):
+                shutil.copy2(PLUGIN_ROOT / "hooks" / name, hook_dir / name)
+            hook_path = hook_dir / "hooks.json"
+            original = json.loads(hook_path.read_text(encoding="utf-8"))
+
+            def errors_for(value):
+                hook_path.write_text(json.dumps(value), encoding="utf-8")
+                errors = []
+                validator.validate_hook_configuration(plugin_root, errors)
+                return errors
+
+            self.assertEqual([], errors_for(original))
+            for event_name in ("PreToolUse", "PostToolUse"):
+                value = json.loads(json.dumps(original))
+                value["hooks"][event_name][0]["matcher"] = "Bash"
+                self.assertTrue(any("matcher" in error for error in errors_for(value)))
+                value = json.loads(json.dumps(original))
+                value["hooks"][event_name][0]["matcher"] = ".*spawn_agent.*"
+                self.assertTrue(any("matcher" in error for error in errors_for(value)))
+                for field in ("command", "commandWindows"):
+                    value = json.loads(json.dumps(original))
+                    value["hooks"][event_name][0]["hooks"][0][field] = "python other.py"
+                    self.assertTrue(any("exact allowlist" in error for error in errors_for(value)))
+                value = json.loads(json.dumps(original))
+                del value["hooks"][event_name]
+                self.assertTrue(any("audit group" in error for error in errors_for(value)))
+            self.assertEqual([], errors_for(original))
+            (hook_dir / "dispatch_audit.py").unlink()
+            self.assertTrue(any("audit hook program is missing" in error
+                                for error in errors_for(original)))
+
+    def test_v2_post_audit_commits_observed_input_without_plaintext(self) -> None:
+        event = {"hook_event_name": "PostToolUse", "tool_name": "collaborationspawn_agent",
+                 "session_id": "parent-1", "turn_id": "turn-1", "tool_use_id": "call-1",
+                 "tool_input": {"message": "private assignment"},
+                 "tool_response": {"task_name": "/root/worker"}}
+        record = dispatch_audit.build_record(event)
+        self.assertEqual({"message_sha256": hashlib.sha256(b"private assignment").hexdigest(),
+                          "message_bytes": len(b"private assignment")},
+                         record["post_observed_input"])
+        self.assertNotIn("private assignment", json.dumps(record))
+        with self.assertRaisesRegex(dispatch_audit.AuditError, "missing message"):
+            dispatch_audit.build_record({**event, "tool_input": {}})
+        with self.assertRaisesRegex(dispatch_audit.AuditError, "bound"):
+            dispatch_audit.build_record({**event, "tool_input": {"message": "s" * 65_537}})
+        self.assertIsNone(dispatch_audit.build_record({**event, "tool_name": "collaborationfollowup_task"}))
+
     def test_unsupported_hook_event_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             hook.build_hook_output({"hook_event_name": "Stop"})
@@ -1212,10 +1403,10 @@ class RouterPluginTests(unittest.TestCase):
         spawn_path.write_text(json.dumps({"schema_version": 1, "kind": "spawn_schema",
             "tool": "spawn_agent", "supported_arguments": ["task_name", "message", "model", "reasoning_effort"]}), encoding="utf-8")
         catalog_path.write_text(json.dumps({"schema_version": 1, "kind": "model_catalog", "models": [
-            {"id": "gpt-5.6-sol", "reasoning_efforts": ["low", "high"]}]}), encoding="utf-8")
+            {"id": "gpt-6-sol", "reasoning_efforts": ["low", "high"]}]}), encoding="utf-8")
         inheritance_path.write_text(json.dumps({"schema_version": 1, "kind": "inheritance_contract",
             "tool": "spawn_agent", "when_omitted": True,
-            "inherits": {"model": "gpt-5.6-sol", "reasoning_effort": "high"}}), encoding="utf-8")
+            "inherits": {"model": "gpt-6-sol", "reasoning_effort": "high"}}), encoding="utf-8")
         evidence = [
             {"id": "schema", "kind": "spawn_schema", "source": str(spawn_path),
              "sha256": hashlib.sha256(spawn_path.read_bytes()).hexdigest(), "captured_at": "2026-09-23T04:00:00Z"},
@@ -1231,12 +1422,12 @@ class RouterPluginTests(unittest.TestCase):
             refs = ["inheritance"]
         return {
             "schema_version": 1, "dispatch_id": "edit-worker", "purpose": "edit",
-            "canonical_name": "edit-gpt-5-6-sol-high",
-            "packet": {"worker_name": "edit-gpt-5-6-sol-high", "task_id": "edit-gpt-5-6-sol-high",
-                       "native_task_name": "edit_gpt_5_6_sol_high"},
+            "canonical_name": "edit-gpt-6-sol-high",
+            "packet": {"worker_name": "edit-gpt-6-sol-high", "task_id": "edit-gpt-6-sol-high",
+                       "native_task_name": "edit_gpt_6_sol_high"},
             "native_dispatch": {"tool": "spawn_agent", "naming_field": "task_name",
-                                "native_name": "edit_gpt_5_6_sol_high", "schema_evidence_ref": "schema"},
-            "selection": {"mode": mode, "model": "gpt-5.6-sol", "reasoning_effort": "high",
+                                "native_name": "edit_gpt_6_sol_high", "schema_evidence_ref": "schema"},
+            "selection": {"mode": mode, "model": "gpt-6-sol", "reasoning_effort": "high",
                           "evidence_refs": refs},
             "capability_evidence": evidence,
         }
@@ -1255,6 +1446,30 @@ class RouterPluginTests(unittest.TestCase):
         value = self.dispatch_contract()
         value["selection"]["model"] = "model-unexposed"
         with self.assertRaisesRegex(dispatch.DispatchContractError, "unresolved placeholder"):
+            dispatch.validate_dispatch_contract(value)
+
+    def test_none_effort_is_rejected_even_when_catalog_advertises_it(self) -> None:
+        value = self.dispatch_contract()
+        catalog_item = next(item for item in value["capability_evidence"] if item["kind"] == "model_catalog")
+        catalog_path = Path(catalog_item["source"])
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        catalog["models"][0]["reasoning_efforts"].append("none")
+        catalog["models"][0]["reasoning_efforts"].append("ultra")
+        catalog_path.write_text(json.dumps(catalog), encoding="utf-8")
+        catalog_item["sha256"] = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
+        value["selection"]["reasoning_effort"] = "none"
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "unresolved placeholder"):
+            dispatch.validate_dispatch_contract(value)
+        value["selection"]["reasoning_effort"] = "high"
+        value["selection"]["model"] = "none"
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "unresolved placeholder"):
+            dispatch.validate_dispatch_contract(value)
+        value["selection"]["model"] = "gpt-6-sol"
+        value["selection"]["reasoning_effort"] = "default"
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "unresolved placeholder"):
+            dispatch.validate_dispatch_contract(value)
+        value["selection"]["reasoning_effort"] = "ultra"
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "unsupported by the router"):
             dispatch.validate_dispatch_contract(value)
 
     def test_dispatch_contract_requires_capability_proof_for_inheritance(self) -> None:
@@ -1277,10 +1492,10 @@ class RouterPluginTests(unittest.TestCase):
 
         value = self.dispatch_contract()
         value["selection"]["reasoning_effort"] = "ultra"
-        value["canonical_name"] = "edit-gpt-5-6-sol-ultra"
+        value["canonical_name"] = "edit-gpt-6-sol-ultra"
         value["packet"] = {"worker_name": value["canonical_name"], "task_id": value["canonical_name"],
-                           "native_task_name": "edit_gpt_5_6_sol_ultra"}
-        value["native_dispatch"]["native_name"] = "edit_gpt_5_6_sol_ultra"
+                           "native_task_name": "edit_gpt_6_sol_ultra"}
+        value["native_dispatch"]["native_name"] = "edit_gpt_6_sol_ultra"
         with self.assertRaisesRegex(dispatch.DispatchContractError, "unsupported"):
             dispatch.validate_dispatch_contract(value)
 
@@ -1288,6 +1503,185 @@ class RouterPluginTests(unittest.TestCase):
         value["selection"]["model"] = "gpt-6-astra"
         with self.assertRaisesRegex(dispatch.DispatchContractError, "contradict"):
             dispatch.validate_dispatch_contract(value)
+
+    def test_dispatch_evidence_is_bounded_and_hashes_the_parsed_bytes(self) -> None:
+        value = self.dispatch_contract()
+        source = Path(value["capability_evidence"][0]["source"])
+        original_read = dispatch.read_evidence
+        reads = []
+
+        def read_then_replace(path):
+            raw = original_read(path)
+            reads.append(path)
+            if path == source:
+                source.write_text('{"schema_version":1,"kind":"spawn_schema",'
+                                  '"tool":"wrong","supported_arguments":["message"]}',
+                                  encoding="utf-8")
+            return raw
+
+        with mock.patch.object(dispatch, "read_evidence", side_effect=read_then_replace):
+            self.assertEqual(value, dispatch.validate_dispatch_contract(value))
+        self.assertEqual(1, reads.count(source))
+
+        value = self.dispatch_contract()
+        source = Path(value["capability_evidence"][0]["source"])
+        source.write_bytes(b"x" * (dispatch.MAX_EVIDENCE_BYTES + 1))
+        value["capability_evidence"][0]["sha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "1\\.\\.1048576 bytes"):
+            dispatch.validate_dispatch_contract(value)
+
+        value = self.dispatch_contract()
+        source = Path(value["capability_evidence"][0]["source"])
+        source.write_text('{"schema_version":1,"kind":"spawn_schema",'
+                          '"tool":"spawn_agent","tool":"spawn_agent",'
+                          '"supported_arguments":["task_name","message","model","reasoning_effort"]}',
+                          encoding="utf-8")
+        value["capability_evidence"][0]["sha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "duplicate JSON key"):
+            dispatch.validate_dispatch_contract(value)
+
+    def role_dispatch_contract(self) -> dict:
+        root = self.policy_workspace / "role-evidence"
+        root.mkdir(exist_ok=True)
+        role_file = root / "astra-role.toml"
+        role_file.write_text('model = "gpt-6-astra"\nmodel_reasoning_effort = "xhigh"\n', encoding="utf-8")
+        binding = root / "active-config.toml"
+        binding.write_text('[agents.default]\ndescription = "Benchmark hard-kernel worker."\n'
+                           f'config_file = "{role_file.as_posix()}"\n', encoding="utf-8")
+        binary = root / "codex.exe"
+        binary.write_bytes(b"synthetic-cli-for-contract-tests")
+        runtime = root / "runtime.json"
+        runtime.write_text(json.dumps({"schema_version": 1, "kind": "role_runtime",
+            "cli_version": "codex-cli 0.144.1", "tool": "collaborationspawn_agent",
+            "default_role": "default",
+            "role_file_precedence": "role_file_over_explicit_spawn_and_agents_defaults",
+            "agent_type_omitted_uses_default": True}), encoding="utf-8")
+        schema = root / "spawn.json"
+        schema.write_text(json.dumps({"schema_version": 1, "kind": "spawn_schema",
+            "tool": "collaborationspawn_agent",
+            "supported_arguments": ["task_name", "message", "fork_turns"]}), encoding="utf-8")
+        review = root / "review.json"
+        review.write_text('{"synthetic_test_only":true}', encoding="utf-8")
+        binary_hash = hashlib.sha256(binary.read_bytes()).hexdigest()
+        calibration = root / "calibration.json"
+        calibration.write_text(json.dumps({"schema_version": 1, "kind": "role_calibration",
+            "cli_version": "codex-cli 0.144.1", "tool": "collaborationspawn_agent",
+            "role_name": "default", "binding_sha256": hashlib.sha256(binding.read_bytes()).hexdigest(),
+            "role_file_sha256": hashlib.sha256(role_file.read_bytes()).hexdigest(),
+            "binary_sha256": binary_hash,
+            "spawn_arguments": {"fork_turns": "none", "selector_fields": [], "agent_type": None},
+            "child": {"model": "gpt-6-astra", "reasoning_effort": "xhigh"},
+            "review": {"status": "passed", "reviewer": "synthetic-test-reviewer",
+                       "source": str(review), "sha256": hashlib.sha256(review.read_bytes()).hexdigest()}}),
+            encoding="utf-8")
+        paths = {"schema": ("spawn_schema", schema), "binding": ("role_binding", binding),
+                 "role": ("role_file", role_file), "runtime": ("role_runtime", runtime),
+                 "calibration": ("role_calibration", calibration)}
+        evidence = [{"id": key, "kind": kind, "source": str(path),
+                     "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                     "captured_at": "2026-09-24T00:00:00Z"}
+                    for key, (kind, path) in paths.items()]
+        canonical = "design-gpt-6-astra-xhigh"
+        return {"schema_version": 1, "dispatch_id": "design-kernel", "purpose": "design",
+                "canonical_name": canonical,
+                "packet": {"worker_name": canonical, "task_id": canonical,
+                           "native_task_name": "design_gpt_6_astra_xhigh"},
+                "native_dispatch": {"tool": "collaborationspawn_agent",
+                                    "naming_field": "task_name",
+                                    "native_name": "design_gpt_6_astra_xhigh",
+                                    "schema_evidence_ref": "schema",
+                                    "planned_arguments": {"fork_turns": "none", "model": None,
+                                                          "reasoning_effort": None,
+                                                          "agent_type": None,
+                                                          "message_sha256": hashlib.sha256(b"bounded packet").hexdigest(),
+                                                          "message_bytes": len(b"bounded packet")}},
+                "selection": {"mode": "verified_role_config", "model": "gpt-6-astra",
+                              "reasoning_effort": "xhigh",
+                              "evidence_refs": ["binding", "role", "runtime", "calibration"],
+                              "role": {"name": "default", "binding_ref": "binding",
+                                       "file_ref": "role", "runtime_ref": "runtime",
+                                       "calibration_ref": "calibration",
+                                       "binary_path": str(binary), "binary_sha256": binary_hash}},
+                "capability_evidence": evidence}
+
+    def test_verified_role_config_is_distinct_and_requires_exact_bound_evidence(self) -> None:
+        value = self.role_dispatch_contract()
+        self.assertEqual(value, dispatch.validate_dispatch_structure(value))
+        with self.assertRaisesRegex(dispatch.RoleAuthorizationUnavailable, "structural evidence only"):
+            dispatch.validate_dispatch_contract(value)
+        contract_path = self.policy_workspace / "synthetic-role-contract.json"
+        contract_path.write_text(json.dumps(value), encoding="utf-8")
+        result = subprocess.run([sys.executable, str(PLUGIN_ROOT / "hooks" / "dispatch_contract.py"),
+                                 "--input", str(contract_path)], capture_output=True, text=True)
+        self.assertNotEqual(0, result.returncode)
+        blocked = json.loads(result.stdout)
+        self.assertEqual("blocked", blocked["status"])
+        self.assertEqual("role-runtime-authorization-unverified", blocked["blocker_kind"])
+        value["native_dispatch"]["planned_arguments"]["model"] = "gpt-6-astra"
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "omitted selectors"):
+            dispatch.validate_dispatch_structure(value)
+        value = self.role_dispatch_contract()
+        value["native_dispatch"]["planned_arguments"]["fork_turns"] = "all"
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "fork_turns none"):
+            dispatch.validate_dispatch_structure(value)
+        value = self.role_dispatch_contract()
+        value["native_dispatch"]["planned_arguments"]["agent_type"] = "reviewer"
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "omitted selectors"):
+            dispatch.validate_dispatch_structure(value)
+        value = self.role_dispatch_contract()
+        value["selection"]["evidence_refs"].remove("calibration")
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "exactly four"):
+            dispatch.validate_dispatch_structure(value)
+        value = self.role_dispatch_contract()
+        role_path = Path(next(item["source"] for item in value["capability_evidence"]
+                              if item["kind"] == "role_file"))
+        role_path.write_text('model = "gpt-6-sol"\nmodel_reasoning_effort = "high"\n', encoding="utf-8")
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "hash mismatch"):
+            dispatch.validate_dispatch_structure(value)
+        value = self.role_dispatch_contract()
+        binding = next(item for item in value["capability_evidence"]
+                       if item["kind"] == "role_binding")
+        binding_path = Path(binding["source"])
+        binding_path.write_text('[agents.default]\ndescription = "Benchmark hard-kernel worker."\n'
+                                'config_file = "C:/different-role.toml"\n', encoding="utf-8")
+        binding["sha256"] = hashlib.sha256(binding_path.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "binding differs"):
+            dispatch.validate_dispatch_structure(value)
+        value = self.role_dispatch_contract()
+        Path(value["selection"]["role"]["binary_path"]).write_bytes(b"changed")
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "binary is missing or changed"):
+            dispatch.validate_dispatch_structure(value)
+
+    def test_verified_role_config_rejects_unknown_runtime_and_wrong_child(self) -> None:
+        value = self.role_dispatch_contract()
+        runtime = next(item for item in value["capability_evidence"] if item["kind"] == "role_runtime")
+        source = Path(runtime["source"])
+        record = json.loads(source.read_text(encoding="utf-8"))
+        record["cli_version"] = "codex-cli 0.155.0"
+        source.write_text(json.dumps(record), encoding="utf-8")
+        runtime["sha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "audited allowlist"):
+            dispatch.validate_dispatch_structure(value)
+        value = self.role_dispatch_contract()
+        calibration = next(item for item in value["capability_evidence"]
+                           if item["kind"] == "role_calibration")
+        source = Path(calibration["source"])
+        record = json.loads(source.read_text(encoding="utf-8"))
+        record["child"]["reasoning_effort"] = "high"
+        source.write_text(json.dumps(record), encoding="utf-8")
+        calibration["sha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "child selectors"):
+            dispatch.validate_dispatch_structure(value)
+        value = self.role_dispatch_contract()
+        calibration = next(item for item in value["capability_evidence"]
+                           if item["kind"] == "role_calibration")
+        source = Path(calibration["source"])
+        record = json.loads(source.read_text(encoding="utf-8"))
+        record["review"]["status"] = "pending"
+        source.write_text(json.dumps(record), encoding="utf-8")
+        calibration["sha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "independent review"):
+            dispatch.validate_dispatch_structure(value)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,37 @@
+{
+  "task_id": "flipt-ecr-credential-lifecycle-v1",
+  "oracle_version": 1,
+  "method": "local-hidden-test-replay-not-official-harbor",
+  "legacy_oracle_sha256": "b32fa3b601051584a419624459df7f96dcd7edd57ff0efb80a3449d89a75f268",
+  "new_tests": [
+    "TestLifecycleReuseAndExpiry",
+    "TestLifecycleRegistrySelectionAndIsolation",
+    "TestLifecycleConcurrentRefresh",
+    "TestLifecycleIndependentRegistryProgress",
+    "TestLifecycleSharedFailureAndRetry",
+    "TestLifecycleCancellation",
+    "TestLifecycleAlreadyCancelled",
+    "TestLifecycleFailedRefreshRecovery",
+    "TestLifecycleInvalidResponsesAndMissingExpiry",
+    "TestLifecycleStaticOptionCompatibility",
+    "TestLifecycleAWSOptionSharesProvider"
+  ],
+  "packages": [
+    "./internal/config",
+    "./internal/oci",
+    "./internal/oci/ecr"
+  ],
+  "race_required": true,
+  "race_packages": [
+    "./internal/oci",
+    "./internal/oci/ecr"
+  ],
+  "race_run": "TestLifecycle",
+  "race_count": 3,
+  "semantic_review": [
+    "independent issue-level decomposition",
+    "focused candidate regression tests",
+    "maintainer documentation",
+    "no unrelated scope or oracle access"
+  ]
+}

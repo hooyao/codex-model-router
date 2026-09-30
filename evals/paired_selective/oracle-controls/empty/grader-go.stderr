@@ -1,0 +1,24 @@
+# go.flipt.io/flipt/internal/oci/ecr
+internal/oci/ecr/ecr_test.go:9:2: no required module provides package github.com/aws/aws-sdk-go-v2/service/ecr; to add it:
+	go get github.com/aws/aws-sdk-go-v2/service/ecr
+# go.flipt.io/flipt/internal/oci [go.flipt.io/flipt/internal/oci.test]
+internal/oci/options_test.go:12:17: undefined: AuthenticationType
+internal/oci/options_test.go:17:10: undefined: AuthenticationTypeStatic
+internal/oci/options_test.go:18:10: undefined: AuthenticationTypeAWSECR
+internal/oci/options_test.go:19:10: undefined: AuthenticationType
+internal/oci/options_test.go:23:16: assignment mismatch: 2 variables but WithCredentials returns 1 value
+internal/oci/options_test.go:23:50: too many arguments in call to WithCredentials
+	have (unknown type, string, string)
+	want (string, string)
+internal/oci/options_test.go:30:22: invalid operation: cannot call non-function o.auth (variable of type *struct{username string; password string})
+internal/oci/options_test.go:43:17: undefined: AuthenticationTypeStatic
+internal/oci/options_test.go:44:17: undefined: AuthenticationTypeAWSECR
+internal/oci/options_test.go:45:18: undefined: AuthenticationType
+internal/oci/options_test.go:45:18: too many errors
+# go.flipt.io/flipt/internal/config [go.flipt.io/flipt/internal/config.test]
+internal/config/config_test.go:844:8: unknown field Type in struct literal of type OCIAuthentication
+internal/config/config_test.go:844:22: undefined: oci.AuthenticationTypeStatic
+internal/config/config_test.go:866:8: unknown field Type in struct literal of type OCIAuthentication
+internal/config/config_test.go:866:22: undefined: oci.AuthenticationTypeStatic
+internal/config/config_test.go:888:8: unknown field Type in struct literal of type OCIAuthentication
+internal/config/config_test.go:888:18: undefined: oci.AuthenticationTypeAWSECR

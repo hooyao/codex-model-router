@@ -1,0 +1,7 @@
+schema_version = 1
+task_id = "flipt-ecr-credential-lifecycle-v1"
+version = "1.0.0"
+origin = "Local follow-on to the pinned Flipt OCI/ECR task; not an official SWE-bench task"
+language = "Go"
+timeout_seconds = 3000
+required_artifacts = ["implementation", "regression tests", "maintainer documentation"]

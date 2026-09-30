@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "benchmark": {
+    "suite": "Local Flipt lifecycle follow-on v1 (not official SWE-bench)",
+    "upstream_commit": "66f92766bba642462d4bbe5479e83f91f9211862",
+    "task_id": "flipt-ecr-credential-lifecycle-v1",
+    "image_index_digest": "sha256:b6a9cbf8ec8a1a250524433f3fcaa3afa8634bb1299880aac54b808948ef5bfa",
+    "linux_amd64_manifest_digest": "sha256:8e2458836acf6d14616949c3573584a86449c29eb4a0bb09fab9a9b5ec8b53e9",
+    "source_layer": "../paired_selective/assets/source-layer.tar.gz",
+    "source_layer_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
+    "instruction": "assets/instruction.md",
+    "instruction_sha256": "737b16ffa440bc62a9471315f9533bb9cb542a329e7bb7585d0bc4c3f3c1583c",
+    "task_spec": "assets/task.toml",
+    "task_spec_sha256": "f6ed3111fff492f964e93a02bc408d8983fc6a74be55b6eeb37e2a136b83e952",
+    "oracle_patch": "assets/oracle.patch",
+    "oracle_patch_sha256": "45951edfb7dc5a136cea8cac7150c7e64f52e1745afebf8ef807a7da37b6c680",
+    "oracle_config": "assets/oracle-config.json",
+    "oracle_config_sha256": "bc443988706cd897df68decc3fc05dfb480b14829515acf2ca9d2e5a303c127c",
+    "oracle_packages": [
+      "./internal/config",
+      "./internal/oci",
+      "./internal/oci/ecr"
+    ],
+    "parent_task_id": "instance_flipt-io__flipt-c188284ff0c094a4ee281afebebd849555ebee59"
+  },
+  "fixture": {
+    "source_tree": "20121a7049c58571664b87989d1fc7bab8562884",
+    "initial_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
+    "working_tree_must_be_clean": true,
+    "seed_patch": "assets/seed.patch",
+    "seed_patch_sha256": "3d824219a77b11d8b6f6ec506403daad092594d07c9a697a3c2280a2c935c74b",
+    "seed_provenance": "pair-01-baseline-evidence/candidate.patch",
+    "seed_go_sum_sha256": "96e3e2be26f962e5e058ffcc7485f5d6dd2f99526423e041d8223943c08d4373"
+  },
+  "prompt": {
+    "environment_note": "environment-note.md",
+    "environment_note_sha256": "2a77f23c930e134e2a48c66e3826211d29bc92cc05c903df96c410a61cf90cac",
+    "combined_sha256": "f136aa48d15e263c6b07037adf5a466d9799f2194526c217946069dc03f86acd"
+  },
+  "treatment_execution": {
+    "version": "lifecycle-v1-selective-stage-plan-v4",
+    "authorization_suffix": "Treatment arm execution authorization v4: I authorize native subagent delegation when the router policy calls for it. Before dispatch, save .codex-model-router/eval-stage-plan.json with schema_version 1 and these bounded stages. (1) hard-kernel: benchmark-hard-kernel-gpt-6-astra-xhigh (native task_name benchmark_hard_kernel_gpt_6_astra_xhigh, gpt-6-astra/xhigh) designs and implements ECR credential lifecycle behavior and necessary code regression tests; its exclusive write scope is internal/oci/ecr/ecr.go, internal/oci/ecr/ecr_test.go, internal/oci/options.go, and internal/oci/options_test.go. It does not own maintainer documentation or final synthesis. (2) maintainer-docs: the Sol/low controller only after a separate DIRECT gate, or the cheapest valid easy worker, writes only internal/oci/ecr/README.md to document the externally observable lifecycle and configuration requirements. This stage is independent of hard-kernel implementation and may run concurrently; verification must compare it with the final code. (3) verify-and-synthesize: the Sol/low controller only after a separate DIRECT gate, or the cheapest valid easy worker, runs go test -count=1 ./internal/config ./internal/oci ./internal/oci/ecr, compares documentation with final code, and synthesizes the final answer after both hard-kernel and maintainer-docs; its write scope is empty. Record every stage owner, dependencies, exact disjoint write_scope, bounded context_budget, acceptance, and self_check; commit each worker packet SHA-256 and byte length, and use null packet fields for controller stages. The launcher validates a source-backed dispatch-contract-v1 for the exact Astra worker and verifies installed hook binding before this session starts. For any other worker, build and validate its complete dispatch-contract-v1 before spawning; never invoke the validator with an empty or partial record. If policy selects delegation and native spawn is unavailable, stop and report that blocker. Keep the frozen task requirements and stage audit instructions above unchanged.",
+    "authorization_suffix_sha256": "c548cdd203f1a7eee02f831c07c66f4cb72d3ca529db9f5a479935be0ec41c9b"
+  },
+  "plugin": {
+    "name": "codex-model-router",
+    "version": "1.2.2+codex.20260928032924",
+    "installed_manifest_sha256": "93fe5e44662ed973bf7fef3edd860bb10bc1fa3ec8312cf1fbd9b6689bcc6300",
+    "installed_hooks_sha256": "9cf09fb63c6e3c208f83796ebb51f2425b70a7f528dde3fc77efdfff1a0aa7f2",
+    "process_local_audit_trust": [
+      {
+        "key": "codex-model-router@personal:hooks/hooks.json:pre_tool_use:0:0",
+        "event": "preToolUse",
+        "current_hash": "sha256:4fadcc93db5f6b143fbecdfb0a5c5953f0822c3a04fca88a16376d7fe6f40b05"
+      },
+      {
+        "key": "codex-model-router@personal:hooks/hooks.json:post_tool_use:0:0",
+        "event": "postToolUse",
+        "current_hash": "sha256:0bd6433353822ddb51cf5c07e44a3cc66e93f1ace78a602d9676835384e2435e"
+      }
+    ]
+  },
+  "dispatch_runtime": {
+    "cli": "C:\\Users\\yahu2\\AppData\\Local\\OpenAI\\Codex\\bin\\faa963e871dd422c\\codex.exe",
+    "cli_version": "codex-cli 0.158.0-alpha.2.1",
+    "cli_sha256": "8f0554ede25bbc5450921897c468b2e84635aa513c5017457997af0954581f49",
+    "schema_capture": {
+      "path": "evals/live/router-hook-canary-20260929/schema-desktop-explicit-provider-pin.json",
+      "sha256": "e7ab622cd3f825cbead1fa314b8d375001c78245881480950f8a1f88bd3dbf47"
+    },
+    "spawn_schema": {
+      "path": "evals/live/router-hook-canary-20260929/explicit-schema.json",
+      "sha256": "951957772e68cfb48f418117c2b26abba609b9248a08f04d50cd5a918caf9816"
+    },
+    "model_catalog": {
+      "path": "evals/live/router-hook-canary-20260929/explicit-catalog.json",
+      "sha256": "85aa93be9af7ae9fde35ef959bc80f3cd66c54996cadb450e6099690ef3d113f"
+    },
+    "dispatch_validator_sha256": "e965f93174963798287c2dad233f4ca77630cde44d8d710dd0c1b7766efae795"
+  },
+  "arms": {
+    "baseline": {
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "delegation": "disabled"
+    },
+    "treatment": {
+      "controller_candidates": [
+        {
+          "model": "gpt-6-luna",
+          "effort": "medium"
+        },
+        {
+          "model": "gpt-6-sol",
+          "effort": "low"
+        }
+      ],
+      "required_hard_worker": {
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "role_file": "astra-hard-kernel-role.toml",
+        "role_sha256": "cb5ae4d38b859b51b9429fe199606acaeb181d6428fbb53b67ff8083d965fcb0"
+      },
+      "allowed_easy_worker_selectors": [
+        {
+          "model": "gpt-6-luna",
+          "effort": "low"
+        },
+        {
+          "model": "gpt-6-luna",
+          "effort": "medium"
+        },
+        {
+          "model": "gpt-6-sol",
+          "effort": "low"
+        }
+      ]
+    }
+  },
+  "limits": {
+    "timeout_seconds": 3000,
+    "astra_budget_usd": 10.0,
+    "stop_margin_usd": 1.0,
+    "max_retries_per_stage": 1
+  },
+  "pricing": {
+    "as_of": "2026-09-24",
+    "source": "https://developers.openai.com/api/docs/pricing",
+    "tier": "Standard",
+    "long_context_threshold_input_tokens": 272000,
+    "per_million": {
+      "gpt-6-astra": [
+        10.0,
+        1.0,
+        12.5,
+        50.0
+      ],
+      "gpt-6-sol": [
+        2.0,
+        0.2,
+        2.5,
+        10.0
+      ],
+      "gpt-6-luna": [
+        0.1,
+        0.01,
+        0.125,
+        0.5
+      ]
+    }
+  },
+  "environment": {
+    "windows_go": "Q:\\MyProjects\\codex-model-router\\evals\\live\\paired-swepro-flipt-20260923\\tools\\windows-go\\go\\bin\\go.exe",
+    "windows_go_sha256": "edc83e6820401bcdbe40d774e5a7b6e376a29a4d5a74b7b3c5a631964d45cb3f",
+    "windows_go_version": "go version go1.22.2 windows/amd64",
+    "windows_go_cache_root": "Q:\\MyProjects\\codex-model-router\\evals\\live\\paired-flipt-first-20260925\\windows-go-cache",
+    "linux_go": "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",
+    "linux_go_sha256": "89b81bd72c27404ccfd701c136b7e3ace9a4ccb26d96d97e874b48829aed27a1",
+    "linux_go_version": "go version go1.22.2 linux/amd64",
+    "linux_module_cache": "/home/huyao/go/pkg/mod",
+    "linux_build_cache": "/home/huyao/.cache/go-build",
+    "oracle_network": "loopback AWS fixture; no live AWS credentials or service"
+  },
+  "controls": {
+    "positive_patch": "oracle/positive-control.patch",
+    "positive_patch_sha256": "56e083d4e85cb48f08521bac9fdf4fa55b391518b8eae1801bc99bf9c4a7c103"
+  }
+}

@@ -32,9 +32,22 @@ def configured_command(platform: str) -> str:
     key = "commandWindows" if platform == "win32" else "command"
     expected = 'cmd.exe /d /c python "%PLUGIN_ROOT%\\hooks\\router_hook.py"' if platform == "win32" else \
         'python3 "$PLUGIN_ROOT/hooks/router_hook.py"'
-    commands = [handler[key] for groups in config["hooks"].values() for group in groups for handler in group["hooks"]]
-    if not commands or any(command != expected for command in commands):
+    audit = 'cmd.exe /d /c python "%PLUGIN_ROOT%\\hooks\\dispatch_audit.py"' if platform == "win32" else \
+        'python3 "$PLUGIN_ROOT/hooks/dispatch_audit.py"'
+    lifecycle = {"SessionStart", "UserPromptSubmit", "SubagentStart"}
+    audit_events = {"PreToolUse", "PostToolUse"}
+    hooks = config.get("hooks")
+    if not isinstance(hooks, dict) or not lifecycle.issubset(hooks) or \
+            set(hooks) - lifecycle - audit_events:
         raise ValueError("hook commands differ from the supported preflight contract")
+    for event_name, groups in hooks.items():
+        required = expected if event_name in lifecycle else audit
+        if (not isinstance(groups, list) or not groups or
+                any(not isinstance(group, dict) or not isinstance(group.get("hooks"), list) or
+                    not group["hooks"] or any(not isinstance(handler, dict) or
+                    handler.get(key) != required for handler in group["hooks"])
+                    for group in groups)):
+            raise ValueError("hook commands differ from the supported preflight contract")
     return expected
 
 

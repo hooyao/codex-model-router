@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -19,8 +20,10 @@ CONFIG_FILENAME = "routing.json"
 MAX_CONFIG_FILE_BYTES = 32_768
 MAX_SERIALIZED_CONFIG_BYTES = 16_384
 MAX_EXAMPLES = 64
+# Terra remains accepted for existing schema-v3 workspace files; new defaults
+# use only the current GPT-6 Astra, Sol, and Luna roles.
 MODEL_CLASSES = {"Astra", "Sol", "Terra", "Luna"}
-REASONING_EFFORTS = {"low", "medium", "high", "xhigh", "max", "ultra"}
+REASONING_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 EXAMPLE_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 TOP_LEVEL_FIELDS = {
     "schema_version",
@@ -32,6 +35,7 @@ TOP_LEVEL_FIELDS = {
     "execution_policy",
 }
 EFFORT_FIELDS = {"low", "medium", "high", "xhigh"}
+OPTIONAL_EFFORT_FIELDS = {"max"}
 EXAMPLE_FIELDS = {
     "id",
     "task_signals",
@@ -352,8 +356,13 @@ def validate_config(config: Any, source: str = "routing config") -> dict[str, An
     _validate_execution_policy(root["execution_policy"], f"{source}.execution_policy")
 
     guidance = _require_object(root["effort_guidance"], f"{source}.effort_guidance")
-    _require_exact_fields(guidance, EFFORT_FIELDS, f"{source}.effort_guidance")
-    for effort in sorted(EFFORT_FIELDS):
+    missing = sorted(EFFORT_FIELDS - set(guidance))
+    unknown = sorted(set(guidance) - EFFORT_FIELDS - OPTIONAL_EFFORT_FIELDS)
+    if missing:
+        raise RoutingConfigError(f"{source}.effort_guidance is missing required fields: {', '.join(missing)}")
+    if unknown:
+        raise RoutingConfigError(f"{source}.effort_guidance contains unknown fields: {', '.join(unknown)}")
+    for effort in sorted(guidance):
         _require_string(guidance[effort], f"{source}.effort_guidance.{effort}", 500)
 
     sources = root["official_sources"]
@@ -453,7 +462,13 @@ def load_config(path: Path) -> dict[str, Any]:
         raise RoutingConfigError(
             f"routing config {path} is malformed JSON at line {error.lineno}, column {error.colno}: {error.msg}"
         ) from error
-    return validate_config(parsed, str(path))
+    config = validate_config(parsed, str(path))
+    # Existing schema-v3 files are preserved on disk, while their retired
+    # Terra preference is resolved to the current Sol role in hook context.
+    for example in config["examples"]:
+        if example["preferred_model_class"] == "Terra":
+            example["preferred_model_class"] = "Sol"
+    return config
 
 
 def load_default_template() -> tuple[dict[str, Any], bytes]:
@@ -514,6 +529,7 @@ def load_workspace_config(workspace_cwd: Path) -> tuple[Path, dict[str, Any], bo
 
 def routing_context_block(path: Path, config: dict[str, Any]) -> str:
     serialized = serialized_config(config, str(path))
+    config_digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
     resolver = plugin_root() / "hooks" / "execution_decision.py"
     effective_policy = json.dumps(
         effective_execution_policy(config), ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -521,10 +537,13 @@ def routing_context_block(path: Path, config: dict[str, Any]) -> str:
     return (
         "ROUTING_CONFIG_BEGIN\n"
         f"Workspace routing config: {path}\n"
+        f"Validated config SHA256 (canonical JSON): {config_digest}\n"
+        "Read this config for routing examples and model guidance before selecting matched_example_ids. "
+        "The resolver reads it too.\n"
         "Routing decision contract version: 1. Ownership is resolved before delegate topology, verification, "
         "and model selection. Unknown decision signals cannot qualify for DIRECT.\n"
         f"Decision resolver program: {resolver}\n"
-        f"Invocation: use an available Python 3.9+ runtime to run the resolver with --config {path}; "
+        "Invocation: use Python 3.9+ to run the resolver with --config set to the workspace config path above; "
         "send one decision-request-v1 JSON on stdin and use its validated JSON result.\n"
         "Request fields: schema_version=1, decision_id, phase, prior_ownership, escalation_trigger, "
         "matched_example_ids, and signals. Signals: one_local_scope, bounded_known_outcome, "
@@ -534,6 +553,5 @@ def routing_context_block(path: Path, config: dict[str, Any]) -> str:
         "permissions_confirmed, safety_constraints_known, verification_plan_present, write_scope_known. "
         "Every signal is true, false, or null; null is unknown.\n"
         f"EFFECTIVE_EXECUTION_POLICY:{effective_policy}\n"
-        f"{serialized}\n"
         "ROUTING_CONFIG_END"
     )

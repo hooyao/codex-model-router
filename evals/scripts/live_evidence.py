@@ -40,7 +40,7 @@ IANA_TIMEZONES = frozenset(
     if line and not line.startswith("#")
 )
 sys.path.insert(0, str(REPO_ROOT / "plugins" / "codex-model-router" / "hooks"))
-from routing_config import validate_config, serialized_config  # noqa: E402
+from routing_config import routing_context_block, validate_config, serialized_config  # noqa: E402
 from router_hook import CONTROLLER_CONTRACT  # noqa: E402
 
 
@@ -71,6 +71,30 @@ def require(condition: bool, message: str) -> None:
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def installed_hook_block_matches(block: str, expected: str, captured_manifest: Path) -> bool:
+    """Allow a relocated installation only when its manifest and resolver match."""
+    marker = "Decision resolver program: "
+    observed_lines, expected_lines = block.split("\n"), expected.split("\n")
+    resolver_lines = [index for index, line in enumerate(observed_lines) if line.startswith(marker)]
+    if len(observed_lines) != len(expected_lines) or len(resolver_lines) != 1:
+        return False
+    resolver_index = resolver_lines[0]
+    if any(actual != wanted for index, (actual, wanted) in enumerate(zip(observed_lines, expected_lines))
+           if index != resolver_index):
+        return False
+    resolver = Path(observed_lines[resolver_index][len(marker):])
+    if not resolver.is_absolute() or resolver.name != "execution_decision.py" or resolver.parent.name != "hooks":
+        return False
+    installed_manifest = resolver.parent.parent / ".codex-plugin" / "plugin.json"
+    source_resolver = REPO_ROOT / "plugins" / "codex-model-router" / "hooks" / "execution_decision.py"
+    try:
+        return (resolver.is_file() and installed_manifest.is_file() and
+                sha256(installed_manifest) == sha256(captured_manifest) and
+                sha256(resolver) == sha256(source_resolver))
+    except OSError:
+        return False
 
 
 def parse_json(path: Path) -> Any:
@@ -1114,6 +1138,8 @@ def activation_session_checks(root: Path, spec: dict[str, Any], resolved: dict[s
 
         hook_lines = []
         config_json = serialized_config(config, str(source))
+        current_block = routing_context_block(source, config).split("ROUTING_CONFIG_BEGIN\n", 1)[1].split(
+            "\nROUTING_CONFIG_END", 1)[0]
         for line, value in items:
             payload = value.get("payload")
             if value.get("type") != "response_item" or not isinstance(payload, dict) or \
@@ -1123,11 +1149,13 @@ def activation_session_checks(root: Path, spec: dict[str, Any], resolved: dict[s
             if CONTROLLER_CONTRACT in text and text.count("ROUTING_CONFIG_BEGIN") == 1 and \
                     text.count("ROUTING_CONFIG_END") == 1:
                 block = text.split("ROUTING_CONFIG_BEGIN\n", 1)[-1].split("\nROUTING_CONFIG_END", 1)[0]
-                if block.startswith(f"Workspace routing config: {source}\n") and block.endswith("\n" + config_json):
+                legacy_block = block.startswith(f"Workspace routing config: {source}\n") and \
+                    block.endswith("\n" + config_json)
+                if installed_hook_block_matches(block, current_block, resolved["plugin_manifest"]) or legacy_block:
                     hook_lines.append(line)
         hook_ok = 1 <= len(hook_lines) <= 2 and all(line < routes[0]["line"] for line in hook_lines)
         checks.append(status("actual-hook-context", "pass" if hook_ok else "fail", refs,
-                             "one context per firing lifecycle hook contains the exact contract/config before routing"))
+                             "one context per firing lifecycle hook contains the exact contract and config commitment before routing"))
 
         expected_note = spec["expected_note_contents"]
         note_before = resolved["note_before"]

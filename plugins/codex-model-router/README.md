@@ -14,6 +14,15 @@ a validated routing decision contract and emits
 `ROUTE: DIRECT — <rule/reason>` or
 `ROUTE: DELEGATE — <topology/rule/model/effort/reason>`. Skills define HOW, not WHO.
 
+For a mixed DELEGATE request, the controller records a stage DAG with stable
+IDs, owners, dependencies, exclusive write scopes, context budgets, acceptance
+criteria, and self-checks. It may execute an easy, low-context stage only after
+a separate decision for that stage resolves DIRECT. The hard kernel goes to the
+lowest capable worker, with Astra/xhigh reserved for demanding work and max
+for exceptional cases. A cheap worker can handle an easy stage when its tool
+output would burden controller context. The controller does not repeat a
+worker-owned stage; whole-request permissions and review still apply.
+
 DIRECT requires one local scope, one bounded known outcome, and no network or
 synchronization, long-running work or monitoring, failure/recovery workflow,
 substantive research/investigation, high risk, or independent review/validation.
@@ -54,10 +63,12 @@ inheritance contract; omitted arguments or later child metadata do not prove
 it. Unresolved placeholders and missing capability evidence block dispatch.
 
 Controller packet validation checks identity, fields, completeness, consistency,
-evidence references, and reported acceptance/validation status. It does not
-verify business correctness by opening artifacts or rerunning tests. Missing
-evidence and substantive disagreements go back to workers. Integration workers
-resolve file conflicts, and workers validate the integrated result.
+evidence references, and reported acceptance/validation status. The controller
+self-checks its own stages and tracks overall verification status. Missing
+worker evidence and substantive disagreements go back to workers. An
+integration worker resolves file conflicts unless a bounded controller-owned
+resolution stage independently passes DIRECT; the responsible stage owner
+validates the integrated result.
 
 Every dispatch also receives a deterministic user-visible name in the form
 `<purpose>-<model>-<effort>`. The controller normalizes and validates the name
@@ -153,12 +164,16 @@ Schema version 3 is a JSON object with exactly these fields:
   topology rules, bounded depth/concurrency/retry limits, and verification
   minima. Required signal arrays are exact sets.
 - `effort_guidance`: non-empty string guidance for `low`, `medium`, `high`, and
-  `xhigh`.
+  `xhigh`, with optional `max` guidance for existing schema-v3 files. The
+  bundled template includes `max` and reserves it for extreme cases.
 - `official_sources`: a non-empty array of HTTPS URLs.
 - `examples`: one to 64 objects with a unique lower-case hyphenated `id`, a
   non-empty `task_signals` string array, `execution_mode` set to `direct`,
   `delegate`, or `evaluate`, `preferred_model_class` set to `Astra`, `Sol`,
-  `Terra`, or `Luna`, a supported `reasoning_effort`, and a non-empty `rationale`.
+  or `Luna`, a `reasoning_effort` of `low`, `medium`, `high`, `xhigh`, or `max`,
+  and a non-empty `rationale`.
+  Legacy schema-v3 workspace files may still use `Terra`; the loader maps that
+  advisory role to Sol in memory.
 
 Obsolete schema v1 and v2 files are rejected rather than silently translated.
 Regenerate or deliberately migrate them to schema v3. `direct` is an eligibility
@@ -174,14 +189,38 @@ subject to every direct criterion.
 
 Model classes are preferences, not assumed runtime identifiers. The controller
 resolves them against the current runtime catalog only after choosing DELEGATE.
-The defaults include
+The GPT-6 defaults prefer Astra for the hardest work, Sol for coding, technical
+discovery, documentation, triage, and review, and Luna for focused repeatable
+work. They include
 architecture, security, complex tool workflows, 3D modeling, image analysis,
 code analysis, debugging, open-ended and everyday implementation, discovery,
 documentation, test triage, detailed manual procedures, extraction,
 classification, normalization, and structured summarization. They follow the
-current official [Codex model guidance](https://learn.chatgpt.com/docs/models)
-and [OpenAI model catalog](https://developers.openai.com/api/docs/models),
-consulted on 2026-09-21.
+current official [GPT-6 migration guide](https://developers.openai.com/api/docs/guides/latest-model/gpt-6-astra.md#migration-quickstart),
+[OpenAI model catalog](https://developers.openai.com/api/docs/models), and
+[API pricing](https://developers.openai.com/api/docs/pricing), consulted on
+2026-09-24. At standard API rates per million input/cached/cache-write/output
+tokens, Astra is $10/$1/$12.50/$50, Sol is $2/$0.20/$2.50/$10, and Luna is
+$0.10/$0.01/$0.125/$0.50. A request above 272K input tokens uses twice the
+input and cache rates and 1.5 times the output rate for the full request.
+These are API prices, not measured savings or Codex subscription charges.
+
+An existing workspace `routing.json` is not overwritten by an updated plugin.
+Its schema-v3 `Terra` examples remain valid for compatibility; the loader
+normalizes their preferred class to GPT-6 Sol in memory without rewriting the
+workspace file. To adopt the new example IDs and rationales, deliberately edit
+that workspace file after reviewing local customizations.
+
+The controller model is selected by Codex, not by this plugin. Codex's
+[model selection guide](https://developers.openai.com/codex/models) documents
+the desktop model picker or saved configuration when available. The
+[configuration guide](https://developers.openai.com/codex/config-basic) documents
+`model = "gpt-6-luna"` as a possible CLI or IDE default in personal or trusted
+project `config.toml`. This plugin does not change either setting. GPT-6 Luna's
+lower published API token price does not establish that it matches GPT-5.6
+Terra on controller planning, routing, and result synthesis; a representative
+matched evaluation is needed before recommending it as this plugin's controller
+default.
 
 The raw file limit is 32,768 bytes. Its validated deterministic serialization
 must be no more than 16,384 bytes, smaller than the 24,576-byte hook context

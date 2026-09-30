@@ -7,11 +7,12 @@ contract.
 
 The plugin separates execution ownership from model routing. Before the first
 business action, the primary agent chooses DIRECT for genuinely local, bounded
-work or DELEGATE for nontrivial work. Only delegated work is matched to an
-available worker model and effort. A direct task that reveals complexity must
-be rerouted with a recorded trigger before the next business action. Delegated
-work uses an isolated serial topology unless multiple bounded tasks are
-explicitly independent, dependency-free, and write-disjoint.
+work or DELEGATE for nontrivial work. Within a delegated request, it can also
+execute an explicitly bounded easy stage after that stage passes its own DIRECT
+gate; it sends the hard kernel to a capable worker. A direct stage that reveals
+complexity is rerouted with a recorded trigger before further business work.
+Delegated work uses an isolated serial topology unless multiple bounded tasks
+are explicitly independent, dependency-free, and write-disjoint.
 
 ## What It Does
 
@@ -25,18 +26,23 @@ explicitly independent, dependency-free, and write-disjoint.
 - Gives every dispatch a deterministic user-visible
   `<purpose>-<model>-<effort>` name, with a packet/result fallback when native
   dispatch cannot name the worker card.
-- Routes clear and repeatable work toward Luna, everyday and read-heavy work
-  toward Terra, complex open-ended work toward Sol, and high-risk or
-  sustained-judgment work toward Astra.
+- Routes clear and repeatable work toward GPT-6 Luna, everyday coding and
+  read-heavy work toward GPT-6 Sol, and demanding hard-kernel work toward
+  GPT-6 Astra. Existing Terra workspace preferences load as Sol.
+- Records each stage's owner, dependencies, write scope, context budget,
+  acceptance criteria, and self-check. A lightweight primary may own a
+  qualifying easy stage; a cheap worker is preferable when local tool context
+  would burden the primary.
 - Starts with the lowest suitable reasoning effort and escalates only for
   ambiguity, risk, complexity, or failed verification.
-- Limits controller validation to worker-packet completeness and consistency;
-  workers own substantive review, testing, and integration.
+- Keeps the controller accountable for dependency order, conflict resolution,
+  verification status, and final synthesis. Workers validate their substantive
+  results; the controller self-checks any stage it owns.
 - Requires an independent high-capability reviewer for router meta-tasks and
   an implementation worker for requested changes.
-- Permits direct execution only for one local scope and one bounded known
-  outcome without network, monitoring, recovery, substantive investigation, or
-  independent-validation signals.
+- Permits direct execution of a whole request or a declared stage only for one
+  local scope and one bounded known outcome without network, monitoring,
+  recovery, substantive investigation, or independent-validation signals.
 - Requires delegation for multi-repository/system/source work, named multi-step
   runbooks, network synchronization, monitoring, failure/recovery, substantive
   investigation, and independent review or validation.
@@ -101,7 +107,7 @@ discovery precedence, size budgets, and failure behavior. The default model
 routing policy follows official
 [Codex model guidance](https://learn.chatgpt.com/docs/models) and the
 [OpenAI model catalog](https://developers.openai.com/api/docs/models), consulted
-on 2026-09-21.
+on 2026-09-24.
 
 ## Validation
 
@@ -173,10 +179,14 @@ python evals/scripts/runner.py --manifest evals/benchmark.json --output evals/ge
 The scenarios target noisy investigation and receipt reuse, direct-to-delegate
 escalation, dependent serial work, safe parallelism with disjoint artifacts,
 independent architecture review, and one small direct calibration. Reports keep
-quality, route adherence, critical-path/wall time, context and receipt volume,
+quality, route adherence, end-to-end wall time, context and receipt volume,
 tools/logs, retries, conflicts, failures, and measured versus estimated cost
-separate. Bundled observations are deterministic synthetic fixtures and do not
-establish live performance or savings.
+separate. Per-stage and critical-path timings are diagnostic attribution, not
+the comparative speed metric. A future paired run must use the same task and
+start state with common start/end boundaries; quality parity and total USD are
+primary, and repeated interleaved runs are required for a speed claim. Bundled
+observations are deterministic synthetic fixtures and do not establish live
+performance or savings.
 
 ## OpenSpec
 
