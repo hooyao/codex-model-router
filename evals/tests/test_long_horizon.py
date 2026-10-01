@@ -45,7 +45,7 @@ from evals.long_horizon_v1.run import (ActiveTelemetryGuard, MeterRefreshGate, _
     MAX_SECONDS, RECEIPT_RESERVE_SECONDS, baseline_has_child,
     grade_before_deadline, live_preflight, live_run,
     parent_selector, pilot_plan, submitted_prompt, final_fork_observation)
-from evals.long_horizon_v1.prepare import prepare, verify_prepared
+from evals.long_horizon_v1.prepare import _product_files, prepare, verify_prepared
 from evals.long_horizon_v1.runtime_binding import (bind_arm_config, fixture_config,
     arm_execution, verify_arm_config, verify_arm_runtime, verify_cli)
 from evals.long_horizon_v1.transport import (AppServerTransport, TransportError,
@@ -575,6 +575,62 @@ class LongHorizonProtocolTests(unittest.TestCase):
         self.assertFalse((treatment / "oracle").exists())
         paired = {**spec, "pilot": {"path": "pilot-plan-v9.json", "schema_version": 1}}
         self.assertEqual(_arms_for_plan(paired), ("baseline", "treatment"))
+
+    def test_product_scan_prunes_git_and_hashes_untracked_files(self) -> None:
+        nested = self.workspace / "a" / "nested.go"
+        nested.parent.mkdir()
+        nested.write_text("package a\n", encoding="utf-8")
+        untracked = self.workspace / "new.go"
+        untracked.write_text("package main\n", encoding="utf-8")
+        linked = self.workspace / "linked"
+        linked.mkdir()
+        (linked / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8")
+        linked_product = linked / "untracked.go"
+        linked_product.write_text("package linked\n", encoding="utf-8")
+        router = self.workspace / ".codex-model-router"
+        router.mkdir()
+        (router / "routing.json").write_text("{}\n", encoding="utf-8")
+        real_scandir = os.scandir
+        git_object_scans = []
+
+        def guarded_scandir(path):
+            if Path(path) == self.workspace / ".git" / "objects":
+                git_object_scans.append(path)
+                raise FileNotFoundError("Git objects changed during traversal")
+            return real_scandir(path)
+
+        with mock_patch("os.scandir", side_effect=guarded_scandir):
+            files = _product_files(self.workspace)
+        self.assertEqual(git_object_scans, [])
+        self.assertEqual(list(files), sorted(files))
+        self.assertEqual(files["README.md"], file_sha(self.workspace / "README.md"))
+        self.assertEqual(files["a/nested.go"], file_sha(nested))
+        self.assertEqual(files["new.go"], file_sha(untracked))
+        self.assertEqual(files["linked/untracked.go"], file_sha(linked_product))
+        self.assertNotIn("linked/.git", files)
+        self.assertFalse(any(name.startswith((".git/", ".benchmark/",
+                                              ".codex-model-router/")) for name in files))
+
+        original_sha = file_sha
+
+        def disappearing_product(path):
+            if path == untracked:
+                untracked.unlink()
+            return original_sha(path)
+
+        with mock_patch("evals.long_horizon_v1.prepare.file_sha",
+                        side_effect=disappearing_product), \
+             self.assertRaises(FileNotFoundError):
+            _product_files(self.workspace)
+
+        def missing_product_directory(path):
+            if Path(path) == nested.parent:
+                raise FileNotFoundError("Product directory changed during traversal")
+            return real_scandir(path)
+
+        with mock_patch("os.scandir", side_effect=missing_product_directory), \
+             self.assertRaises(FileNotFoundError):
+            _product_files(self.workspace)
 
     def test_v13_plan_validation_preserves_standalone_mode(self) -> None:
         self.require_retained_adjudication()
@@ -1369,7 +1425,18 @@ class LongHorizonProtocolTests(unittest.TestCase):
         treatment = root / "treatment"
         self.assertEqual(list(prepared["arms"]), ["treatment"])
         self.assertFalse((root / "baseline").exists())
-        t = verify_prepared(root, "treatment", spec)
+        real_scandir = os.scandir
+        git_object_scans = []
+
+        def guarded_scandir(path):
+            if Path(path).parts[-2:] == (".git", "objects"):
+                git_object_scans.append(path)
+                raise FileNotFoundError("Git objects changed during traversal")
+            return real_scandir(path)
+
+        with mock_patch("os.scandir", side_effect=guarded_scandir):
+            t = verify_prepared(root, "treatment", spec)
+        self.assertEqual(git_object_scans, [])
         self.assertEqual(t["start_tree"], spec["start_tree"])
         self.assertEqual(file_sha(treatment / ".benchmark" / "submit_checkpoint.py"),
                          spec["assets"]["submit_checkpoint.py"])

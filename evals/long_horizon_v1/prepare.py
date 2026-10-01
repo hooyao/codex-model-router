@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -33,12 +34,25 @@ def _expected_reveal(spec: dict) -> dict[str, str]:
     return result
 
 
+def _raise_walk_error(error: OSError) -> None:
+    raise error
+
+
+def _walk_paths(workspace: Path, excluded: frozenset[str]):
+    """Yield paths without entering excluded trees; surface scan failures."""
+    for root, directories, files in os.walk(workspace, topdown=True,
+                                            onerror=_raise_walk_error):
+        directories[:] = sorted(name for name in directories if name not in excluded)
+        for name in sorted(name for name in (*directories, *files) if name not in excluded):
+            yield Path(root) / name
+
+
 def _product_files(workspace: Path) -> dict[str, str]:
-    return {path.relative_to(workspace).as_posix(): file_sha(path)
-            for path in workspace.rglob("*") if path.is_file() and
-            ".git" not in path.relative_to(workspace).parts and
-            ".benchmark" not in path.relative_to(workspace).parts and
-            ".codex-model-router" not in path.relative_to(workspace).parts}
+    excluded = frozenset({".git", ".benchmark", ".codex-model-router"})
+    paths = sorted((path for path in _walk_paths(workspace, excluded)
+                    if path.is_file()),
+                   key=lambda path: path.relative_to(workspace).as_posix())
+    return {path.relative_to(workspace).as_posix(): file_sha(path) for path in paths}
 
 
 def verify_prepared(prepared: Path, arm: str, spec: dict) -> dict:
@@ -60,7 +74,8 @@ def verify_prepared(prepared: Path, arm: str, spec: dict) -> dict:
         raise ValueError("fresh preparation receipt drift")
     seed = prepared / "seed"
     workspace = prepared / arm
-    if any(path.is_symlink() for root in (seed, workspace) for path in root.rglob("*")):
+    if any(path.is_symlink() for root in (seed, workspace)
+           for path in _walk_paths(root, frozenset({".git"}))):
         raise ValueError("prepared arm contains a symlink")
     if (not seed.is_dir() or not workspace.is_dir() or
             receipt.get("seed_head") != _head(seed) or
@@ -91,8 +106,9 @@ def verify_prepared(prepared: Path, arm: str, spec: dict) -> dict:
     seed_files = _product_files(seed)
     if receipt.get("seed_files") != seed_files or _product_files(workspace) != seed_files:
         raise ValueError("seed or arm product file bytes drift")
-    observed = {path.relative_to(workspace).as_posix() for path in workspace.rglob("*")
-                if path.is_file() and ".git" not in path.relative_to(workspace).parts}
+    observed = {path.relative_to(workspace).as_posix()
+                for path in _walk_paths(workspace, frozenset({".git"}))
+                if path.is_file()}
     if observed != set(seed_files) | expected_paths:
         raise ValueError("arm contains missing or unexpected files, later reveals, or checkpoints")
     if any(file_sha(workspace / name) != digest for name, digest in expected.items()):
