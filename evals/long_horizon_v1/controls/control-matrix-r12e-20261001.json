@@ -1,0 +1,295 @@
+{
+  "build_cache": "serial evaluator-only shared Go build cache",
+  "controls": {
+    "broken-close": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": "TestBenchmarkG2CancelledAndClosed",
+          "expected_pass": false,
+          "grade_sha256": "226e69cccdb479b93955fef259a53283166e2fe75768ea1bb3f60eb5a78c4c54",
+          "observed_failures": [
+            "TestBenchmarkG2CancelledAndClosed"
+          ],
+          "observed_pass": false,
+          "race_pass": true,
+          "round": 2
+        }
+      ],
+      "status": "matched"
+    },
+    "global-blocking": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": null,
+          "expected_pass": true,
+          "grade_sha256": "2342d57b6449bfab824b4d919a35f79f708302ecf0d31b8dc32287f2581db779",
+          "observed_failures": [],
+          "observed_pass": true,
+          "race_pass": true,
+          "round": 0
+        },
+        {
+          "exact_failures": true,
+          "expected_failure_marker": "TestBenchmarkG1UnrelatedReferenceProgress",
+          "expected_pass": false,
+          "grade_sha256": "84d2b447bd77ad474556c4ebe265b30e92c0aeeba98dfa17c6552d4adab291b9",
+          "observed_failures": [
+            "TestBenchmarkG1UnrelatedReferenceProgress"
+          ],
+          "observed_pass": false,
+          "race_pass": true,
+          "round": 1
+        }
+      ],
+      "status": "matched"
+    },
+    "ignore-reference": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": "TestBenchmarkG0ReferenceSelection",
+          "expected_pass": false,
+          "grade_sha256": "b2ed3d98376db8f475be20f2f6349c2925909c46c0228b48be7d29ad9711c5ff",
+          "observed_failures": [
+            "TestBenchmarkG0ReferenceSelection"
+          ],
+          "observed_pass": false,
+          "race_pass": true,
+          "round": 0
+        }
+      ],
+      "status": "matched"
+    },
+    "leaked-stream": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": "TestBenchmarkOracleAllSuppliedStreamsCloseOnFailure",
+          "expected_pass": false,
+          "grade_sha256": "1b8fef8a25db15218fef8fc539aa763666bd4271a64693046a4d32daa9d56465",
+          "observed_failures": [
+            "TestBenchmarkOracleAllSuppliedStreamsCloseOnFailure"
+          ],
+          "observed_pass": false,
+          "race_pass": true,
+          "round": 2
+        }
+      ],
+      "status": "matched"
+    },
+    "per-reference-serialization": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": null,
+          "expected_pass": true,
+          "grade_sha256": "bf0d11a2df1fa1fcd72f7ae8532735e13df038503b9fa977599ee7ea6e3fb8f4",
+          "observed_failures": [],
+          "observed_pass": true,
+          "race_pass": true,
+          "round": 0
+        },
+        {
+          "exact_failures": true,
+          "expected_failure_marker": null,
+          "expected_pass": true,
+          "grade_sha256": "12135f542a50069087d65e1a673b6a9e10743f5f95f75d589449e3184a7aabd0",
+          "observed_failures": [],
+          "observed_pass": true,
+          "race_pass": true,
+          "round": 1
+        },
+        {
+          "exact_failures": true,
+          "expected_failure_marker": null,
+          "expected_pass": true,
+          "grade_sha256": "67da31df4b307f612ff406726e304fb378bd02fae05b8eb3f0258b2e57065543",
+          "observed_failures": [],
+          "observed_pass": true,
+          "race_pass": true,
+          "round": 2
+        }
+      ],
+      "status": "matched"
+    },
+    "positive": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": null,
+          "expected_pass": true,
+          "grade_sha256": "1db587a31511cd5b78b364bd4f6fe710b6d51a68a93d5bf56e18c20ab768b794",
+          "observed_failures": [],
+          "observed_pass": true,
+          "race_pass": true,
+          "round": 0
+        },
+        {
+          "exact_failures": true,
+          "expected_failure_marker": null,
+          "expected_pass": true,
+          "grade_sha256": "f0a3b0e4edd7e8854974454828dde715e1a09163eddb3fd15aeaf56e3e0aafa3",
+          "observed_failures": [],
+          "observed_pass": true,
+          "race_pass": true,
+          "round": 1
+        },
+        {
+          "exact_failures": true,
+          "expected_failure_marker": null,
+          "expected_pass": true,
+          "grade_sha256": "c207fc72b81de258ad424734c4636a8784c84d2ccbe3ef145814feda6c833bec",
+          "observed_failures": [],
+          "observed_pass": true,
+          "race_pass": true,
+          "round": 2
+        }
+      ],
+      "status": "matched"
+    },
+    "round0-only": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": null,
+          "expected_pass": true,
+          "grade_sha256": "96f360548c980bdf3a25441defd9c911138a1cc7510249435cdab0b5bd1fc9bc",
+          "observed_failures": [],
+          "observed_pass": true,
+          "race_pass": true,
+          "round": 0
+        },
+        {
+          "exact_failures": true,
+          "expected_failure_marker": "TestBenchmarkG1AliasAndMove",
+          "expected_pass": false,
+          "grade_sha256": "83ca90510658e48f71830b69dbded4faefc08345e60197d88842285fa5a25337",
+          "observed_failures": [
+            "TestBenchmarkG1AliasAndMove"
+          ],
+          "observed_pass": false,
+          "race_pass": true,
+          "round": 1
+        }
+      ],
+      "status": "matched"
+    },
+    "round1-only": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": null,
+          "expected_pass": true,
+          "grade_sha256": "147ec6e88358f37d5b7e4e7e5ca623483d821087d00e8c4773ddfc96da046c49",
+          "observed_failures": [],
+          "observed_pass": true,
+          "race_pass": true,
+          "round": 0
+        },
+        {
+          "exact_failures": true,
+          "expected_failure_marker": null,
+          "expected_pass": true,
+          "grade_sha256": "1d3b8956905959b3bc1529b46ca7ea8dd182b2cc8713ce2c1ff463d6f182c6b6",
+          "observed_failures": [],
+          "observed_pass": true,
+          "race_pass": true,
+          "round": 1
+        },
+        {
+          "exact_failures": true,
+          "expected_failure_marker": [
+            "TestBenchmarkG2CancelledAndClosed",
+            "TestBenchmarkOracleHeldCallbackPublicationAndShutdown"
+          ],
+          "expected_pass": false,
+          "grade_sha256": "82e7125db0017f23f08746e17b9849b7c7e213f27a475ee3aa5c2a30dad37c48",
+          "observed_failures": [
+            "TestBenchmarkG2CancelledAndClosed",
+            "TestBenchmarkOracleHeldCallbackPublicationAndShutdown"
+          ],
+          "observed_pass": false,
+          "race_pass": true,
+          "round": 2
+        }
+      ],
+      "status": "matched"
+    },
+    "seed": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": "TestBenchmarkG0ReferenceSelection",
+          "expected_pass": false,
+          "grade_sha256": "28e261aa1bb36bdef8e0cfa492e9527fb33b2707db2fe2a10e0bd3bd4124db69",
+          "observed_failures": [
+            "TestBenchmarkG0ReferenceSelection"
+          ],
+          "observed_pass": false,
+          "race_pass": true,
+          "round": 0
+        }
+      ],
+      "status": "matched"
+    },
+    "stale-publication": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": "TestBenchmarkG1AliasAndMove",
+          "expected_pass": false,
+          "grade_sha256": "f5fd722ae3cf9940cc577197fb7ef90d54422e2d0398cf1d44511a458787e217",
+          "observed_failures": [
+            "TestBenchmarkG1AliasAndMove"
+          ],
+          "observed_pass": false,
+          "race_pass": true,
+          "round": 1
+        }
+      ],
+      "status": "matched"
+    },
+    "swallowed-explicit-error": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": "TestBenchmarkG1AliasAndMove",
+          "expected_pass": false,
+          "grade_sha256": "08d4d24298060c13c581e2e3e51bb229df17923b8962a7282dc38eaa774f0aa4",
+          "observed_failures": [
+            "TestBenchmarkG1AliasAndMove"
+          ],
+          "observed_pass": false,
+          "race_pass": true,
+          "round": 1
+        }
+      ],
+      "status": "matched"
+    },
+    "wrong-manifest-digest": {
+      "checks": [
+        {
+          "exact_failures": true,
+          "expected_failure_marker": "TestBenchmarkOracleManifestIdentityViews",
+          "expected_pass": false,
+          "grade_sha256": "e68091d99290a28d919150e1661393b036a2070d2012646c76806c21ced90c65",
+          "observed_failures": [
+            "TestBenchmarkOracleManifestIdentityViews"
+          ],
+          "observed_pass": false,
+          "race_pass": true,
+          "round": 2
+        }
+      ],
+      "status": "matched"
+    }
+  },
+  "controls_pass": true,
+  "live_enabled": false,
+  "manifest_sha256": "6f18c333ef3df0b6bd7f3f267a60f6b83b553ba128bcf0b58bef57cd27afa253",
+  "ready_for_live": false,
+  "schema_version": 1,
+  "task_id": "flipt-oci-reference-rollout-v1"
+}

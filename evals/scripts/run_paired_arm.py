@@ -98,6 +98,7 @@ class SessionMeter:
         self.unknown_models: set[str] = set()
         self.unknown_usage: list[str] = []
         self.long_context_calls = 0
+        self.response_ids: set[str] = set()
 
     def discover(self) -> None:
         # Child sessions may be created after the parent starts. Iterate once
@@ -126,6 +127,9 @@ class SessionMeter:
                     "responses": [],
                     "terminal": None, "last_total_usage": None,
                     "last_response_usage": None, "turns": [],
+                    "pending_usage_record": None, "raw_usage_seen": False,
+                    "response_ids": set(), "raw_turn_totals": {},
+                    "observed_task_started": False,
                 }
                 self.known_ids.add(session_id)
                 changed = True
@@ -152,16 +156,95 @@ class SessionMeter:
                             continue
                         kind = event.get("type")
                         payload = event.get("payload") or {}
+                        if kind == "event_msg" and payload.get("type") == "task_started":
+                            state["observed_task_started"] = True
+                            turn_id = payload.get("turn_id")
+                            if state["turns"] and state["turns"][-1].get("terminal") is None:
+                                self.unknown_usage.append(
+                                    f"{state['id']}: new turn before prior terminal")
+                            if not isinstance(turn_id, str) or not turn_id or any(
+                                    turn.get("turn_id") == turn_id for turn in state["turns"]):
+                                self.unknown_usage.append(f"{state['id']}: turn start identity malformed")
+                            else:
+                                state["turns"].append({"turn_id": turn_id, "model": None,
+                                                       "effort": None, "terminal": None,
+                                                       "calls": 0})
+                                state["terminal"] = None
                         if kind == "turn_context" and payload.get("model"):
+                            turn_id = payload.get("turn_id")
+                            current = state["turns"][-1] if state["turns"] else None
+                            if (current is None or current.get("turn_id") != turn_id or
+                                    (turn_id is None and current.get("model") is not None)):
+                                if current is not None and state["observed_task_started"] and (
+                                        current.get("terminal") is None and
+                                        current.get("turn_id") is not None):
+                                    self.unknown_usage.append(
+                                        f"{state['id']}: new turn before prior terminal")
+                                if turn_id is not None and any(
+                                        row.get("turn_id") == turn_id for row in state["turns"]):
+                                    self.unknown_usage.append(
+                                        f"{state['id']}: repeated turn identity")
+                                current = {"turn_id": turn_id, "model": None,
+                                           "effort": None, "terminal": None, "calls": 0}
+                                state["turns"].append(current)
+                                state["terminal"] = None
+                            elif current.get("model") is not None:
+                                self.unknown_usage.append(
+                                    f"{state['id']}: repeated turn context")
                             state["model"] = payload["model"]
                             state["effort"] = payload.get("effort")
-                            state["turns"].append({"turn_id": payload.get("turn_id"),
-                                                   "model": state["model"],
-                                                   "effort": state["effort"]})
+                            current["model"] = state["model"]
+                            current["effort"] = state["effort"]
                         if kind == "event_msg" and payload.get("type") in (
                                 "task_complete", "task_completed", "task_failed",
-                                "task_cancelled", "task_cancel"):
-                            state["terminal"] = payload["type"]
+                                "task_cancelled", "task_cancel", "turn_aborted"):
+                            current = state["turns"][-1] if state["turns"] else None
+                            if (current is None or current.get("terminal") is not None or
+                                    (payload["type"] == "turn_aborted" and
+                                     payload.get("reason") != "interrupted") or
+                                    (payload.get("turn_id") is not None and
+                                     payload["turn_id"] != current.get("turn_id"))):
+                                self.unknown_usage.append(
+                                    f"{state['id']}: terminal differs from current turn")
+                            else:
+                                current["terminal"] = payload["type"]
+                                current["terminal_timestamp"] = event.get("timestamp")
+                                state["terminal"] = payload["type"]
+                        if kind == "token_usage_record":
+                            current = state["turns"][-1] if state["turns"] else None
+                            response_id = payload.get("response_id")
+                            if (current is None or current.get("model") is None or
+                                    current.get("terminal") is not None or
+                                    payload.get("thread_id") != state["id"] or
+                                    payload.get("session_id") != self.parent_id or
+                                    payload.get("turn_id") != current.get("turn_id") or
+                                    not isinstance(payload.get("root_turn_id"), str) or
+                                    not payload["root_turn_id"] or
+                                    (state["id"] == self.parent_id and
+                                     payload["root_turn_id"] != current.get("turn_id")) or
+                                    not isinstance(response_id, str) or not response_id or
+                                    response_id in self.response_ids or
+                                    state["pending_usage_record"] is not None or
+                                    not isinstance(payload.get("usage"), dict)):
+                                self.unknown_usage.append(
+                                    f"{state['id']}: raw response identity or turn invalid")
+                            else:
+                                previous_turn = state["raw_turn_totals"].get(
+                                    current["turn_id"], {})
+                                usage = payload["usage"]
+                                turn_total = payload.get("turn_token_usage")
+                                if (not isinstance(turn_total, dict) or any(
+                                        type(value) is not int or value < 0 or
+                                        turn_total.get(key) != previous_turn.get(key, 0) + value
+                                        for key, value in usage.items())):
+                                    self.unknown_usage.append(
+                                        f"{state['id']}: raw turn usage disagrees with responses")
+                                else:
+                                    state["raw_turn_totals"][current["turn_id"]] = turn_total
+                                self.response_ids.add(response_id)
+                                state["response_ids"].add(response_id)
+                                state["pending_usage_record"] = payload
+                            state["raw_usage_seen"] = True
                         if kind != "event_msg" or payload.get("type") != "token_count":
                             continue
                         info = payload.get("info") or {}
@@ -172,7 +255,23 @@ class SessionMeter:
                                 self.unknown_usage.append(
                                     f"{state['id']}: cumulative usage without response usage")
                             continue
+                        current = state["turns"][-1] if state["turns"] else None
+                        raw = state["pending_usage_record"]
                         previous = state["last_total_usage"]
+                        if (raw is None and isinstance(total, dict) and
+                                total == previous and usage == state["last_response_usage"]):
+                            continue  # An unchanged stream snapshot has no new billed response.
+                        state["pending_usage_record"] = None
+                        if state["raw_usage_seen"] and raw is None:
+                            self.unknown_usage.append(
+                                f"{state['id']}: priced response lacks raw usage record")
+                        if raw is not None and (raw.get("usage") != usage or
+                                raw.get("thread_token_usage") != total):
+                            self.unknown_usage.append(
+                                f"{state['id']}: raw and priced response usage disagree")
+                        if current is None or current.get("terminal") is not None:
+                            self.unknown_usage.append(
+                                f"{state['id']}: response lacks active turn")
                         if not isinstance(total, dict):
                             self.unknown_usage.append(
                                 f"{state['id']}: response lacks cumulative usage")
@@ -194,7 +293,7 @@ class SessionMeter:
                                     f"{state['id']}: cumulative usage classes malformed")
                             elif previous is not None and all(
                                     total[key] == previous[key] for key in comparable):
-                                if (total != previous or
+                                if (raw is not None or total != previous or
                                         usage != state["last_response_usage"]):
                                     self.unknown_usage.append(
                                         f"{state['id']}: unchanged cumulative usage has conflicting response")
@@ -220,8 +319,14 @@ class SessionMeter:
                         state["cost_upper"] += cost_upper
                         self.calls += 1
                         state["calls"] += 1
+                        if current is not None:
+                            current["calls"] += 1
                         state["responses"].append({
+                            "turn_id": current.get("turn_id") if current else None,
+                            "root_turn_id": raw.get("root_turn_id") if raw else None,
                             "model": model, "effort": state["effort"],
+                            "response_id_sha256": (hashlib.sha256(raw["response_id"].encode(
+                                "utf-8")).hexdigest() if raw is not None else None),
                             "token_classes": {key: usage.get(key) for key in USAGE_KEYS},
                             "estimated_usd": round(cost, 9) if cost == cost_upper else None,
                             "estimated_usd_lower_bound": round(cost, 9),
@@ -276,6 +381,11 @@ class SessionMeter:
         if self.unknown_models or self.unknown_usage:
             issues.append("unpriced model response or token class")
         for state in self.paths.values():
+            if state["pending_usage_record"] is not None:
+                issues.append(f"session {state['id']} has unpaired raw usage record")
+            if state["observed_task_started"] and any(
+                    turn.get("terminal") is None for turn in state["turns"][:-1]):
+                issues.append(f"session {state['id']} has historical turn without terminal")
             if state["terminal"] not in ("task_complete", "task_completed", "task_failed",
                                          "task_cancelled", "task_cancel"):
                 issues.append(f"session {state['id']} lacks terminal result")
@@ -353,51 +463,334 @@ def native_dispatches(parent_path: Path) -> tuple[list[str | None], list[str]]:
     return names, issues
 
 
-def native_lineage(parent_path: Path, paths: dict[Path, dict],
-                   parent_id: str) -> tuple[list[dict], list[str]]:
-    """Join v2 calls and activities to their original parent turn and child."""
-    calls: dict[str, dict] = {}
+def _native_message_digest(payload: dict) -> str | None:
+    """Return the commitment to one routed input, never its opaque content."""
+    contents = payload.get("content")
+    if not isinstance(contents, list):
+        return None
+    encrypted = [item.get("encrypted_content") for item in contents
+                 if isinstance(item, dict) and item.get("type") == "encrypted_content"]
+    if len(encrypted) != 1 or not isinstance(encrypted[0], str):
+        return None
+    return hashlib.sha256(encrypted[0].encode("utf-8")).hexdigest()
+
+
+def _native_timestamp_ns(value: str | None) -> int | None:
+    """Parse the rollout's UTC timestamp without float precision loss."""
+    if not isinstance(value, str) or not value.endswith("Z"):
+        return None
+    try:
+        stamp = datetime.fromisoformat(value[:-1] + "+00:00")
+        delta = stamp - datetime(1970, 1, 1, tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    return ((delta.days * 86400 + delta.seconds) * 1_000_000_000 +
+            delta.microseconds * 1000)
+
+
+def _native_abort_proven(turn: dict, session: dict, parent_id: str,
+                         parent_aborts: list[dict], proof: dict | None,
+                         parent_state: dict, child_state: dict) -> bool:
+    """Require an exact, drained interrupt receipt for closure without completion."""
+    if not isinstance(proof, dict) or turn.get("terminal_reason") != "interrupted":
+        return False
+    child_id, child_turn = session["child_id"], turn["turn_id"]
+    parent_turn = turn["parent_turn_id"]
+    matching_parent = [row for row in parent_aborts if row.get("turn_id") == parent_turn]
+    if (len(matching_parent) != 1 or matching_parent[0].get("reason") != "interrupted" or
+            proof.get("parent_thread_id") != parent_id or proof.get("turn_id") != parent_turn):
+        return False
+    trigger = proof.get("trigger_evidence")
+    if (not isinstance(trigger, dict) or trigger.get("target_thread_id") != child_id or
+            trigger.get("target_turn_id") != child_turn):
+        return False
+    cancellation = proof.get("cancellation")
+    if (not isinstance(cancellation, dict) or
+            cancellation.get("turn_id") != parent_turn or
+            cancellation.get("status") != "verified-drained" or
+            any(cancellation.get(key) is not True for key in (
+                "interrupt_ack", "turn_completed", "descendants_drained", "usage_drained")) or
+            cancellation.get("interrupted_threads") != [child_id, parent_id]):
+        return False
+    requests = cancellation.get("interrupt_requests")
+    if (not isinstance(requests, list) or len(requests) != 2 or
+            [(row.get("thread_id"), row.get("turn_id")) for row in requests
+             if isinstance(row, dict)] != [(child_id, child_turn), (parent_id, parent_turn)]):
+        return False
+    dispatches = []
+    for request in requests:
+        dispatch = request.get("dispatch_time_ns")
+        pre = request.get("pre_dispatch_evidence")
+        if (type(dispatch) is not int or dispatch <= 0 or not isinstance(pre, dict) or
+                pre.get("target_thread_id") != child_id or
+                pre.get("target_turn_id") != child_turn or
+                type(pre.get("marker_observed_ns")) is not int or
+                type(pre.get("completion_absent_checked_ns")) is not int or
+                not 0 < pre["marker_observed_ns"] <=
+                    pre["completion_absent_checked_ns"] < dispatch):
+            return False
+        dispatches.append(dispatch)
+    child_abort_ns = _native_timestamp_ns(turn.get("terminal_timestamp"))
+    parent_abort_ns = _native_timestamp_ns(matching_parent[0].get("timestamp"))
+    if (not dispatches[0] < dispatches[1] or child_abort_ns is None or
+            parent_abort_ns is None or child_abort_ns <= dispatches[0] or
+            parent_abort_ns <= dispatches[1]):
+        return False
+    usage = proof.get("usage")
+    if (not isinstance(usage, dict) or usage.get("unknown_models") != [] or
+            usage.get("unknown_usage") != [] or
+            type(usage.get("model_calls")) is not int or usage["model_calls"] <= 0):
+        return False
+    usage_sessions = usage.get("sessions")
+    if not isinstance(usage_sessions, list) or len(usage_sessions) != 2:
+        return False
+    observed = {row.get("id"): row for row in usage_sessions if isinstance(row, dict)}
+    if set(observed) != {parent_id, child_id}:
+        return False
+    if sum(row.get("calls", 0) for row in observed.values()
+           if type(row.get("calls")) is int) != usage["model_calls"]:
+        return False
+    for session_id, state in ((parent_id, parent_state), (child_id, child_state)):
+        row = observed[session_id]
+        if (type(row.get("calls")) is not int or row["calls"] <= 0 or
+                row.get("terminal") != "turn_aborted" or
+                not isinstance(row.get("reported_total_usage"), dict) or
+                row["reported_total_usage"] != state.get("last_total_usage") or
+                row["calls"] != state.get("calls") or
+                row["terminal"] != state.get("terminal")):
+            return False
+    return observed[child_id].get("model") == session.get("model") and (
+        observed[child_id].get("effort") == session.get("effort"))
+
+
+def _native_child_turns(path: Path, child: dict, parent_id: str,
+                        closed_snapshot: bool) -> tuple[list[dict], list[str]]:
+    """Read the pinned v0.158 child event contract as ordered turns."""
+    turns: list[dict] = []
+    issues: list[str] = []
+    pending_trigger: tuple[bool, int] | None = None
+    current: dict | None = None
+    meta_seen = False
+    try:
+        with path.open(encoding="utf-8") as stream:
+            for line_no, line in enumerate(stream, 1):
+                if not line.endswith("\n") and not closed_snapshot:
+                    break
+                try:
+                    event = json.loads(line)
+                    payload = event.get("payload")
+                    if not isinstance(payload, dict):
+                        raise ValueError("payload")
+                except (AttributeError, TypeError, ValueError):
+                    issues.append("native child event malformed")
+                    continue
+                kind = event.get("type")
+                if kind == "session_meta":
+                    source = payload.get("source") or {}
+                    subagent = source.get("subagent") if isinstance(source, dict) else None
+                    spawn = (subagent.get("thread_spawn")
+                             if isinstance(subagent, dict) else None)
+                    spawn = spawn if isinstance(spawn, dict) else {}
+                    if (meta_seen or line_no != 1 or payload.get("id") != child["id"] or
+                            payload.get("parent_thread_id") != parent_id or
+                            payload.get("agent_path") != child.get("agent_path") or
+                            spawn.get("parent_thread_id") != parent_id or
+                            spawn.get("agent_path") != child.get("agent_path")):
+                        issues.append("native child session metadata differs from spawn")
+                    meta_seen = True
+                elif kind == "event_msg" and payload.get("type") == "task_started":
+                    turn_id = payload.get("turn_id")
+                    root_turn_id = payload.get("root_turn_id")
+                    if (not meta_seen or not isinstance(turn_id, str) or not turn_id or
+                            not isinstance(root_turn_id, str) or not root_turn_id or
+                            (current is not None and "terminal_line" not in current) or
+                            any(turn["turn_id"] == turn_id for turn in turns)):
+                        issues.append("native child turn start missing, repeated, or out of order")
+                        continue
+                    current = {"turn_id": turn_id, "start_line": line_no,
+                               "root_turn_id": root_turn_id, "inputs": []}
+                    turns.append(current)
+                elif kind == "turn_context":
+                    if (current is None or "context_line" in current or
+                            payload.get("turn_id") != current["turn_id"] or
+                            payload.get("root_turn_id") != current["root_turn_id"]):
+                        issues.append("native child turn context differs from start")
+                    else:
+                        current.update({"context_line": line_no, "model": payload.get("model"),
+                                        "effort": payload.get("effort")})
+                elif kind == "inter_agent_communication_metadata":
+                    if (current is None or "context_line" not in current or
+                            "terminal_line" in current or pending_trigger is not None or
+                            type(payload.get("trigger_turn")) is not bool):
+                        issues.append("native child trigger metadata missing or misplaced")
+                    else:
+                        pending_trigger = (payload["trigger_turn"], line_no)
+                elif kind == "response_item" and payload.get("type") == "agent_message" \
+                        and payload.get("author") == "/root":
+                    metadata = payload.get("internal_chat_message_metadata_passthrough")
+                    digest = _native_message_digest(payload)
+                    if (current is None or pending_trigger is None or
+                            "terminal_line" in current or not isinstance(metadata, dict) or
+                            metadata.get("turn_id") != current["turn_id"] or
+                            payload.get("recipient") != child.get("agent_path") or digest is None):
+                        issues.append("native child routed input lacks turn or encrypted commitment")
+                    else:
+                        current["inputs"].append({"trigger_turn": pending_trigger[0],
+                                                  "metadata_line": pending_trigger[1],
+                                                  "message_line": line_no,
+                                                  "message_sha256": digest})
+                    pending_trigger = None
+                elif kind == "event_msg" and payload.get("type") in (
+                        "task_complete", "task_completed", "task_failed", "task_cancelled",
+                        "task_cancel", "turn_aborted"):
+                    if (current is None or "terminal_line" in current or
+                            payload.get("turn_id") != current["turn_id"] or
+                            "context_line" not in current or pending_trigger is not None):
+                        issues.append("native child turn terminal missing or conflicting")
+                    else:
+                        current.update({"terminal_line": line_no, "terminal": payload["type"],
+                                        "terminal_reason": payload.get("reason"),
+                                        "terminal_timestamp": event.get("timestamp")})
+    except OSError:
+        issues.append("native child rollout cannot be read")
+    if pending_trigger is not None and closed_snapshot:
+        issues.append("native child trigger has no routed input")
+    if not meta_seen:
+        issues.append("native child session metadata missing")
+    for turn in turns:
+        if (closed_snapshot or "terminal_line" in turn) and (not turn["inputs"] or
+                turn["inputs"][0]["trigger_turn"] is not True or sum(
+                item["trigger_turn"] is True for item in turn["inputs"]) != 1):
+            issues.append("native child turn lacks unique trigger input")
+        if closed_snapshot and ("context_line" not in turn or "terminal_line" not in turn):
+            issues.append("native child turn lacks context or terminal")
+    return turns, issues
+
+
+def native_lineage(parent_path: Path, paths: dict[Path, dict], parent_id: str,
+                   *, closed_snapshot: bool = False,
+                   interruption_proof: dict | None = None) -> tuple[list[dict], list[str]]:
+    """Join one immutable spawn session to each ordered child turn.
+
+    A live prefix may have an unfinished final turn. A closed snapshot must
+    contain its trigger, child terminal, and one matching parent completion.
+    An interrupted turn instead needs exact external interrupt and usage proof;
+    its completion is never inferred from a terminal alone.
+    Returned sessions keep the old spawn fields and add an ordered ``turns``
+    ledger for current-turn accounting by callers.
+    """
+    sessions: dict[str, dict] = {}
+    operations: dict[str, dict] = {}
+    child_sessions: dict[str, dict] = {}
     issues: list[str] = []
     current_session_id: str | None = parent_id
     current_turn_id: str | None = None
+    parent_meta_seen = False
     completion_ids: set[str] = set()
-    with parent_path.open(encoding="utf-8") as stream:
+    seen_call_ids: set[str] = set()
+    parent_aborts: list[dict] = []
+    try:
+        stream = parent_path.open(encoding="utf-8")
+    except OSError:
+        return [], ["native parent rollout cannot be read"]
+    with stream:
         for line_no, line in enumerate(stream, 1):
+            if not line.endswith("\n") and not closed_snapshot:
+                break
             try:
                 event = json.loads(line)
-                if not isinstance(event, dict):
-                    raise ValueError("native lineage event is not an object")
-                payload = event.get("payload") or {}
-                if not isinstance(payload, dict):
-                    raise ValueError("native lineage payload is not an object")
-                if event.get("type") == "session_meta":
+                payload = event.get("payload")
+                if not isinstance(event, dict) or not isinstance(payload, dict):
+                    raise ValueError("event")
+                kind = event.get("type")
+                if kind == "session_meta":
                     current_session_id = payload.get("id")
-                    if current_session_id != parent_id:
+                    if parent_meta_seen or current_session_id != parent_id:
                         issues.append("native parent session context differs from expected parent")
-                elif event.get("type") == "turn_context":
+                    parent_meta_seen = True
+                elif kind == "turn_context":
                     current_turn_id = payload.get("turn_id") or event.get("turn_id")
-                if event.get("type") == "response_item" and payload.get("type") == "function_call" \
-                        and payload.get("name") == "spawn_agent":
+                    if not isinstance(current_turn_id, str) or not current_turn_id:
+                        issues.append("native parent turn context malformed")
+                if kind == "response_item" and payload.get("type") == "function_call":
+                    any_call_id = payload.get("call_id")
+                    if not isinstance(any_call_id, str) or not any_call_id or any_call_id in seen_call_ids:
+                        issues.append("native call ID missing or duplicated")
+                    else:
+                        seen_call_ids.add(any_call_id)
+                if kind == "response_item" and payload.get("type") == "function_call" \
+                        and payload.get("name") in ("spawn_agent", "followup_task", "send_message"):
                     call_id = payload.get("call_id")
-                    arguments = json.loads(payload["arguments"])
-                    if not isinstance(call_id, str) or not call_id or call_id in calls:
-                        issues.append("native spawn call ID missing or duplicated")
+                    args = json.loads(payload["arguments"])
+                    name = payload["name"]
+                    metadata = payload.get("internal_chat_message_metadata_passthrough")
+                    if not isinstance(call_id, str) or not call_id or call_id in operations:
+                        issues.append("native call ID missing or duplicated")
                         continue
-                    if not isinstance(arguments, dict):
-                        issues.append("native spawn arguments malformed")
+                    if not isinstance(args, dict) or not isinstance(args.get("message"), str):
+                        issues.append("native call arguments malformed")
                         continue
-                    if payload.get("namespace") not in (None, "collaboration"):
-                        issues.append("native spawn namespace differs from collaboration")
-                    if not native_event_matches(event, payload, parent_id, current_turn_id,
-                                                current_session_id, current_turn_id):
-                        issues.append("native spawn identity differs from parent context")
-                    calls[call_id] = {"call_id": call_id, "call_line": line_no,
-                                      "task_name": arguments.get("task_name"),
-                                      "model": arguments.get("model"),
-                                      "effort": arguments.get("reasoning_effort"),
-                                      "fork_turns": arguments.get("fork_turns"),
-                                      "session_id": parent_id, "turn_id": current_turn_id}
-                elif event.get("type") == "event_msg":
+                    if (payload.get("namespace") not in (None, "collaboration") or
+                            not current_turn_id or
+                            not native_event_matches(event, payload, parent_id, current_turn_id,
+                                                     current_session_id, current_turn_id) or
+                            (metadata is not None and (not isinstance(metadata, dict) or
+                             metadata.get("turn_id") != current_turn_id))):
+                        issues.append("native call identity differs from parent context")
+                    op = {"call_id": call_id, "kind": name, "call_line": line_no,
+                          "parent_turn_id": current_turn_id,
+                          "call_metadata_seen": isinstance(metadata, dict),
+                          "parent_meta_seen": parent_meta_seen,
+                          "namespace": payload.get("namespace"),
+                          "message_sha256": hashlib.sha256(args["message"].encode("utf-8")).hexdigest()}
+                    operations[call_id] = op
+                    if name == "spawn_agent":
+                        task_name = args.get("task_name")
+                        if not isinstance(task_name, str) or not task_name or any(
+                                row.get("task_name") == task_name for row in sessions.values()):
+                            issues.append("native spawn task name missing or duplicated")
+                        session = {"call_id": call_id, "call_line": line_no,
+                                   "task_name": task_name, "model": args.get("model"),
+                                   "effort": args.get("reasoning_effort"),
+                                   "fork_turns": args.get("fork_turns"),
+                                   "session_id": parent_id, "turn_id": current_turn_id,
+                                   "turns": []}
+                        sessions[call_id] = session
+                        op["session"] = session
+                    else:
+                        target = args.get("target")
+                        matches = [row for row in sessions.values() if target in (
+                            row.get("task_name"), row.get("agent_path"))]
+                        if len(matches) != 1 or "child_id" not in matches[0]:
+                            issues.append("native child interaction lacks unique spawned target")
+                            continue
+                        session = matches[0]
+                        op["session"] = session
+                        if "result_line" not in session:
+                            issues.append("native interaction precedes spawn result")
+                        if name == "followup_task":
+                            if not session["turns"] or "completion_line" not in session["turns"][-1]:
+                                issues.append("native followup lacks completed prior turn")
+                            session["turns"].append({"trigger_call_id": call_id,
+                                                     "trigger_kind": name,
+                                                     "parent_turn_id": current_turn_id,
+                                                     "trigger_call_line": line_no,
+                                                     "message_sha256": op["message_sha256"],
+                                                     "interactions": []})
+                            op["turn"] = session["turns"][-1]
+                        elif not session["turns"] or "completion_line" in session["turns"][-1]:
+                            issues.append("native send_message has no active child turn")
+                        else:
+                            op["turn"] = session["turns"][-1]
+                            trigger = operations.get(op["turn"]["trigger_call_id"])
+                            if trigger is None or "result_line" not in trigger:
+                                issues.append("native send_message precedes child turn trigger result")
+                            op["turn"]["interactions"].append(op)
+                elif kind == "event_msg":
+                    if payload.get("type") == "turn_aborted":
+                        parent_aborts.append({"turn_id": payload.get("turn_id"),
+                                              "reason": payload.get("reason"),
+                                              "timestamp": event.get("timestamp")})
                     item = (payload.get("item") if payload.get("type") == "item_completed"
                             else payload if payload.get("type") == "sub_agent_activity" else None)
                     if not isinstance(item, dict) or item.get("type") not in (
@@ -406,86 +799,188 @@ def native_lineage(parent_path: Path, paths: dict[Path, dict],
                     activity_id = item.get("id") or item.get("event_id")
                     child_id = item.get("agent_thread_id")
                     agent_path = item.get("agent_path")
-                    if (not isinstance(activity_id, str) or not activity_id or
-                            not isinstance(child_id, str) or not child_id or
-                            not isinstance(agent_path, str) or not agent_path):
+                    if any(not isinstance(value, str) or not value for value in (
+                            activity_id, child_id, agent_path)):
                         issues.append("native subagent activity identity malformed")
                         continue
-                    if item.get("kind") == "started":
-                        call = calls.get(activity_id)
-                        if call is None or "start_line" in call or any(
-                                row.get("child_id") == child_id for row in calls.values()):
-                            issues.append("native child start lacks unique preceding spawn call")
+                    activity_kind = item.get("kind")
+                    if activity_kind in ("started", "interacted"):
+                        op = operations.get(activity_id)
+                        expected = "spawn_agent" if activity_kind == "started" else None
+                        if (op is None or "activity_line" in op or
+                                (expected and op["kind"] != expected) or
+                                (activity_kind == "interacted" and op["kind"] not in (
+                                    "followup_task", "send_message"))):
+                            issues.append("native child activity lacks unique preceding call")
                             continue
-                        if not native_event_matches(event, payload, call["session_id"],
-                                                    call["turn_id"], current_session_id,
-                                                    current_turn_id, item):
-                            issues.append("native child start differs from spawn context")
-                            continue
-                        call.update({"start_line": line_no, "child_id": child_id,
-                                     "agent_path": agent_path})
-                    elif item.get("kind") == "completed":
-                        starts = [call for call in calls.values() if
-                                  call.get("child_id") == child_id and
-                                  call.get("agent_path") == agent_path and "start_line" in call]
-                        if (len(starts) != 1 or activity_id in calls or
-                                activity_id in completion_ids or
-                                "completion_line" in starts[0]):
-                            issues.append("native child completion lacks unique start")
-                            continue
-                        call = starts[0]
-                        if not native_event_matches(event, payload, call["session_id"],
-                                                    call["turn_id"], current_session_id,
-                                                    current_turn_id, item):
-                            issues.append("native child completion differs from spawn context")
-                            continue
-                        completion_ids.add(activity_id)
-                        call["completion_line"] = line_no
-                    elif item.get("kind") == "interacted":
-                        starts = [call for call in calls.values() if
-                                  call.get("child_id") == child_id and
-                                  call.get("agent_path") == agent_path and
-                                  "start_line" in call and "completion_line" not in call]
-                        if (len(starts) != 1 or activity_id in calls or
+                        session = op.get("session")
+                        if (session is None or (activity_kind == "started" and child_id in child_sessions) or
+                                (activity_kind == "interacted" and (
+                                    session.get("child_id") != child_id or
+                                    session.get("agent_path") != agent_path)) or
                                 not native_event_matches(event, payload, parent_id,
-                                                         current_turn_id, current_session_id,
+                                                         op["parent_turn_id"], current_session_id,
                                                          current_turn_id, item)):
-                            issues.append("native child interaction lacks active start or parent context")
+                            issues.append("native child activity differs from call context")
+                            continue
+                        op["activity_line"] = line_no
+                        if activity_kind == "started":
+                            session.update({"start_line": line_no, "child_id": child_id,
+                                            "agent_path": agent_path})
+                            child_sessions[child_id] = session
+                            session["turns"].append({"trigger_call_id": activity_id,
+                                                     "trigger_kind": "spawn_agent",
+                                                     "parent_turn_id": op["parent_turn_id"],
+                                                     "trigger_call_line": op["call_line"],
+                                                     "message_sha256": op["message_sha256"],
+                                                     "interactions": []})
+                    elif activity_kind == "completed":
+                        session = child_sessions.get(child_id)
+                        turn = session["turns"][-1] if session and session["turns"] else None
+                        if (session is None or session.get("agent_path") != agent_path or
+                                turn is None or "completion_line" in turn or
+                                activity_id in completion_ids or activity_id in operations or
+                                not native_event_matches(event, payload, parent_id,
+                                                         turn["parent_turn_id"], current_session_id,
+                                                         current_turn_id, item)):
+                            issues.append("native child completion lacks unique active turn")
+                            continue
+                        turn.update({"completion_line": line_no, "completion_id": activity_id})
+                        session["completion_line"] = line_no  # Historical one-turn API.
+                        completion_ids.add(activity_id)
                     else:
                         issues.append("native subagent activity kind unsupported")
-                elif event.get("type") == "response_item" and payload.get("type") == "function_call_output":
-                    call = calls.get(payload.get("call_id"))
-                    if call is None:
+                elif kind == "response_item" and payload.get("type") == "function_call_output":
+                    op = operations.get(payload.get("call_id"))
+                    if op is None:
                         continue
-                    if "result_line" in call:
-                        issues.append("native spawn result duplicated")
+                    metadata = payload.get("internal_chat_message_metadata_passthrough")
+                    if ("result_line" in op or
+                            not native_event_matches(event, payload, parent_id,
+                                                     op["parent_turn_id"], current_session_id,
+                                                     current_turn_id) or
+                            (metadata is not None and (not isinstance(metadata, dict) or
+                             metadata.get("turn_id") != op["parent_turn_id"])) or
+                            current_turn_id != op["parent_turn_id"] or
+                            "activity_line" not in op):
+                        issues.append("native call result missing activity or parent context")
                         continue
-                    result = json.loads(payload["output"])
-                    if not isinstance(result, dict) or set(result) != {"task_name"}:
-                        issues.append("native spawn result malformed")
-                        continue
-                    call.update({"result_line": line_no, "result_path": result["task_name"]})
-            except (TypeError, KeyError, ValueError):
+                    output = payload.get("output")
+                    if op["kind"] == "spawn_agent":
+                        result = json.loads(output)
+                        if not isinstance(result, dict) or set(result) != {"task_name"}:
+                            issues.append("native spawn result malformed")
+                            continue
+                        op["session"]["result_path"] = result["task_name"]
+                        op["session"]["result_line"] = line_no
+                    elif output != "":
+                        issues.append("native interaction result malformed")
+                    op["result_line"] = line_no
+                    op["result_metadata_seen"] = isinstance(metadata, dict)
+            except (AttributeError, TypeError, KeyError, ValueError):
                 issues.append("native lineage event malformed")
-    children = {state["id"]: state for state in paths.values()
-                if state["id"] != parent_id and state.get("parent_id") == parent_id}
-    for call in calls.values():
-        name = call.get("task_name")
-        child = children.get(call.get("child_id"))
-        if (not isinstance(name, str) or not call.get("start_line") or
-                not call.get("result_line") or
-                not call["call_line"] < call["start_line"] < call["result_line"] or
-                not isinstance(call.get("agent_path"), str) or
-                call["agent_path"] != "/root/" + name or
-                call.get("result_path") != call["agent_path"] or child is None or
-                child.get("agent_path") != call["agent_path"] or
-                not child.get("turns") or
-                any((turn.get("model"), turn.get("effort")) !=
-                    (call.get("model"), call.get("effort")) for turn in child["turns"])):
-            issues.append("native call/start/result/child selectors do not join")
-    if len(calls) != len(children):
+    discovered = {state["id"]: (path, state) for path, state in paths.items()
+                  if state.get("id") != parent_id and state.get("parent_id") == parent_id}
+    if closed_snapshot and len(sessions) != len(discovered):
         issues.append("native child lineage count differs from discovered sessions")
-    return list(calls.values()), issues
+    for session in sessions.values():
+        child_entry = discovered.get(session.get("child_id"))
+        name = session.get("task_name")
+        if not session.get("start_line") and not closed_snapshot:
+            continue
+        if (not isinstance(name, str) or not session.get("start_line") or
+                not session["call_line"] < session["start_line"] or
+                session.get("agent_path") != "/root/" + name or
+                (closed_snapshot and child_entry is None) or
+                (child_entry is not None and child_entry[1].get("agent_path") != session["agent_path"]) or
+                ("result_line" in session and (session["result_path"] != session["agent_path"] or
+                 session["start_line"] >= session["result_line"])) or
+                (closed_snapshot and "result_line" not in session)):
+            issues.append("native call/start/result/child selectors do not join")
+            continue
+        if child_entry is None:
+            continue  # A live prefix can precede discovery of the child file.
+        child_path, child = child_entry
+        if child_path.is_file():
+            if not parent_meta_seen or any(
+                    op.get("namespace") != "collaboration" or
+                    not op.get("parent_meta_seen") or
+                    not op.get("call_metadata_seen") or
+                    ("result_line" in op and not op.get("result_metadata_seen"))
+                    for op in operations.values() if op.get("session") is session):
+                issues.append("native parent metadata turn context missing")
+            observed, child_issues = _native_child_turns(
+                child_path, child, parent_id, closed_snapshot)
+            issues.extend(child_issues)
+            ledger = session["turns"]
+            if closed_snapshot and len(observed) != len(ledger):
+                issues.append("native child turn count differs from parent triggers")
+            for index, turn in enumerate(ledger):
+                if index >= len(observed):
+                    break
+                actual = observed[index]
+                turn.update({key: actual[key] for key in (
+                    "turn_id", "root_turn_id", "start_line", "context_line", "model", "effort")
+                             if key in actual})
+                if "terminal_line" in actual:
+                    turn.update({"terminal_line": actual["terminal_line"],
+                                 "terminal": actual["terminal"],
+                                 "terminal_reason": actual.get("terminal_reason"),
+                                 "terminal_timestamp": actual.get("terminal_timestamp")})
+                expected_inputs = [turn] + turn["interactions"]
+                if (((closed_snapshot or "completion_line" in turn) and
+                     len(actual["inputs"]) != len(expected_inputs)) or
+                        any(input_row["message_sha256"] != expected["message_sha256"] or
+                            input_row["trigger_turn"] is not (position == 0) for
+                            position, (input_row, expected) in enumerate(
+                                zip(actual["inputs"], expected_inputs)))):
+                    issues.append("native child routed input commitment or trigger differs from parent")
+                if ("context_line" in actual and
+                        (actual.get("model"), actual.get("effort")) != (
+                        session.get("model"), session.get("effort"))):
+                    issues.append("native child turn selectors differ from spawn")
+                if actual["root_turn_id"] != turn["parent_turn_id"]:
+                    issues.append("native child root turn differs from trigger parent turn")
+                if "completion_line" in turn and turn["completion_id"] != (
+                        "subagent-completed-" + actual["turn_id"]):
+                    issues.append("native completion ID differs from child turn")
+                if actual.get("terminal") == "turn_aborted":
+                    if "completion_line" in turn:
+                        issues.append("native interrupted turn has normal completion activity")
+                    elif closed_snapshot:
+                        if _native_abort_proven(turn, session, parent_id, parent_aborts,
+                                                interruption_proof, paths.get(parent_path, {}),
+                                                child):
+                            turn["closure"] = "interrupted"
+                        else:
+                            issues.append("native aborted turn lacks verified interrupt and usage proof")
+                    else:
+                        turn["closure"] = "pending-interrupt-proof"
+                elif closed_snapshot:
+                    if "completion_line" in turn and "terminal_line" not in actual:
+                        issues.append("native parent completion precedes child terminal evidence")
+                    if "completion_line" not in turn or "terminal_line" not in turn:
+                        issues.append("native child turn lacks matching completion or terminal")
+                    else:
+                        turn["closure"] = "completed"
+        else:
+            if closed_snapshot:
+                issues.append("native child rollout missing")
+            elif not child.get("turns") or any(
+                    (row.get("model"), row.get("effort")) != (
+                        session.get("model"), session.get("effort")) for row in child["turns"]):
+                issues.append("native call/start/result/child selectors do not join")
+    if closed_snapshot:
+        for op in operations.values():
+            if "activity_line" not in op or "result_line" not in op:
+                issues.append("native call lacks activity or result")
+    for session in sessions.values():
+        for turn in session["turns"]:
+            turn["interactions"] = [
+                {key: op[key] for key in ("call_id", "call_line", "parent_turn_id",
+                                          "message_sha256", "activity_line", "result_line")
+                 if key in op} for op in turn["interactions"]]
+    return list(sessions.values()), issues
 
 
 def telemetry_unavailable(meter: SessionMeter | None, elapsed_seconds: float,

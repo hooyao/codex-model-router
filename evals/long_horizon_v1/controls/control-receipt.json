@@ -1,0 +1,73 @@
+{
+  "control_patches": {
+    "broken-close": {
+      "path": "controls/broken-close.patch",
+      "sha256": "5c6ed0bf84bf778d16abc89600586e400e9a8d23f4f92d81e833fdd26e3b401b"
+    },
+    "global-blocking": {
+      "path": "controls/global-blocking.patch",
+      "sha256": "a6cbf1a2b90c757571739449cfcff862529a2ed4599b12c4e1d310da2850c52f"
+    },
+    "ignore-reference": {
+      "path": "controls/ignore-reference.patch",
+      "sha256": "ffee0b31dd048642f289b82a6beb5ec43fb2e426f562935fed1dc623744b773e"
+    },
+    "leaked-stream": {
+      "path": "controls/leaked-stream.patch",
+      "sha256": "fa3c9bfb20f6228690b98a5e170a0c1a3a51bce79f5c26c4270e558eb0f846dd"
+    },
+    "per-reference-serialization": {
+      "path": "controls/per-reference-serialization.patch",
+      "sha256": "384cc88f0ca95bc5522df2ad5f97938462146e549ed0e515d66b6986362af983"
+    },
+    "positive": {
+      "path": "controls/positive.patch",
+      "sha256": "4a91fb11fbb898791ec30b37d926fa541a10c37b070c40fc0ce892a2b6c11f65"
+    },
+    "round0-only": {
+      "path": "controls/round0-only.patch",
+      "sha256": "932f7f20421267f2a441593343e5673f76b8fe6790074adde80a4d9444a24216"
+    },
+    "round1-only": {
+      "path": "controls/round1-only.patch",
+      "sha256": "78f2e00cc21c7fb7c39db63c9a35fac8c26cd6c66c6d36c3666f2d23a74620f8"
+    },
+    "stale-publication": {
+      "path": "controls/stale-publication.patch",
+      "sha256": "efc7283262cb8ba362af63018fac1f9d136bdd2870116fce47e06112cc9035a1"
+    },
+    "swallowed-explicit-error": {
+      "path": "controls/swallowed-explicit-error.patch",
+      "sha256": "02a9c4afa807953127fccc7729b8a129302120b9213c58ccdea2b08a8301c0f7"
+    },
+    "wrong-manifest-digest": {
+      "path": "controls/wrong-manifest-digest.patch",
+      "sha256": "7795a4db4957fb31beb1bb0b32ffb644899407c6cdcbf44cf1df88b41775dfc8"
+    }
+  },
+  "controls_pass": true,
+  "fixture_task_id": "flipt-oci-reference-rollout-v1",
+  "live_enabled": false,
+  "manifest_sha256": "9ccfa90bae894732758a2f7e98be3598a3fd6f21036af4474097c9239812efaf",
+  "matrix_path": "controls/control-matrix.json",
+  "matrix_sha256": "b4337a2f49e53f75b7ce1167bb237561777f3ecfacded5cc15097c6c8381137c",
+  "positive_patch_sha256": "4a91fb11fbb898791ec30b37d926fa541a10c37b070c40fc0ce892a2b6c11f65",
+  "positive_prior_hidden_quality_pass": null,
+  "ready_for_live": false,
+  "remaining_gates": [
+    "Independent fixture/control review",
+    "Strategy-neutral R1/R2 oracle expansion",
+    "Runtime capability validation",
+    "Separate live spending authorization"
+  ],
+  "schema_version": 1,
+  "source_run_path": "_scratch/control-matrix-v4-20260930",
+  "task_id": "build-long-controls-gpt-6-sol-high",
+  "validation": {
+    "go_gates": "All 12 controls matched exact expected failures or passes; positive and alternative G2 race checks passed.",
+    "patch_derivation": "All 10 variant patches reproduced from a clean seed; dirty seed rejected.",
+    "python_unit_tests": "python -m unittest evals.tests.test_long_horizon -q: 10 passed",
+    "scope": "No shipped control patch contains Python bytecode or hidden oracle paths; fresh baseline and treatment arms remain clean."
+  },
+  "worker_name": "build-long-controls-gpt-6-sol-high"
+}

@@ -1,0 +1,251 @@
+{
+  "provenance": {
+    "source_parent_sha256": "42262f101b6970ee7feb4194a9bea9d3e30468989511cb6ffff881cf6dc72e99",
+    "source_child_sha256": "0ce8b638e1acce5427ec1317b05eae6eca27a2ec44950525e0a192ed7418ece6",
+    "source_lines": {
+      "parent": [
+        1,
+        2,
+        8,
+        61,
+        63,
+        64,
+        74
+      ],
+      "child": [
+        1,
+        2,
+        8,
+        10,
+        11,
+        26
+      ]
+    },
+    "note": "Pinned v0.158 canary shape. IDs, routed content, times and usage are test-only replacements; no raw prompt or encrypted content is retained."
+  },
+  "parent_id": "abort-parent",
+  "child_id": "abort-child",
+  "agent_path": "/root/abort_worker",
+  "native": [
+    {
+      "type": "session_meta",
+      "payload": {
+        "id": "abort-parent"
+      }
+    },
+    {
+      "type": "turn_context",
+      "payload": {
+        "turn_id": "abort-parent-turn"
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "function_call",
+        "name": "spawn_agent",
+        "namespace": "collaboration",
+        "call_id": "abort-spawn",
+        "arguments": "{\"task_name\":\"abort_worker\",\"model\":\"gpt-6-astra\",\"reasoning_effort\":\"xhigh\",\"fork_turns\":\"none\",\"message\":\"fixture-only-abort-ciphertext\"}",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "abort-parent-turn"
+        }
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "item_completed",
+        "thread_id": "abort-parent",
+        "turn_id": "abort-parent-turn",
+        "item": {
+          "type": "SubAgentActivity",
+          "kind": "started",
+          "id": "abort-spawn",
+          "agent_thread_id": "abort-child",
+          "agent_path": "/root/abort_worker"
+        }
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "function_call_output",
+        "call_id": "abort-spawn",
+        "thread_id": "abort-parent",
+        "turn_id": "abort-parent-turn",
+        "output": "{\"task_name\":\"/root/abort_worker\"}",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "abort-parent-turn"
+        }
+      }
+    },
+    {
+      "timestamp": "2030-01-01T00:00:02.500000Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "turn_aborted",
+        "turn_id": "abort-parent-turn",
+        "reason": "interrupted"
+      }
+    }
+  ],
+  "child": [
+    {
+      "type": "session_meta",
+      "payload": {
+        "id": "abort-child",
+        "parent_thread_id": "abort-parent",
+        "agent_path": "/root/abort_worker",
+        "source": {
+          "subagent": {
+            "thread_spawn": {
+              "parent_thread_id": "abort-parent",
+              "agent_path": "/root/abort_worker"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "task_started",
+        "turn_id": "abort-child-turn",
+        "root_turn_id": "abort-parent-turn"
+      }
+    },
+    {
+      "type": "turn_context",
+      "payload": {
+        "turn_id": "abort-child-turn",
+        "root_turn_id": "abort-parent-turn",
+        "model": "gpt-6-astra",
+        "effort": "xhigh"
+      }
+    },
+    {
+      "type": "inter_agent_communication_metadata",
+      "payload": {
+        "trigger_turn": true
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "agent_message",
+        "author": "/root",
+        "recipient": "/root/abort_worker",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "fixture-only-routed-input"
+          },
+          {
+            "type": "encrypted_content",
+            "encrypted_content": "fixture-only-abort-ciphertext"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "abort-child-turn"
+        }
+      }
+    },
+    {
+      "timestamp": "2030-01-01T00:00:01.500000Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "turn_aborted",
+        "turn_id": "abort-child-turn",
+        "reason": "interrupted"
+      }
+    }
+  ],
+  "states": {
+    "parent": {
+      "calls": 2,
+      "terminal": "turn_aborted",
+      "last_total_usage": {
+        "input_tokens": 2
+      }
+    },
+    "child": {
+      "calls": 1,
+      "terminal": "turn_aborted",
+      "last_total_usage": {
+        "input_tokens": 1
+      }
+    }
+  },
+  "interruption_proof": {
+    "parent_thread_id": "abort-parent",
+    "turn_id": "abort-parent-turn",
+    "trigger_evidence": {
+      "target_thread_id": "abort-child",
+      "target_turn_id": "abort-child-turn"
+    },
+    "cancellation": {
+      "turn_id": "abort-parent-turn",
+      "status": "verified-drained",
+      "interrupt_ack": true,
+      "turn_completed": true,
+      "descendants_drained": true,
+      "usage_drained": true,
+      "interrupted_threads": [
+        "abort-child",
+        "abort-parent"
+      ],
+      "interrupt_requests": [
+        {
+          "thread_id": "abort-child",
+          "turn_id": "abort-child-turn",
+          "dispatch_time_ns": 1893456001000000000,
+          "pre_dispatch_evidence": {
+            "target_thread_id": "abort-child",
+            "target_turn_id": "abort-child-turn",
+            "marker_observed_ns": 1893456000400000000,
+            "completion_absent_checked_ns": 1893456000500000000
+          }
+        },
+        {
+          "thread_id": "abort-parent",
+          "turn_id": "abort-parent-turn",
+          "dispatch_time_ns": 1893456002000000000,
+          "pre_dispatch_evidence": {
+            "target_thread_id": "abort-child",
+            "target_turn_id": "abort-child-turn",
+            "marker_observed_ns": 1893456000400000000,
+            "completion_absent_checked_ns": 1893456000500000000
+          }
+        }
+      ]
+    },
+    "usage": {
+      "model_calls": 3,
+      "unknown_models": [],
+      "unknown_usage": [],
+      "sessions": [
+        {
+          "id": "abort-parent",
+          "calls": 2,
+          "terminal": "turn_aborted",
+          "reported_total_usage": {
+            "input_tokens": 2
+          },
+          "model": "gpt-6-sol",
+          "effort": "low"
+        },
+        {
+          "id": "abort-child",
+          "calls": 1,
+          "terminal": "turn_aborted",
+          "reported_total_usage": {
+            "input_tokens": 1
+          },
+          "model": "gpt-6-astra",
+          "effort": "xhigh"
+        }
+      ]
+    }
+  }
+}

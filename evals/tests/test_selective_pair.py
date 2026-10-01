@@ -71,6 +71,10 @@ class SelectivePairTests(unittest.TestCase):
         cli = Path(config["dispatch_runtime"]["cli"])
         if not cli.is_file():
             self.skipTest("reviewed desktop CLI is unavailable on this host")
+        evidence_root = config_path.resolve().parents[2]
+        if any(not (evidence_root / config["dispatch_runtime"][key]["path"]).is_file()
+               for key in ("schema_capture", "spawn_schema", "model_catalog")):
+            self.skipTest("reviewed schema capture artifacts are unavailable in this checkout")
         self.assertEqual(config["dispatch_runtime"]["cli_sha256"],
                          pinned_cli(cli, config)["sha256"])
         self.assertEqual("ready", explicit_dispatch_preflight(config_path, config, cli)["status"])
@@ -90,10 +94,12 @@ class SelectivePairTests(unittest.TestCase):
             child = {"id": "child", "parent_id": "parent", "agent_path": "/root/hard_worker",
                      "turns": [{"model": "gpt-6-astra", "effort": "xhigh"}]}
             events = [
+                {"type": "turn_context", "payload": {"turn_id": "turn-one"}},
                 {"type": "response_item", "payload": {"type": "function_call",
                     "name": "spawn_agent", "call_id": "call_one",
                     "arguments": json.dumps({"task_name": "hard_worker", "model": "gpt-6-astra",
-                                             "reasoning_effort": "xhigh", "fork_turns": "none"})}},
+                                             "reasoning_effort": "xhigh", "fork_turns": "none",
+                                             "message": "fixture-spawn"})}},
                 {"type": "event_msg", "payload": {"type": "item_completed", "item": {
                     "type": "SubAgentActivity", "kind": "started", "id": "call_one",
                     "agent_thread_id": "child", "agent_path": "/root/hard_worker"}}},
@@ -121,7 +127,8 @@ class SelectivePairTests(unittest.TestCase):
                 {"type": "response_item", "payload": {"type": "function_call",
                     "name": "spawn_agent", "namespace": "collaboration", "call_id": "call-one",
                     "arguments": json.dumps({"task_name": "hard_worker", "model": "gpt-6-astra",
-                                             "reasoning_effort": "xhigh", "fork_turns": "none"})}},
+                                             "reasoning_effort": "xhigh", "fork_turns": "none",
+                                             "message": "fixture-spawn"})}},
                 {"type": "event_msg", "payload": {"type": "item_completed",
                     "thread_id": "parent", "turn_id": "turn-one", "item": {
                     "type": "SubAgentActivity", "kind": "started", "id": "call-one",
@@ -140,15 +147,20 @@ class SelectivePairTests(unittest.TestCase):
                 return native_lineage(parent, paths, "parent")[1]
             self.assertEqual([], run(fixture))
             interacted = json.loads(json.dumps(fixture))
-            interacted.insert(5, {"type": "event_msg", "payload": {
+            interacted.insert(5, {"type": "response_item", "payload": {
+                "type": "function_call", "name": "send_message", "namespace": "collaboration",
+                "call_id": "interaction-one", "arguments": json.dumps({
+                    "target": "hard_worker", "message": "fixture-send"})}})
+            interacted.insert(6, {"type": "event_msg", "payload": {
                 "type": "item_completed", "thread_id": "parent", "turn_id": "turn-one",
                 "item": {"type": "SubAgentActivity", "kind": "interacted",
                          "id": "interaction-one", "agent_thread_id": "child",
                          "agent_path": "/root/hard_worker"}}})
+            interacted.insert(7, {"type": "response_item", "payload": {
+                "type": "function_call_output", "call_id": "interaction-one", "output": ""}})
             self.assertEqual([], run(interacted))
-            interacted[5]["payload"]["item"]["agent_thread_id"] = "unknown"
-            self.assertIn("native child interaction lacks active start or parent context",
-                          run(interacted))
+            interacted[6]["payload"]["item"]["agent_thread_id"] = "unknown"
+            self.assertIn("native child activity differs from call context", run(interacted))
             for mutation in ("spawn_parent", "spawn_turn", "start_parent", "start_turn",
                              "start_item_parent", "completion_parent", "completion_turn",
                              "completion_item_turn", "namespace", "unknown_child",
@@ -209,6 +221,268 @@ class SelectivePairTests(unittest.TestCase):
             self.assertEqual([], issues)
             self.assertEqual(child["id"], calls[0]["child_id"])
             self.assertEqual(6, calls[0]["completion_line"])
+
+    def test_sanitized_observed_multiturn_lineage(self) -> None:
+        fixture = json.loads((Path(__file__).parent / "fixtures" /
+                              "native-multiturn-observed-sanitized.json").read_text(
+                                  encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            parent = root / "parent.jsonl"
+            child = root / "child.jsonl"
+            paths = {parent: {"id": fixture["parent_id"], "parent_id": None},
+                     child: {"id": fixture["child_id"], "parent_id": fixture["parent_id"],
+                             "agent_path": fixture["agent_path"]}}
+
+            def run(rows: dict, *, closed: bool = True) -> tuple[list[dict], list[str]]:
+                parent.write_text("".join(json.dumps(item) + "\n" for item in rows["native"]),
+                                  encoding="utf-8")
+                child.write_text("".join(json.dumps(item) + "\n" for item in rows["child"]),
+                                 encoding="utf-8")
+                return native_lineage(parent, paths, fixture["parent_id"],
+                                      closed_snapshot=closed)
+
+            sessions, issues = run(fixture)
+            self.assertEqual([], issues)
+            self.assertEqual(1, len(sessions))
+            self.assertEqual(["child-turn-1", "child-turn-2"],
+                             [turn["turn_id"] for turn in sessions[0]["turns"]])
+            self.assertEqual(["spawn_agent", "followup_task"],
+                             [turn["trigger_kind"] for turn in sessions[0]["turns"]])
+            self.assertEqual(["task_complete", "task_complete"],
+                             [turn["terminal"] for turn in sessions[0]["turns"]])
+            self.assertEqual(1, len(sessions[0]["turns"][0]["interactions"]))
+            serialized = json.dumps(sessions)
+            self.assertNotIn("fixture-only-encrypted", serialized)
+
+            later_parent = json.loads(json.dumps(fixture))
+            later_parent["native"].insert(9, {"type": "turn_context",
+                                                "payload": {"turn_id": "parent-turn-2"}})
+            for index in (10, 12):
+                later_parent["native"][index]["payload"][
+                    "internal_chat_message_metadata_passthrough"]["turn_id"] = "parent-turn-2"
+            for index in (11, 13):
+                later_parent["native"][index]["payload"]["turn_id"] = "parent-turn-2"
+            for index in (8, 9):
+                later_parent["child"][index]["payload"]["root_turn_id"] = "parent-turn-2"
+            sessions, issues = run(later_parent)
+            self.assertEqual([], issues)
+            self.assertEqual(["parent-turn-1", "parent-turn-2"],
+                             [turn["parent_turn_id"] for turn in sessions[0]["turns"]])
+            stale_root = json.loads(json.dumps(later_parent))
+            for index in (8, 9):
+                stale_root["child"][index]["payload"]["root_turn_id"] = "parent-turn-1"
+            self.assertIn("native child root turn differs from trigger parent turn",
+                          run(stale_root)[1])
+            for field, value in (("thread_id", "other-parent"),
+                                 ("turn_id", "other-parent-turn")):
+                with self.subTest(result_field=field):
+                    wrong_result = json.loads(json.dumps(later_parent))
+                    wrong_result["native"][12]["payload"][field] = value
+                    self.assertIn("native call result missing activity or parent context",
+                                  run(wrong_result)[1])
+
+            for mutation in (
+                "missing_spawn_start", "missing_spawn_result", "missing_send_activity",
+                "missing_followup", "missing_followup_result", "missing_first_completion",
+                "missing_second_completion", "duplicate_completion", "wrong_completion_suffix",
+                "wrong_completion_parent_turn", "wrong_followup_metadata",
+                "wrong_child_parent", "wrong_child_path", "wrong_child_root_turn",
+                "wrong_child_context_turn", "wrong_child_message_turn", "wrong_selector",
+                "wrong_spawn_digest", "wrong_followup_digest", "missing_trigger",
+                "false_followup_trigger", "missing_child_context", "missing_child_terminal",
+                "duplicate_child_terminal", "extra_child_turn", "duplicate_call_id",
+                "wrong_followup_target", "cross_child_activity", "orphan_followup",
+                "missing_parent_meta", "missing_call_metadata", "missing_result_metadata",
+                "wrong_namespace", "unsupported_activity", "unsupported_trigger",
+                "wrong_child_spawn_source", "duplicate_parent_call_id",
+            ):
+                with self.subTest(mutation=mutation):
+                    rows = json.loads(json.dumps(fixture))
+                    p, c = rows["native"], rows["child"]
+                    if mutation == "missing_spawn_start": p.pop(3)
+                    elif mutation == "missing_spawn_result": p.pop(4)
+                    elif mutation == "missing_send_activity": p.pop(6)
+                    elif mutation == "missing_followup": p.pop(9)
+                    elif mutation == "missing_followup_result": p.pop(11)
+                    elif mutation == "missing_first_completion": p.pop(8)
+                    elif mutation == "missing_second_completion": p.pop(12)
+                    elif mutation == "duplicate_completion": p.append(json.loads(json.dumps(p[12])))
+                    elif mutation == "wrong_completion_suffix":
+                        p[12]["payload"]["item"]["id"] = "subagent-completed-other-turn"
+                    elif mutation == "wrong_completion_parent_turn":
+                        p[12]["payload"]["turn_id"] = "other-parent-turn"
+                    elif mutation == "wrong_followup_metadata":
+                        p[9]["payload"]["internal_chat_message_metadata_passthrough"][
+                            "turn_id"] = "other-parent-turn"
+                    elif mutation == "wrong_child_parent":
+                        c[0]["payload"]["parent_thread_id"] = "other-parent"
+                    elif mutation == "wrong_child_path":
+                        c[0]["payload"]["agent_path"] = "/root/other"
+                    elif mutation == "wrong_child_root_turn":
+                        c[8]["payload"]["root_turn_id"] = "other-parent-turn"
+                    elif mutation == "wrong_child_context_turn":
+                        c[9]["payload"]["turn_id"] = "other-child-turn"
+                    elif mutation == "wrong_child_message_turn":
+                        c[11]["payload"]["internal_chat_message_metadata_passthrough"][
+                            "turn_id"] = "other-child-turn"
+                    elif mutation == "wrong_selector": c[9]["payload"]["effort"] = "low"
+                    elif mutation == "wrong_spawn_digest":
+                        c[4]["payload"]["content"][1]["encrypted_content"] = "other-input"
+                    elif mutation == "wrong_followup_digest":
+                        c[11]["payload"]["content"][1]["encrypted_content"] = "other-input"
+                    elif mutation == "missing_trigger": c.pop(10)
+                    elif mutation == "false_followup_trigger":
+                        c[10]["payload"]["trigger_turn"] = False
+                    elif mutation == "missing_child_context": c.pop(9)
+                    elif mutation == "missing_child_terminal": c.pop(12)
+                    elif mutation == "duplicate_child_terminal": c.append(json.loads(json.dumps(c[12])))
+                    elif mutation == "extra_child_turn":
+                        c.append({"type": "event_msg", "payload": {"type": "task_started",
+                            "turn_id": "orphan-turn", "root_turn_id": "parent-turn-1"}})
+                    elif mutation == "duplicate_call_id": p[9]["payload"]["call_id"] = "spawn-1"
+                    elif mutation == "wrong_followup_target":
+                        args = json.loads(p[9]["payload"]["arguments"])
+                        args["target"] = "other"
+                        p[9]["payload"]["arguments"] = json.dumps(args)
+                    elif mutation == "cross_child_activity":
+                        p[10]["payload"]["item"]["agent_thread_id"] = "other-child"
+                    elif mutation == "orphan_followup": p.insert(9, p.pop(12))
+                    elif mutation == "missing_parent_meta": p.pop(0)
+                    elif mutation == "missing_call_metadata":
+                        del p[9]["payload"]["internal_chat_message_metadata_passthrough"]
+                    elif mutation == "missing_result_metadata":
+                        del p[11]["payload"]["internal_chat_message_metadata_passthrough"]
+                    elif mutation == "wrong_namespace":
+                        p[9]["payload"]["namespace"] = "other"
+                    elif mutation == "unsupported_activity":
+                        p[10]["payload"]["item"]["kind"] = "resumed"
+                    elif mutation == "unsupported_trigger":
+                        c[10]["payload"]["trigger_turn"] = "true"
+                    elif mutation == "wrong_child_spawn_source":
+                        c[0]["payload"]["source"]["subagent"]["thread_spawn"][
+                            "parent_thread_id"] = "other-parent"
+                    elif mutation == "duplicate_parent_call_id":
+                        p.insert(9, json.loads(json.dumps(p[5])))
+                    self.assertTrue(run(rows)[1], mutation)
+
+            prefix = json.loads(json.dumps(fixture))
+            prefix["native"].pop(12)
+            prefix["child"].pop(12)
+            self.assertEqual([], run(prefix, closed=False)[1])
+            self.assertTrue(run(prefix, closed=True)[1])
+            early_prefix = json.loads(json.dumps(fixture))
+            early_prefix["native"] = early_prefix["native"][:5]
+            early_prefix["child"] = early_prefix["child"][:4]
+            self.assertEqual([], run(early_prefix, closed=False)[1])
+            racing_prefix = json.loads(json.dumps(fixture))
+            racing_prefix["native"] = racing_prefix["native"][:9]
+            racing_prefix["child"] = racing_prefix["child"][:9]
+            self.assertEqual([], run(racing_prefix, closed=False)[1])
+            self.assertTrue(run(racing_prefix, closed=True)[1])
+            child.unlink()
+            self.assertIn("native child rollout missing", native_lineage(
+                parent, paths, fixture["parent_id"], closed_snapshot=True)[1])
+
+    def test_sanitized_observed_abort_requires_exact_drain_proof(self) -> None:
+        fixture = json.loads((Path(__file__).parent / "fixtures" /
+                              "native-abort-observed-sanitized.json").read_text(
+                                  encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            parent, child = root / "parent.jsonl", root / "child.jsonl"
+            def run(rows: dict, proof: dict | None) -> tuple[list[dict], list[str]]:
+                parent.write_text("".join(json.dumps(item) + "\n" for item in rows["native"]),
+                                  encoding="utf-8")
+                child.write_text("".join(json.dumps(item) + "\n" for item in rows["child"]),
+                                 encoding="utf-8")
+                states = rows["states"]
+                paths = {parent: {"id": rows["parent_id"], "parent_id": None,
+                                  **states["parent"]},
+                         child: {"id": rows["child_id"], "parent_id": rows["parent_id"],
+                                 "agent_path": rows["agent_path"], **states["child"]}}
+                return native_lineage(parent, paths, rows["parent_id"],
+                                      closed_snapshot=True, interruption_proof=proof)
+
+            sessions, issues = run(fixture, fixture["interruption_proof"])
+            self.assertEqual([], issues)
+            self.assertEqual("interrupted", sessions[0]["turns"][0]["closure"])
+            self.assertNotIn("completion_line", sessions[0]["turns"][0])
+            self.assertIn("native aborted turn lacks verified interrupt and usage proof",
+                          run(fixture, None)[1])
+            for mutation in (
+                "missing_ack", "missing_request", "wrong_child_request", "wrong_parent_request",
+                "wrong_request_order", "wrong_child_terminal_reason", "missing_child_terminal",
+                "wrong_parent_terminal_reason", "missing_parent_terminal", "missing_usage_drain",
+                "wrong_usage_calls", "missing_usage_session", "wrong_usage_selector",
+                "unreconciled_usage", "normal_completion_on_abort", "early_child_terminal",
+                "wrong_cancellation_turn", "late_marker", "negative_completion_check",
+            ):
+                with self.subTest(mutation=mutation):
+                    rows = json.loads(json.dumps(fixture))
+                    proof = rows["interruption_proof"]
+                    cancel = proof["cancellation"]
+                    if mutation == "missing_ack": cancel["interrupt_ack"] = False
+                    elif mutation == "missing_request": cancel["interrupt_requests"].pop()
+                    elif mutation == "wrong_child_request":
+                        cancel["interrupt_requests"][0]["turn_id"] = "other-turn"
+                    elif mutation == "wrong_parent_request":
+                        cancel["interrupt_requests"][1]["thread_id"] = "other-parent"
+                    elif mutation == "wrong_request_order":
+                        cancel["interrupt_requests"].reverse()
+                    elif mutation == "wrong_child_terminal_reason":
+                        rows["child"][5]["payload"]["reason"] = "other"
+                    elif mutation == "missing_child_terminal": rows["child"].pop(5)
+                    elif mutation == "wrong_parent_terminal_reason":
+                        rows["native"][5]["payload"]["reason"] = "other"
+                    elif mutation == "missing_parent_terminal": rows["native"].pop(5)
+                    elif mutation == "missing_usage_drain": cancel["usage_drained"] = False
+                    elif mutation == "wrong_usage_calls":
+                        proof["usage"]["sessions"][1]["calls"] = 2
+                    elif mutation == "missing_usage_session":
+                        proof["usage"]["sessions"].pop()
+                    elif mutation == "wrong_usage_selector":
+                        proof["usage"]["sessions"][1]["effort"] = "low"
+                    elif mutation == "unreconciled_usage":
+                        rows["states"]["child"]["last_total_usage"]["input_tokens"] = 99
+                    elif mutation == "normal_completion_on_abort":
+                        rows["native"].insert(5, {"type": "event_msg", "payload": {
+                            "type": "item_completed", "thread_id": rows["parent_id"],
+                            "turn_id": "abort-parent-turn", "item": {"type": "SubAgentActivity",
+                                "kind": "completed", "id": "subagent-completed-abort-child-turn",
+                                "agent_thread_id": rows["child_id"],
+                                "agent_path": rows["agent_path"]}}})
+                    elif mutation == "early_child_terminal":
+                        rows["child"][5]["timestamp"] = "2030-01-01T00:00:00.900000Z"
+                    elif mutation == "wrong_cancellation_turn":
+                        cancel["turn_id"] = "wrong-turn"
+                    elif mutation == "late_marker":
+                        cancel["interrupt_requests"][0]["pre_dispatch_evidence"][
+                            "marker_observed_ns"] = (
+                            cancel["interrupt_requests"][0]["dispatch_time_ns"] + 1)
+                    elif mutation == "negative_completion_check":
+                        cancel["interrupt_requests"][0]["pre_dispatch_evidence"][
+                            "completion_absent_checked_ns"] = -1
+                    self.assertTrue(run(rows, proof)[1], mutation)
+
+    def test_retained_real_canary_abort_replay_when_available(self) -> None:
+        receipt = (Path(__file__).resolve().parents[1] / "long_horizon_v1" /
+                   "_scratch" / "cancellation-canary" / "retry-20260930120001-96e403dd" /
+                   "canary" / "cancellation.json")
+        root = Path.home() / ".codex" / "sessions" / "2026" / "09" / "30"
+        parent_id = "01a0f231-1446-7130-8a69-4c3aa87b17f7"
+        if not receipt.is_file() or not list(root.glob(f"rollout-*{parent_id}.jsonl")):
+            self.skipTest("retained canary evidence is unavailable on this host")
+        proof = json.loads(receipt.read_text(encoding="utf-8"))
+        meter = SessionMeter(root, parent_id, "gpt-6-sol", "low", True)
+        meter.refresh()
+        parent = next(path for path, state in meter.paths.items()
+                      if state["id"] == parent_id)
+        sessions, issues = native_lineage(parent, meter.paths, parent_id,
+                                          closed_snapshot=True, interruption_proof=proof)
+        self.assertEqual([], issues)
+        self.assertEqual(1, len(sessions))
+        self.assertEqual("interrupted", sessions[0]["turns"][0]["closure"])
 
     def test_negative_treatment_is_hash_bound_and_never_selective_success(self) -> None:
         config_path = Path(__file__).resolve().parents[1] / "paired_selective" / "config.json"
