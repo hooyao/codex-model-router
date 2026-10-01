@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import queue
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -98,6 +99,36 @@ class LongHorizonProtocolTests(unittest.TestCase):
         git(self.workspace, "commit", "-q", "-m", "seed")
         self.seed_tree = git(self.workspace, "rev-parse", "HEAD^{tree}").decode().strip()
         copy_assets(0, self.workspace)
+
+    def local_plugin_spec(self, spec: dict) -> dict:
+        """Bind an installed-plugin copy to test-local hashes, independent of CI host."""
+        source = Path(__file__).resolve().parents[2] / "plugins" / "codex-model-router"
+        plugin = self.workspace / "installed-plugin"
+        for relative in (".codex-plugin/plugin.json", "hooks/router_hook.py",
+                         "hooks/routing_config.py", "hooks/hooks.json"):
+            destination = plugin / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source / relative, destination)
+        spec = copy.deepcopy(spec)
+        runtime = spec["runtime"]
+        runtime["plugin_root"] = str(plugin)
+        for key, relative in (("plugin_manifest_sha256", ".codex-plugin/plugin.json"),
+                              ("router_hook_sha256", "hooks/router_hook.py"),
+                              ("routing_validator_sha256", "hooks/routing_config.py"),
+                              ("plugin_hooks_sha256", "hooks/hooks.json")):
+            runtime[key] = file_sha(plugin / relative)
+        return spec
+
+    def local_cli(self, spec: dict) -> Path:
+        """Create pinned CLI and sidecar bytes for offline path and hash checks."""
+        cli = self.workspace / "desktop" / "codex.exe"
+        cli.parent.mkdir(parents=True, exist_ok=True)
+        cli.write_bytes(b"test desktop CLI")
+        host = cli.with_name("codex-code-mode-host.exe")
+        host.write_bytes(b"test code-mode host")
+        spec["runtime"].update(cli=str(cli), cli_sha256=file_sha(cli),
+                               code_mode_host_sha256=file_sha(host))
+        return cli
 
     def require_retained_adjudication(self) -> None:
         path = (ASSET_ROOT.parent / "_scratch" / "cancellation-canary" /
@@ -368,6 +399,8 @@ class LongHorizonProtocolTests(unittest.TestCase):
             with mock_patch("evals.long_horizon_v1.controls.HERE", root), \
                  mock_patch("evals.long_horizon_v1.controls.manifest",
                             return_value={"controls": specs}), \
+                 mock_patch("evals.long_horizon_v1.grade.wsl_path",
+                            side_effect=lambda path: path.as_posix()), \
                  mock_patch("evals.long_horizon_v1.controls.grade", fake_grade):
                 result = controls(root, root / "results")
             self.assertTrue(result["controls"]["wrong-manifest-digest"]["status"] == "matched")
@@ -526,7 +559,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
         plan["pilot_id"] = "flipt-oci-long-horizon-pilot-13"
         plan_path = root / "pilot-plan-v13.json"
         plan_path.write_text(json.dumps(plan), encoding="utf-8")
-        spec = copy.deepcopy(manifest())
+        spec = self.local_plugin_spec(manifest())
         spec["pilot"] = {"path": plan_path.name, "schema_version": 4,
                          "sha256": file_sha(plan_path)}
         with mock_patch("evals.long_horizon_v1.prepare.HERE", root), \
@@ -993,7 +1026,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
         self.assertFalse(output.exists())
 
     def test_versioned_routing_fixture_binds_hook_without_overwrite(self) -> None:
-        spec = manifest()
+        spec = self.local_plugin_spec(manifest())
         descriptor = fixture_config(spec)
         before = capture_patch(self.workspace, self.seed_tree)
         binding = bind_arm_config(self.workspace, spec)
@@ -1008,11 +1041,22 @@ class LongHorizonProtocolTests(unittest.TestCase):
         target.write_text("{}\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
             verify_arm_config(self.workspace, spec)
+        drift = copy.deepcopy(spec)
+        drift["runtime"]["plugin_manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "pinned plugin manifest.*SHA-256 mismatch"):
+            fixture_config(drift)
+        (Path(spec["runtime"]["plugin_root"]) / "hooks" / "router_hook.py").unlink()
+        with self.assertRaisesRegex(ValueError, "pinned router hook missing"):
+            fixture_config(spec)
 
     def test_cli_binding_requires_pinned_install_and_sidecar(self) -> None:
         spec = manifest()
-        cli = Path(spec["runtime"]["cli"])
-        binding = verify_cli(cli, spec)
+        cli = self.local_cli(spec)
+        with mock_patch("evals.long_horizon_v1.runtime_binding.subprocess.run",
+                        return_value=subprocess.CompletedProcess([], 0,
+                            stdout=spec["runtime"]["cli_version"])) as version:
+            binding = verify_cli(cli, spec)
+        version.assert_called_once()
         self.assertEqual(binding["code_mode_host_sha256"],
                          spec["runtime"]["code_mode_host_sha256"])
         with self.assertRaisesRegex(ValueError, "pinned complete desktop installation"):
@@ -1021,7 +1065,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
         drift["runtime"]["code_mode_host_sha256"] = "0" * 64
         with self.assertRaisesRegex(ValueError, "code-mode host.*SHA-256 mismatch"):
             verify_cli(cli, drift)
-        fake_cli = self.workspace / "desktop" / "codex.exe"
+        fake_cli = self.workspace / "incomplete" / "codex.exe"
         fake_cli.parent.mkdir()
         fake_cli.write_bytes(b"fake CLI")
         missing = json.loads(json.dumps(spec))
@@ -1036,7 +1080,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
         spec.pop("pilot", None)
         arm = self.workspace / "baseline"
         arm.mkdir()
-        cli = Path(spec["runtime"]["cli"])
+        cli = self.local_cli(spec)
         policy = arm_execution(spec, "baseline")
         proof = {"status": "verified", "cli_sha256": spec["runtime"]["cli_sha256"],
                  "code_mode_host_sha256": spec["runtime"]["code_mode_host_sha256"],
@@ -1191,7 +1235,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
         spec["live_enabled"] = True
         spec.pop("pilot", None)
         (self.workspace / "treatment").mkdir()
-        cli = Path(spec["runtime"]["cli"])
+        cli = self.local_cli(spec)
         policy = arm_execution(spec, "treatment")
         runtime = {"arm": "treatment", "cli_options": policy["cli_options"],
             "policy_sha256": policy["policy_sha256"],
@@ -1319,8 +1363,9 @@ class LongHorizonProtocolTests(unittest.TestCase):
 
     def test_fresh_preparation_rejects_reuse_later_reveal_and_product_drift(self) -> None:
         root = self.workspace / "fresh-prepared"
-        prepared = prepare(root)
-        spec = manifest()
+        spec = self.local_plugin_spec(manifest())
+        with mock_patch("evals.long_horizon_v1.prepare.manifest", return_value=spec):
+            prepared = prepare(root)
         treatment = root / "treatment"
         self.assertEqual(list(prepared["arms"]), ["treatment"])
         self.assertFalse((root / "baseline").exists())
@@ -1330,7 +1375,8 @@ class LongHorizonProtocolTests(unittest.TestCase):
                          spec["assets"]["submit_checkpoint.py"])
         self.assertFalse((treatment / ".benchmark" / "round1.md").exists())
         self.assertFalse((treatment / ".benchmark" / "oracle").exists())
-        with self.assertRaisesRegex(ValueError, "output exists"):
+        with mock_patch("evals.long_horizon_v1.prepare.manifest", return_value=spec), \
+             self.assertRaisesRegex(ValueError, "output exists"):
             prepare(root)
         checkpoint = treatment / ".benchmark" / "checkpoint.json"
         checkpoint.write_text("{}", encoding="utf-8")
