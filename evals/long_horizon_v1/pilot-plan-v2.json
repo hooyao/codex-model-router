@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "pilot_id": "flipt-oci-long-horizon-pilot-02",
+  "arm_order": [
+    "baseline",
+    "treatment"
+  ],
+  "matched_pairs": 1,
+  "preparation_root": "_scratch/pilot-02-prep",
+  "evidence_root": "_scratch/pilot-02-evidence",
+  "limits_per_arm": {
+    "estimated_usd": 10.0,
+    "dispatch_stop_usd": 9.0,
+    "wall_seconds": 3000,
+    "automatic_retries": 0,
+    "public_repairs_per_round": 1
+  },
+  "fixture": {
+    "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
+    "seed_patch_sha256": "3d824219a77b11d8b6f6ec506403daad092594d07c9a697a3c2280a2c935c74b",
+    "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
+    "arm_execution_sha256": "4e0e535fb8f67ea68aa09781c799dd7acab30946e3eae5043174834c332af008",
+    "baseline_suffix_sha256": "5ece6200be87f54301fdc8eeffee9269bd86b4def20705c11063543d05ae4764",
+    "treatment_suffix_sha256": "0a3cbaf15e717e7e689a496e54f81181fa1c66072259c41e07a8993688524763",
+    "routing_config_canonical_sha256": "81827c8776172fe5b0bb7164f8713e59992e658ac86ca7a156321c32e2522ace"
+  },
+  "controls": {
+    "matrix_path": "controls/control-matrix.json",
+    "matrix_sha256": "70a53aa008e7d3a45670ca0a591fde2a81b1ab5fd9b06e6db43dfb501e1986a7",
+    "expansion_receipt_path": "controls/oracle-expansion-receipt.json",
+    "expansion_receipt_sha256": "883c13d6db018b438acd2cbf37423fb0e47b045a95198d20b452e1a116d45865",
+    "expected_controls": 12,
+    "expected_grades": 20
+  },
+  "capabilities": {
+    "baseline": "_scratch/pilot-02-evidence/baseline-capability.json",
+    "treatment": "_scratch/pilot-02-evidence/treatment-capability.json"
+  },
+  "run_outputs": {
+    "baseline": "_scratch/pilot-02-evidence/baseline-live",
+    "treatment": "_scratch/pilot-02-evidence/treatment-live"
+  },
+  "acceptance": {
+    "same_start_and_reveals": true,
+    "complete_three_round_event_chain": true,
+    "hidden_behavior_and_race": true,
+    "pinned_backend_regressions": true,
+    "arm_blind_patch_bound_semantic_retention_review": true,
+    "complete_parent_and_child_usage": true,
+    "quality_parity_and_total_usd_primary": true,
+    "single_pair_performance_claim_allowed": false
+  },
+  "stop_rule": "Stop the pair unless the baseline has complete accounting, a passing hidden and race grade, passing pinned backend regressions, and an independent arm-blind semantic review bound in a verified admission receipt. Preserve partial receipts. No automatic rerun.",
+  "quality_admission": "_scratch/pilot-02-evidence/baseline-quality-admission.json"
+}

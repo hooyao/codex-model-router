@@ -1,0 +1,268 @@
+{
+  "additional_checks": [
+    {
+      "command": [
+        "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",
+        "test",
+        "-timeout=90s",
+        "-count=1",
+        "./internal/config",
+        "./internal/oci/...",
+        "./internal/storage/fs",
+        "./internal/storage/fs/oci",
+        "./internal/storage/fs/store",
+        "./internal/storage/fs/local",
+        "./internal/storage/fs/git",
+        "./internal/storage/fs/object"
+      ],
+      "environment": {
+        "GOPROXY": "off",
+        "GOSUMDB": "off",
+        "cache": "C:\\Users\\yahu2\\.codex\\worktrees\\long-horizon-benchmark\\codex-model-router\\evals\\long_horizon_v1\\_scratch\\positive-workspace\\checks\\initial\\go-build-cache",
+        "external_service_test_env": "unset"
+      },
+      "exit_code": 0,
+      "path": "_scratch/positive-workspace/checks/legacy/check.json",
+      "seconds": 45.671,
+      "sha256": "cb947e8830a16bcf384d5d39816b6fc228bfb07d6b04dfdf859723ccf8970e48",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "531da212f5b91cca91d27e985f96ab506230382399730381dd2e288ec883bf28",
+      "workspace": "C:\\Users\\yahu2\\.codex\\worktrees\\long-horizon-benchmark\\codex-model-router\\evals\\long_horizon_v1\\_scratch\\positive-workspace\\flipt"
+    },
+    {
+      "command": [
+        "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",
+        "test",
+        "-timeout=90s",
+        "-race",
+        "-count=3",
+        "./internal/oci",
+        "./internal/storage/fs",
+        "./internal/storage/fs/oci"
+      ],
+      "environment": {
+        "GOPROXY": "off",
+        "GOSUMDB": "off",
+        "cache": "C:\\Users\\yahu2\\.codex\\worktrees\\long-horizon-benchmark\\codex-model-router\\evals\\long_horizon_v1\\_scratch\\positive-workspace\\checks\\initial\\go-build-cache",
+        "external_service_test_env": "unset"
+      },
+      "exit_code": 0,
+      "path": "_scratch/positive-workspace/checks/race-three/check.json",
+      "seconds": 70.003,
+      "sha256": "208345821a79217fa4f7cc8d25eda5dd223b565591fa35952165036c0d99723d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "527d3ec875acc574feccd0abef0da8439cb5f28513ad0c4d45e500676ea766fc",
+      "workspace": "C:\\Users\\yahu2\\.codex\\worktrees\\long-horizon-benchmark\\codex-model-router\\evals\\long_horizon_v1\\_scratch\\positive-workspace\\flipt"
+    }
+  ],
+  "benchmark_task_id": "flipt-oci-reference-rollout-v1",
+  "current_arm_overlays": {
+    "baseline": {
+      ".benchmark/__pycache__/checkpoint_hash.cpython-314.pyc": "6e805cfb4feba922a86b72d131797eaa2f968d17d3fc0c456051c1935934ccc9",
+      ".benchmark/checkpoint.json": "bbc2e974a41d6003b8de06c00cd83c40a264f75695a9bcfdfdebc503f84dce2a",
+      ".benchmark/checkpoint_hash.py": "54347a487ea3057cb9a58f7dba8268f0494f3b1be3eb32909cf5e29471f2dec1",
+      ".benchmark/environment.md": "1a7e7ad70222efec38973a49586c21e8e440ddb2bfbbf0646bd3782e811490d0",
+      ".benchmark/public/internal/storage/fs/oci/benchmark_g0_test.go": "7d59f2c577144c7ed4d93e518f570b08113c82e936ba8a9055ebdbf01d7eb2c9",
+      ".benchmark/public/internal/storage/fs/oci/benchmark_g1_test.go": "52b0652fa8047ee446fb929a31389c979aa577c0172e77aec68e326942d4e963",
+      ".benchmark/public/internal/storage/fs/oci/benchmark_g2_test.go": "b8936b489c3bacc4106b22ed764211c52569c8a18b92795d8a7ade49e4c94706",
+      ".benchmark/round0.md": "a3b9961e12f2b8c18d9375c9778afa5297bc70d4eb304cdc9c14c45926309ffd",
+      ".benchmark/round1.md": "e6c7ccc37f24ededa3ab34697eca8fa3c605841a27d8690b3a4c9a0e06e766be",
+      ".benchmark/round2.md": "a7a1b0f19521f3555877805244dad122efec5b6cab303372c441a63bd22b104c"
+    },
+    "treatment": {
+      ".benchmark/__pycache__/checkpoint_hash.cpython-314.pyc": "b2d729eaca65941ca576f11a3bb0a3ea768c37661a491b993f827fefe9485925",
+      ".benchmark/checkpoint.json": "bbc2e974a41d6003b8de06c00cd83c40a264f75695a9bcfdfdebc503f84dce2a",
+      ".benchmark/checkpoint_hash.py": "54347a487ea3057cb9a58f7dba8268f0494f3b1be3eb32909cf5e29471f2dec1",
+      ".benchmark/environment.md": "1a7e7ad70222efec38973a49586c21e8e440ddb2bfbbf0646bd3782e811490d0",
+      ".benchmark/public/internal/storage/fs/oci/benchmark_g0_test.go": "7d59f2c577144c7ed4d93e518f570b08113c82e936ba8a9055ebdbf01d7eb2c9",
+      ".benchmark/public/internal/storage/fs/oci/benchmark_g1_test.go": "52b0652fa8047ee446fb929a31389c979aa577c0172e77aec68e326942d4e963",
+      ".benchmark/public/internal/storage/fs/oci/benchmark_g2_test.go": "b8936b489c3bacc4106b22ed764211c52569c8a18b92795d8a7ade49e4c94706",
+      ".benchmark/round0.md": "a3b9961e12f2b8c18d9375c9778afa5297bc70d4eb304cdc9c14c45926309ffd",
+      ".benchmark/round1.md": "e6c7ccc37f24ededa3ab34697eca8fa3c605841a27d8690b3a4c9a0e06e766be",
+      ".benchmark/round2.md": "a7a1b0f19521f3555877805244dad122efec5b6cab303372c441a63bd22b104c"
+    }
+  },
+  "fixture_manifest_sha256": "362263b631250d72f1e187cfdfc3976f6163141a7633bc1b004b826ba5a2dcd7",
+  "gates": [
+    {
+      "behavior_pass": true,
+      "checks": [
+        {
+          "command": [
+            "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",
+            "test",
+            "-count=1",
+            "-timeout=90s",
+            "./internal/config",
+            "./internal/oci",
+            "./internal/storage/fs",
+            "./internal/storage/fs/oci",
+            "./internal/storage/fs/store"
+          ],
+          "exit_code": 0,
+          "seconds": 103.291,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_tail": "",
+          "stdout_sha256": "887a43d8985e467b74a72a23da2dfef092deb9e6c522c99b6b73f4fd242f240f",
+          "stdout_tail": "ok  \tgo.flipt.io/flipt/internal/config\t2.470s\nok  \tgo.flipt.io/flipt/internal/oci\t1.148s\nok  \tgo.flipt.io/flipt/internal/storage/fs\t0.286s\nok  \tgo.flipt.io/flipt/internal/storage/fs/oci\t1.249s\nok  \tgo.flipt.io/flipt/internal/storage/fs/store\t0.071s\n"
+        }
+      ],
+      "path": "_scratch/positive-workspace/grades/g0/grade.json",
+      "quality_pass": true,
+      "round": 0,
+      "sha256": "df77ba52fc236e8475976d1160447589d6b24561373cbd5bdeb2153c8a5a6a32"
+    },
+    {
+      "behavior_pass": true,
+      "checks": [
+        {
+          "command": [
+            "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",
+            "test",
+            "-count=1",
+            "-timeout=90s",
+            "./internal/config",
+            "./internal/oci",
+            "./internal/storage/fs",
+            "./internal/storage/fs/oci",
+            "./internal/storage/fs/store"
+          ],
+          "exit_code": 0,
+          "seconds": 103.662,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_tail": "",
+          "stdout_sha256": "dc7d69068a0716d64c5e1fd6bf14791154f631e047e7f2dc09d7c5f8faa91a27",
+          "stdout_tail": "ok  \tgo.flipt.io/flipt/internal/config\t1.864s\nok  \tgo.flipt.io/flipt/internal/oci\t1.142s\nok  \tgo.flipt.io/flipt/internal/storage/fs\t0.274s\nok  \tgo.flipt.io/flipt/internal/storage/fs/oci\t1.284s\nok  \tgo.flipt.io/flipt/internal/storage/fs/store\t0.108s\n"
+        }
+      ],
+      "path": "_scratch/positive-workspace/grades/g1/grade.json",
+      "quality_pass": true,
+      "round": 1,
+      "sha256": "bc353ea2afa73562b5ad6e9ffce62a2a749a49886c0042465a95cd5ecad41ebc"
+    },
+    {
+      "behavior_pass": true,
+      "checks": [
+        {
+          "command": [
+            "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",
+            "test",
+            "-count=1",
+            "-timeout=90s",
+            "./internal/config",
+            "./internal/oci",
+            "./internal/storage/fs",
+            "./internal/storage/fs/oci",
+            "./internal/storage/fs/store"
+          ],
+          "exit_code": 0,
+          "seconds": 101.387,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_tail": "",
+          "stdout_sha256": "8c9f29f940de61d62d247c18db0a15bc35949bb220c4f41fe4fabe6c501fb708",
+          "stdout_tail": "ok  \tgo.flipt.io/flipt/internal/config\t2.332s\nok  \tgo.flipt.io/flipt/internal/oci\t1.167s\nok  \tgo.flipt.io/flipt/internal/storage/fs\t0.268s\nok  \tgo.flipt.io/flipt/internal/storage/fs/oci\t1.317s\nok  \tgo.flipt.io/flipt/internal/storage/fs/store\t0.067s\n"
+        },
+        {
+          "command": [
+            "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",
+            "test",
+            "-count=1",
+            "-timeout=90s",
+            "-race",
+            "./internal/oci",
+            "./internal/storage/fs",
+            "./internal/storage/fs/oci"
+          ],
+          "exit_code": 0,
+          "seconds": 59.988,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_tail": "",
+          "stdout_sha256": "11c6535a6c9723141b31890ab8bab9af6f0ee12ccd69c94e0747ba519f1f678e",
+          "stdout_tail": "ok  \tgo.flipt.io/flipt/internal/oci\t2.330s\nok  \tgo.flipt.io/flipt/internal/storage/fs\t2.008s\nok  \tgo.flipt.io/flipt/internal/storage/fs/oci\t2.659s\n"
+        }
+      ],
+      "path": "_scratch/positive-workspace/grades/g2/grade.json",
+      "quality_pass": null,
+      "round": 2,
+      "sha256": "5877dfd84bfd5b3b0f577bf17216aeb8bccbd3c999f1a2c43e2b4dc7cd391114"
+    }
+  ],
+  "limitations": [
+    "Independent semantic approval is pending; hidden quality_pass remains null.",
+    "Fixture-level strategy-neutral oracle completion, partial/mutation controls, alternative legal strategy, refreeze and final independent review remain R3d/follow-up work.",
+    "Offline backend service-dependent cases are excluded. No whole-repository or live-service pass is claimed.",
+    "Measured check durations include host/tool overhead and do not establish model performance or task latency.",
+    "The existing prepared arms already contain R1/R2 and checkpoint artifacts from dry replay; reconstruct fresh arms before a future live run. This worker changed neither their product trees nor their overlays."
+  ],
+  "outcome": "positive-behavior-and-regressions-verified-independent-semantic-review-pending",
+  "patch": {
+    "base_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
+    "bytes": 44806,
+    "deterministic_repeated_capture": true,
+    "files": [
+      "docs/oci-snapshot-references.md",
+      "internal/oci/file.go",
+      "internal/oci/ownership_test.go",
+      "internal/storage/fs/oci/reference_test.go",
+      "internal/storage/fs/oci/store.go",
+      "internal/storage/fs/oci/store_test.go",
+      "internal/storage/fs/poll.go",
+      "internal/storage/fs/snapshot.go",
+      "internal/storage/fs/snapshot_ownership_test.go",
+      "internal/storage/fs/store/oci_reference_test.go",
+      "internal/storage/fs/store/store.go"
+    ],
+    "path": "controls/positive.patch",
+    "sha256": "4a91fb11fbb898791ec30b37d926fa541a10c37b070c40fc0ce892a2b6c11f65"
+  },
+  "prepared_arms_are_fresh_live_starts": false,
+  "prepared_r0_overlay_assets_unchanged": true,
+  "schema_version": 1,
+  "scope": {
+    "arm_writes": false,
+    "go_sum_unchanged": true,
+    "hidden_oracle_in_patch": false,
+    "implementation_workspace": "C:\\Users\\yahu2\\.codex\\worktrees\\long-horizon-benchmark\\codex-model-router\\evals\\long_horizon_v1\\_scratch\\positive-workspace\\flipt",
+    "live_model_calls": false
+  },
+  "seed_after_receipt_sha256": "9e9d70430131fc5318ba7fb4f00b5e72af2c9b96895d856d50608f2cfa694ce0",
+  "seed_and_arm_states": {
+    "baseline": {
+      "files_sha256": "7e256150cefcafc3c826ef4e47fe2ddb46927b4eff1123829f672dfd5fb223a1",
+      "go_sum_sha256": "96e3e2be26f962e5e058ffcc7485f5d6dd2f99526423e041d8223943c08d4373",
+      "head_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
+      "status": "?? examples/audit/webhook/__pycache__/\n"
+    },
+    "seed": {
+      "files_sha256": "4ea7c23973dc356b8f67189b05143c667d28c3f20279334baf02ed073f517c20",
+      "go_sum_sha256": "96e3e2be26f962e5e058ffcc7485f5d6dd2f99526423e041d8223943c08d4373",
+      "head_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
+      "status": "?? examples/audit/webhook/__pycache__/\n"
+    },
+    "treatment": {
+      "files_sha256": "e2945c1b3265b472b2ac559c6eaf4beaf37a29be53bc32a75595ec01e045710d",
+      "go_sum_sha256": "96e3e2be26f962e5e058ffcc7485f5d6dd2f99526423e041d8223943c08d4373",
+      "head_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
+      "status": "?? examples/audit/webhook/__pycache__/\n"
+    }
+  },
+  "seed_and_arms_unchanged": true,
+  "seed_before_receipt_sha256": "9e9d70430131fc5318ba7fb4f00b5e72af2c9b96895d856d50608f2cfa694ce0",
+  "seed_patch_sha256": "3d824219a77b11d8b6f6ec506403daad092594d07c9a697a3c2280a2c935c74b",
+  "self_review": {
+    "kind": "author-self-review",
+    "path": "controls/positive-self-review.json",
+    "sha256": "58d67cbba241171d001e34116fc461e7d06ffc2647f0050fb46fb9a58ff0f335"
+  },
+  "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
+  "state_hash_scope": "Git-tracked and nonignored untracked product files",
+  "task_id": "implement-positive-control-gpt-6-astra-xhigh",
+  "toolchain": {
+    "linux_path": "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",
+    "linux_sha256": "89b81bd72c27404ccfd701c136b7e3ace9a4ccb26d96d97e874b48829aed27a1",
+    "sha256": "edc83e6820401bcdbe40d774e5a7b6e376a29a4d5a74b7b3c5a631964d45cb3f",
+    "version": "go version go1.22.2 linux/amd64",
+    "windows_path": "Q:\\MyProjects\\codex-model-router\\evals\\live\\paired-swepro-flipt-20260923\\tools\\windows-go\\go\\bin\\go.exe"
+  },
+  "worker_name": "implement-positive-control-gpt-6-astra-xhigh"
+}

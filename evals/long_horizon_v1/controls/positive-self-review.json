@@ -1,0 +1,32 @@
+{
+  "candidate_patch_sha256": "4a91fb11fbb898791ec30b37d926fa541a10c37b070c40fc0ce892a2b6c11f65",
+  "kind": "author-self-review-not-independent-semantic-approval",
+  "limits": [
+    "This is an author self-check. The grader hidden quality_pass remains null pending the separate independent semantic review.",
+    "This patch is evaluator-only and must not enter arm start trees.",
+    "Existing fixture tests are smoke-level; this positive patch adds implementation-specific regression tests but does not complete the separate strategy-neutral oracle work.",
+    "No live models, paid benchmark run, or performance claim."
+  ],
+  "r3d_handoff": [
+    "Freeze manifest controls.positive to controls/positive.patch and its recorded SHA256 only after independent review.",
+    "Create separate plausible G0-only and G1-only controls and targeted mutations in fresh evaluator workspaces; keep future implementation-specific tests out of partial patches where inapplicable.",
+    "Test wrong identity by treating the content detector as a reusable registry address, explicit errors by substituting cached state, cleanup by restoring per-visited-file defers, and Close by removing admission/lifetime enforcement.",
+    "Supply a legal serialization/no-sharing alternative with strategy-neutral schedules; the positive implementation test that explicitly counts shared waiters describes this implementation only.",
+    "Control failure markers currently inspect bounded stdout tails; ensure the intended public/hidden case marker remains observable if additional positive-test failures produce long logs."
+  ],
+  "requirements": {
+    "alias-order-isolation": "Tags own separate entries and one current uncancelled acquisition each. Network and parse work occur outside the mutex. Cancelled/replaced acquisitions cannot publish. Explicit tag requests resolve again after the preceding acquisition completes.",
+    "atomic-publication": "All files validate before retain publishes under the metadata mutex. An error leaves the previous map entry unchanged.",
+    "cancellation-and-close": "Waiters detach independently; the last departing waiter cancels unused acquisition. Close marks closed before cancellation and joins the poller and acquisition WaitGroup, with additions prohibited after close. User callbacks are not joined. Post-close admission returns ErrClosed (or an already-cancelled caller error).",
+    "last-good-and-explicit-error": "The empty default reads its initialized resident entry. Failed updates preserve it; explicit acquisition errors propagate. Recovery is exercised with the same references.",
+    "maintainer-docs": "docs/oci-snapshot-references.md explains selection, identity, cache ownership, validation, lifecycle, error contracts, and offline verification.",
+    "manifest-identity": "ManifestDigest is desc.Digest from the verified ORAS copy; Digest and IfNoMatch retain annotation-insensitive semantics. Digest reuse compares only ManifestDigest. Parsing reads copied verified layers.",
+    "non-oci-compatibility": "No config/auth or backend factory branches other than OCI change. Legacy packages including ECR, local, Git and object pass offline. Service-dependent cases remain excluded.",
+    "reference-validation": "View accepts only an OCI tag or canonical complete sha256 digest and only replaces the reference field of the configured repository. The factory now passes the reference through.",
+    "resource-release": "fetchFiles closes earlier streams on failure. SnapshotFromFiles defers all supplied closes up front. SnapshotFromPaths closes prior opens on open failure. Original errors are preserved. Poller stops its ticker.",
+    "retention-and-lifetime": "retain keeps the default plus at most three extra entries; no independent parsed-content map exists. Callbacks hold immutable snapshot references and no store lock. Concurrent extra references settle within the bound while a callback survives eviction."
+  },
+  "schema_version": 1,
+  "task_id": "implement-positive-control-gpt-6-astra-xhigh",
+  "worker_name": "implement-positive-control-gpt-6-astra-xhigh"
+}
