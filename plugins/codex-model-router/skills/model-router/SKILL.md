@@ -232,8 +232,9 @@ routing inputs and MUST stop dispatch until corrected. Normalized purpose,
 model, and effort are limited to 48, 48, and 24 characters, and the complete
 name is limited to 128 characters. Join the three normalized components with
 single hyphens. For example, `Implement / Naming`,
-`GPT-6 Sol`, and `High` become
-`implement-naming-gpt-6-sol-high`.
+`gpt-6.1-sol`, and `High` become
+`implement-naming-gpt-6-1-sol-high`. Preserve the exact native identifier
+`gpt-6.1-sol` in the dispatch selector; normalization applies only to the name.
 
 Validate before dispatch by recomputing from the recorded inputs, requiring
 exact equality, matching `^[a-z0-9]+(?:-[a-z0-9]+)*$`, enforcing the limits,

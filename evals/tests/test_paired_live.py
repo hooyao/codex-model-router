@@ -20,6 +20,25 @@ def event(kind: str, payload: dict) -> str:
 
 
 class PairedLiveTests(unittest.TestCase):
+    def test_current_sol_usage_is_unknown_until_exact_model_pricing_is_verified(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            usage = {"input_tokens": 1000, "cached_input_tokens": 500,
+                     "cache_write_input_tokens": 100, "output_tokens": 100,
+                     "reasoning_output_tokens": 20}
+            (root / "rollout-parent.jsonl").write_text(
+                event("session_meta", {"id": "parent"}) +
+                event("turn_context", {"model": "gpt-6.1-sol", "effort": "low"}) +
+                event("event_msg", {"type": "token_count", "info": {
+                    "last_token_usage": usage, "total_token_usage": usage}}) +
+                event("event_msg", {"type": "task_complete"}), encoding="utf-8")
+            meter = SessionMeter(root, "parent", "gpt-6.1-sol", "low")
+            meter.refresh()
+            self.assertIn("gpt-6.1-sol", meter.unknown_models)
+            self.assertTrue(meter.integrity_issues())
+            self.assertEqual(0, meter.calls)
+            self.assertEqual(0, meter.cost)
+
     def test_treatment_options_pin_plugin_role_and_only_audit_trust(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

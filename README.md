@@ -27,7 +27,7 @@ are explicitly independent, dependency-free, and write-disjoint.
   `<purpose>-<model>-<effort>` name, with a packet/result fallback when native
   dispatch cannot name the worker card.
 - Routes clear and repeatable work toward GPT-6 Luna, everyday coding and
-  read-heavy work toward GPT-6 Sol, and demanding hard-kernel work toward
+  read-heavy work toward GPT-6.1 Sol, and demanding hard-kernel work toward
   GPT-6 Astra. Existing Terra workspace preferences load as Sol.
 - Records each stage's owner, dependencies, write scope, context budget,
   acceptance criteria, and self-check. A lightweight primary may own a
@@ -105,9 +105,12 @@ nested `cwd`, and fail clearly rather than falling back on invalid config. See
 the plugin README for the versioned schema, execution modes,
 discovery precedence, size budgets, and failure behavior. The default model
 routing policy follows official
-[Codex model guidance](https://learn.chatgpt.com/docs/models) and the
+[Codex model guidance](https://developers.openai.com/codex/models) and the
 [OpenAI model catalog](https://developers.openai.com/api/docs/models), consulted
-on 2026-09-24.
+on 2026-10-06 for the GPT-6.1 Sol preference. Model and effort availability
+must still be confirmed in the current runtime. See the
+[Sol upgrade note](plugins/codex-model-router/docs/sol-upgrade.md) for workspace
+adoption, compatibility fallbacks, and preserved benchmark pins.
 
 ## Validation
 
