@@ -189,27 +189,34 @@ subject to every direct criterion.
 
 Model classes are preferences, not assumed runtime identifiers. The controller
 resolves them against the current runtime catalog only after choosing DELEGATE.
-The GPT-6 defaults prefer Astra for the hardest work, Sol for coding, technical
+The defaults prefer GPT-6 Astra for the hardest work, GPT-6.1 Sol for coding, technical
 discovery, documentation, triage, and review, and Luna for focused repeatable
 work. They include
 architecture, security, complex tool workflows, 3D modeling, image analysis,
 code analysis, debugging, open-ended and everyday implementation, discovery,
 documentation, test triage, detailed manual procedures, extraction,
 classification, normalization, and structured summarization. They follow the
-current official [GPT-6 migration guide](https://developers.openai.com/api/docs/guides/latest-model/gpt-6-astra.md#migration-quickstart),
-[OpenAI model catalog](https://developers.openai.com/api/docs/models), and
-[API pricing](https://developers.openai.com/api/docs/pricing), consulted on
-2026-09-24. At standard API rates per million input/cached/cache-write/output
-tokens, Astra is $10/$1/$12.50/$50, Sol is $2/$0.20/$2.50/$10, and Luna is
-$0.10/$0.01/$0.125/$0.50. A request above 272K input tokens uses twice the
-input and cache rates and 1.5 times the output rate for the full request.
-These are API prices, not measured savings or Codex subscription charges.
+official [Codex model guidance](https://developers.openai.com/codex/models),
+which recommends `gpt-6.1-sol` for complex coding and agentic workflows,
+consulted on 2026-10-06. Sol resolves to `gpt-6.1-sol` only when the current
+runtime exposes that model and requested effort. `gpt-6-sol` remains a
+compatibility fallback when the preferred model/effort is unavailable and the
+runtime confirms the fallback model/effort. Astra and Luna retain their roles
+and runtime availability checks. The router permits `low`, `medium`, `high`,
+`xhigh`, and `max` only when supported; it does not select `ultra`.
+
+Verify exact model prices against the current official
+[API pricing](https://developers.openai.com/api/docs/pricing) before a paid
+evaluation. The older GPT-6 Sol rates retained in historical benchmark files
+do not establish GPT-6.1 Sol prices, Codex subscription charges, or savings.
 
 An existing workspace `routing.json` is not overwritten by an updated plugin.
 Its schema-v3 `Terra` examples remain valid for compatibility; the loader
-normalizes their preferred class to GPT-6 Sol in memory without rewriting the
+normalizes their preferred class to Sol in memory without rewriting the
 workspace file. To adopt the new example IDs and rationales, deliberately edit
-that workspace file after reviewing local customizations.
+that workspace file after reviewing local customizations. See the
+[Sol upgrade note](docs/sol-upgrade.md) for the model preference update and
+historical evaluation boundaries.
 
 The controller model is selected by Codex, not by this plugin. Codex's
 [model selection guide](https://developers.openai.com/codex/models) documents

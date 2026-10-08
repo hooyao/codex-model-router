@@ -28,13 +28,13 @@ def frame(value: dict) -> bytes:
 
 
 def base_reducer(*, requested_model: str | None = "gpt-6-sol",
-                 requested_effort: str | None = "low") -> probe.Reducer:
+                 requested_effort: str | None = "low", observed_model: str = "gpt-6-sol") -> probe.Reducer:
     reducer = probe.Reducer(SECRET, requested_parent_model=requested_model,
                             requested_parent_effort=requested_effort,
                             expected_hook_source_path=HOOK_SOURCE)
     reducer.feed(frame({"jsonrpc": "2.0", "id": 1, "result": {"userAgent": "test"}}))
     reducer.feed(frame({"jsonrpc": "2.0", "id": 2, "result": {
-        "thread": {"id": "parent-1", "model": "gpt-6-sol", "reasoningEffort": "low"}}}))
+        "thread": {"id": "parent-1", "model": observed_model, "reasoningEffort": "low"}}}))
     reducer.feed(frame({"jsonrpc": "2.0", "id": 3, "result": {"turn": {"id": "turn-1"}}}))
     return reducer
 
@@ -425,6 +425,37 @@ class AppServerProbeTests(unittest.TestCase):
         self.assertTrue(receipt["capabilities"]["typed_spawn_prompt_and_selectors"])
         self.assertEqual(["child-1"], receipt["calls"][0]["receiver_thread_ids"])
         self.assertNotIn("capability sentinel", encoded)
+        self.assertEqual("gpt-6.1-sol", receipt["requested_turn_model"])
+        self.assertEqual("gpt-6.1-sol", receipt["thread_model_at_start"])
+
+    def test_current_and_legacy_sol_probe_selectors_require_exact_observation(self) -> None:
+        for model in ("gpt-6.1-sol", "gpt-6-sol"):
+            with self.subTest(model=model):
+                receipt = finish_success(base_reducer(requested_model=model, observed_model=model))
+                self.assertTrue(receipt["capabilities"]["usable_for_dispatch_provenance"])
+                self.assertEqual(model, receipt["requested_turn_model"])
+                self.assertEqual(model, receipt["thread_model_at_start"])
+        receipt = finish_success(base_reducer(requested_model="gpt-6.1-sol"))
+        self.assertTrue(receipt["capabilities"]["approved_parent_selector_request"])
+        self.assertFalse(receipt["capabilities"]["thread_model_matches_requested"])
+        self.assertFalse(receipt["capabilities"]["usable_for_dispatch_provenance"])
+        for effort in ("medium", "ultra"):
+            with self.subTest(effort=effort):
+                receipt = finish_success(base_reducer(requested_model="gpt-6.1-sol",
+                    requested_effort=effort, observed_model="gpt-6.1-sol"))
+                self.assertFalse(receipt["capabilities"]["approved_parent_selector_request"])
+
+    def test_live_probe_defaults_to_current_sol_without_changing_explicit_legacy_selector(self) -> None:
+        arguments = ["--live", "--codex-cli", "C:\\codex.exe",
+                     "--router-hook-config", "C:\\hooks.json",
+                     "--router-audit-script", "C:\\dispatch_audit.py"]
+        receipt = {"capabilities": {"usable_for_dispatch_provenance": True}}
+        for extra, expected in (([], "gpt-6.1-sol"),
+                                (["--model", "gpt-6-sol"], "gpt-6-sol")):
+            with self.subTest(model=expected), mock.patch.object(probe, "run_live", return_value=receipt) as run:
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(0, probe.main(arguments + extra))
+                self.assertEqual((expected, "low"), run.call_args.args[3:5])
 
     def test_fake_successful_stream_sends_exact_protocol_requests(self) -> None:
         events = [

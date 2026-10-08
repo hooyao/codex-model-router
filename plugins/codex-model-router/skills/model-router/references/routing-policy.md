@@ -144,8 +144,8 @@ meta-tasks semantically, including follow-ups without explicit router keywords.
 | Task profile | Preferred role | Reasoning effort |
 | --- | --- | --- |
 | Clear, repeatable work and fixed-format summaries | GPT-6 Luna | Low, then Medium if needed |
-| Repository discovery, everyday coding, technical documentation, test triage, routine code review | GPT-6 Sol | Medium; High for notable edge cases |
-| Complex implementation, integration, or open-ended analysis | GPT-6 Sol | High; Xhigh when High is insufficient |
+| Repository discovery, everyday coding, technical documentation, test triage, routine code review | GPT-6.1 Sol | Medium; High for notable edge cases |
+| Complex implementation, integration, or open-ended analysis | GPT-6.1 Sol | High; Xhigh when High is insufficient |
 | Architecture, security, critical decisions, independent meta-task review | GPT-6 Astra | High; Xhigh for demanding cases |
 
 Use the lowest capable available model and effort that can meet the task's
@@ -165,9 +165,12 @@ model preference against the current runtime capability catalog only for a
 DELEGATE route. The stable delegated fallback when no example matches is
 capability-based: Luna for clear repeatable work,
 Sol for everyday engineering and complex or open-ended work, and Astra for work
-requiring the strongest sustained judgment. Resolve these roles to
-`gpt-6-luna`, `gpt-6-sol`, and `gpt-6-astra` only when the runtime exposes the
-model and effort. An existing schema-v3 workspace example may still name
+requiring the strongest sustained judgment. Sol prefers `gpt-6.1-sol` when the
+runtime exposes that model and the requested effort. Use `gpt-6-sol` as a
+compatibility fallback only when the preferred model/effort is unavailable and
+the runtime confirms the fallback model/effort. Resolve Luna to `gpt-6-luna`
+and Astra to `gpt-6-astra` only when the runtime exposes the model and effort.
+An existing schema-v3 workspace example may still name
 `Terra`; the loader normalizes that legacy preference to Sol in memory for
 discovery, implementation, documentation, triage, and review without rewriting
 the workspace file. Preserve the workspace's execution mode and any user-edited
@@ -179,19 +182,11 @@ This plugin routes only `low`, `medium`, `high`, `xhigh`, and `max`; it does not
 select `none` or `ultra`. Supported efforts must also be checked against the
 current runtime before dispatch.
 
-At the standard API rate per million tokens, the official GPT-6 pricing is:
-
-| Tier | Input | Cached input | Cache writes | Output |
-| --- | ---: | ---: | ---: | ---: |
-| Astra | $10 | $1 | $12.50 | $50 |
-| Sol | $2 | $0.20 | $2.50 | $10 |
-| Luna | $0.10 | $0.01 | $0.125 | $0.50 |
-
-For requests with more than 272K input tokens, the model pages specify twice
-the input and cache rates and 1.5 times the output rate for the full request.
-These published API prices inform the preference, but the controller uses the
-runtime's actual availability and task requirements. They do not establish
-Codex subscription cost or measured savings.
+Verify prices for the exact native model against current official API pricing
+before estimating or spending evaluation budget. Historical `gpt-6-sol` rates
+must not be copied to `gpt-6.1-sol` without official evidence. The runtime's
+actual availability and task requirements remain binding. Published API prices
+do not establish Codex subscription cost or measured savings.
 
 For performance evaluation, compare the same task and start state under
 Astra/xhigh alone and under a lightweight Luna or Sol/low controller with
@@ -203,11 +198,12 @@ time went; neither synthetic spans nor model-call counts are speed proxies.
 Require repeated interleaved matched runs before claiming a stable speed
 difference. No routing change earns a savings claim from policy alone.
 
-The default examples are grounded in the official
-[GPT-6 migration guide](https://developers.openai.com/api/docs/guides/latest-model/gpt-6-astra.md#migration-quickstart),
-[model catalog](https://developers.openai.com/api/docs/models), and
-[API pricing](https://developers.openai.com/api/docs/pricing), consulted on
-2026-09-24. The workspace file is editable and can replace those examples;
+The Sol preference follows official
+[Codex model guidance](https://developers.openai.com/codex/models), consulted
+on 2026-10-06. The existing Astra/Luna workload examples follow the official
+[GPT-6 migration guide](https://developers.openai.com/api/docs/guides/latest-model/gpt-6-astra.md#migration-quickstart)
+and [model catalog](https://developers.openai.com/api/docs/models), consulted
+on 2026-09-24. The workspace file is editable and can replace those examples;
 hard-coded prose in this policy must not override valid workspace values.
 
 Every hook reloads and validates the workspace file. Existing config is found
