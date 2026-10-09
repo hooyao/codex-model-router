@@ -42,6 +42,29 @@ def _atomic_new(path: Path, value: dict) -> None:
     publish_json_new(path, value)
 
 
+class EvaluatorBudgetGuard:
+    """Check clock on every frame and scan native usage at a bounded cadence."""
+    def __init__(self, meter: SessionMeter, deadline: float, cancel_path: Path,
+                 solver_cost_upper: float, known_evaluator_cost_upper: float):
+        self.meter = meter
+        self.deadline = deadline
+        self.cancel_path = cancel_path
+        self.known_cost_upper = solver_cost_upper + known_evaluator_cost_upper
+        self.last_refresh = 0.0
+
+    def __call__(self, *, force: bool = False) -> None:
+        now = time.monotonic()
+        if now >= self.deadline or self.cancel_path.exists():
+            raise TransportError("evaluator original deadline, cost, or cancellation stop")
+        if force or now - self.last_refresh >= 1.0:
+            self.meter.refresh()
+            self.last_refresh = now
+        if (time.monotonic() >= self.deadline or self.meter.unknown_models or
+                self.meter.unknown_usage or
+                self.known_cost_upper + self.meter.cost_upper >= 15.0):
+            raise TransportError("evaluator original deadline, cost, or cancellation stop")
+
+
 def product_snapshot(product: Path) -> dict:
     """Record the candidate file set and content independently of Git status."""
     files = {}
@@ -80,6 +103,62 @@ def _last_message(meter: SessionMeter, thread_id: str) -> str:
     if not messages:
         raise ValueError("independent evaluator final response missing")
     return messages[-1]
+
+
+def _completed_native_review(root: Path, revision: int, request_sha: str,
+                             session_root: Path, neutral: Path, candidate_sha: str,
+                             original_snapshot: dict, original_patch: bytes) -> tuple[str, SessionMeter, dict]:
+    """Resume this exact request only after its original evaluator closed normally."""
+    registration = json.loads((root / f"evaluator-r{revision}.json").read_text(encoding="utf-8"))
+    evaluator_id = registration.get("thread_id")
+    if (registration.get("schema_version") != 1 or
+            registration.get("request_sha256") != request_sha or
+            registration.get("session_root") != str(session_root.resolve()) or
+            registration.get("model") != "gpt-6-astra" or
+            registration.get("effort") != "xhigh" or
+            not isinstance(evaluator_id, str) or not evaluator_id):
+        raise ValueError("existing evaluator registration differs from request")
+    observed = account(session_root, evaluator_id, "gpt-6-astra", "xhigh", False)
+    usage = observed.get("summary") or {}
+    sessions = usage.get("sessions") or []
+    if (observed.get("status") != "complete" or observed.get("issues") or
+            len(sessions) != 1 or sessions[0].get("id") != evaluator_id or
+            sessions[0].get("model") != "gpt-6-astra" or
+            sessions[0].get("effort") != "xhigh" or
+            sessions[0].get("terminal") != "task_complete" or
+            len(sessions[0].get("turns", [])) != 1 or
+            sessions[0]["turns"][0].get("terminal") != "task_complete" or
+            not usage.get("model_calls")):
+        raise ValueError("existing evaluator native turn or usage incomplete")
+    turn_id = sessions[0]["turns"][0]["turn_id"]
+    meter = SessionMeter(session_root, evaluator_id, "gpt-6-astra", "xhigh")
+    meter.refresh()
+    rollouts = [path for path, state in meter.paths.items() if state.get("id") == evaluator_id]
+    if len(rollouts) != 1 or len(meter.paths) != 1:
+        raise ValueError("existing evaluator native rollout ambiguous")
+    rows = [json.loads(line) for line in rollouts[0].read_text(encoding="utf-8").splitlines()]
+    meta = rows[0].get("payload") if rows and rows[0].get("type") == "session_meta" else {}
+    scratch = Path((meta or {}).get("cwd", ""))
+    if (meta.get("id") != evaluator_id or scratch.name != "scratch" or
+            scratch.resolve().parent.parent != neutral.resolve()):
+        raise ValueError("existing evaluator workspace identity changed")
+    prior_product = scratch.parent / "product"
+    prompts = ["".join(item.get("text", "") for item in (row.get("payload") or {}).get("content", [])
+                       if isinstance(item, dict))
+               for row in rows if row.get("type") == "response_item" and
+               (row.get("payload") or {}).get("type") == "message" and
+               (row.get("payload") or {}).get("role") == "user"]
+    terminals = [row for row in rows if row.get("type") == "event_msg" and
+                 (row.get("payload") or {}).get("type") == "task_complete"]
+    if (prompts.count(_review_prompt(prior_product)) != 1 or len(terminals) != 1 or
+            terminals[0]["payload"].get("turn_id") != turn_id or
+            capture_patch(prior_product) != original_patch or
+            hashlib.sha256(original_patch).hexdigest() != candidate_sha or
+            product_snapshot(prior_product) != original_snapshot):
+        raise ValueError("existing evaluator prompt, candidate, or terminal differs")
+    report = json.loads(_last_message(meter, evaluator_id))
+    require_complete_assessment(report)
+    return evaluator_id, meter, report
 
 
 def _review_prompt(product: Path) -> str:
@@ -209,31 +288,33 @@ def _run_once(request_path: Path, prepared: Path, cli: Path,
     evaluator_id = None
     review_data = None
     try:
-        review_env = os.environ.copy()
-        review_env.update(TEMP=str(scratch), TMP=str(scratch),
-                          GOCACHE=str(scratch / "go-cache"))
-        transport = AppServerTransport(cli, scratch, options,
-                                       "gpt-6-astra", "xhigh", deadline,
-                                       env=review_env)
-        evaluator_id = transport.start()
-        _atomic_new(root / f"evaluator-r{revision}.json", {
-            "schema_version": 1, "request_sha256": request_sha,
-            "thread_id": evaluator_id, "session_root": str(session_root.resolve()),
-            "model": "gpt-6-astra", "effort": "xhigh"})
-        meter = SessionMeter(session_root, evaluator_id, "gpt-6-astra", "xhigh")
-        def guard():
-            meter.refresh()
-            if (time.monotonic() >= deadline or (root / f"cancel-r{revision}.json").exists() or
-                    meter.unknown_models or meter.unknown_usage or
-                    request["solver_cost_upper_at_request"] +
-                    request["known_evaluator_cost_upper"] + meter.cost_upper >= 15.0):
-                raise TransportError("evaluator original deadline, cost, or cancellation stop")
-        turn = transport.turn(_review_prompt(product), guard)
-        guard()
-        if turn.get("status") != "completed" or turn.get("thread_id") != evaluator_id:
-            raise ValueError("evaluator turn or parent identity incomplete")
-        meter.refresh()
-        review_data = json.loads(_last_message(meter, evaluator_id))
+        if (root / f"evaluator-r{revision}.json").exists():
+            evaluator_id, meter, review_data = _completed_native_review(
+                root, revision, request_sha, session_root, neutral,
+                request["candidate_patch_sha256"], original_snapshot, original_patch)
+        else:
+            review_env = os.environ.copy()
+            review_env.update(TEMP=str(scratch), TMP=str(scratch),
+                              GOCACHE=str(scratch / "go-cache"))
+            transport = AppServerTransport(cli, scratch, options,
+                                           "gpt-6-astra", "xhigh", deadline,
+                                           env=review_env)
+            evaluator_id = transport.start()
+            _atomic_new(root / f"evaluator-r{revision}.json", {
+                "schema_version": 1, "request_sha256": request_sha,
+                "thread_id": evaluator_id, "session_root": str(session_root.resolve()),
+                "model": "gpt-6-astra", "effort": "xhigh"})
+            meter = SessionMeter(session_root, evaluator_id, "gpt-6-astra", "xhigh")
+        guard = EvaluatorBudgetGuard(meter, deadline, root / f"cancel-r{revision}.json",
+            request["solver_cost_upper_at_request"],
+            request["known_evaluator_cost_upper"])
+        if transport is not None:
+            turn = transport.turn(_review_prompt(product), guard)
+            guard(force=True)
+            if turn.get("status") != "completed" or turn.get("thread_id") != evaluator_id:
+                raise ValueError("evaluator turn or parent identity incomplete")
+            review_data = json.loads(_last_message(meter, evaluator_id))
+        guard(force=True)
         requirements, diagnostics = require_complete_assessment(review_data)
         if capture_patch(product) != original_patch or product_snapshot(product) != original_snapshot:
             raise ValueError("read-only evaluator changed candidate product")
@@ -258,8 +339,10 @@ def _run_once(request_path: Path, prepared: Path, cli: Path,
         passed = (hidden.get("behavior_pass") is True and hidden.get("quality_pass") is True and
                   backend.get("behavior_pass") is True and backend.get("quality_pass") is True and
                   review["verdict"] == "pass")
-        diagnostics = ([] if passed else _functional_diagnostics(
-            transport, meter, evaluator_id, hidden, backend, diagnostics, guard))
+        diagnostics = ([] if passed else
+            validate_diagnostics(diagnostics, "FAIL") if transport is None else
+            _functional_diagnostics(transport, meter, evaluator_id, hidden, backend,
+                                    diagnostics, guard))
         observed = account(session_root, evaluator_id, "gpt-6-astra", "xhigh", False)
         settle_deadline = min(deadline, time.monotonic() + 10.0)
         while observed.get("status") != "complete" and time.monotonic() < settle_deadline:
