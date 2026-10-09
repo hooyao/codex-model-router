@@ -237,7 +237,7 @@ def _verify_corrected_controls(controls: dict, spec: dict) -> None:
 def pilot_plan(spec: dict) -> dict:
     """Verify the frozen one-pair plan and its offline evidence without a model turn."""
     descriptor = spec.get("pilot")
-    if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v14.json":
+    if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v15.json":
         return _pilot_plan_recovery(spec)
     if isinstance(descriptor, dict) and _standalone_plan_version(descriptor.get("path")) is not None:
         return _pilot_plan_standalone(spec)
@@ -453,7 +453,7 @@ def _standalone_source_hashes() -> dict[str, str]:
     names = ("common.py", "protocol.py", "controls.py", "grade.py", "prepare.py",
         "live_preflight.py", "accounting.py", "collect.py", "transport.py",
         "runtime_binding.py", "cancellation_adjudication.py", "fork_policy.py",
-        "standalone_quality.py", "end_to_end.py")
+        "standalone_quality.py", "recovery_quality.py", "end_to_end.py")
     return {**{name: file_sha(HERE / name) for name in names},
             "evals/scripts/run_paired_arm.py": file_sha(HERE.parent / "scripts/run_paired_arm.py")}
 
@@ -468,13 +468,13 @@ def _verify_standalone_sources(plan: dict) -> None:
 def _pilot_plan_recovery(spec: dict) -> dict:
     """Check the fresh two-arm recovery freeze without using historical runs."""
     descriptor = spec["pilot"]
-    path = HERE / "pilot-plan-v14.json"
+    path = HERE / "pilot-plan-v15.json"
     if descriptor != {"path": path.name, "schema_version": 5,
                       "sha256": file_sha(path)}:
         raise ValueError("recovery plan descriptor drift")
     plan = json.loads(path.read_text(encoding="utf-8"))
     arms = ("baseline", "treatment")
-    prefix = "_scratch/pilot-14"
+    prefix = "_scratch/pilot-15"
     if (set(plan) != {"schema_version", "mode", "pilot_id", "claim", "arm_order",
                       "matched_pairs", "packet_scope_mode", "preparation_root",
                       "evidence_root", "capabilities", "run_outputs", "live_rebind",
@@ -482,7 +482,7 @@ def _pilot_plan_recovery(spec: dict) -> dict:
                       "fixture", "runtime", "runner_normalized_sha256",
                       "execution_sources_sha256", "stop_rule"} or
             plan.get("schema_version") != 5 or plan.get("mode") != "paired-recovery" or
-            plan.get("pilot_id") != "flipt-oci-long-horizon-pilot-14" or
+            plan.get("pilot_id") != "flipt-oci-long-horizon-pilot-15" or
             plan.get("claim") != "fresh-two-arm-diagnostic" or
             plan.get("arm_order") != list(arms) or plan.get("matched_pairs") != 1 or
             plan.get("packet_scope_mode") != DIAGNOSTIC or
@@ -510,6 +510,7 @@ def _pilot_plan_recovery(spec: dict) -> dict:
                 "pinned_backend_regressions": True,
                 "arm_blind_patch_bound_semantic_retention_review": True,
                 "end_to_end_wall_includes_post_run_quality": True,
+                "empirical_quality_total_cost_comparison_allowed": True,
                 "performance_advantage_claim_allowed": False} or
             plan.get("end_to_end") != {"start": "runner-start-before-app-server-launch",
                 "finish": "after-hidden-race-backend-and-arm-blind-review",
@@ -1452,7 +1453,8 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
               "packet_scope_mode": plan.get("packet_scope_mode") if plan else None,
               "benchmark_mode": benchmark_mode,
               "claim_class": "standalone-treatment-feasibility" if
-                  benchmark_mode == "standalone-feasibility" else "non-matched-non-interleaved-diagnostic" if
+                  benchmark_mode == "standalone-feasibility" else "matched-empirical-scope-unknown" if
+                  plan and plan.get("mode") == "paired-recovery" else "non-matched-non-interleaved-diagnostic" if
                   plan and plan.get("packet_scope_mode") == DIAGNOSTIC else "strict-selective",
               "child_rollout_paths": ({state["id"]: str(path) for path, state in
                   meter.paths.items() if state["id"] != thread_id} if meter is not None else {}),

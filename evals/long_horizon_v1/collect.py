@@ -160,9 +160,12 @@ def _arm(path: Path, expected: str) -> dict:
                 for call in calls) else "UNKNOWN"
             fork_evidence = data.get("fork_policy")
             standalone = data.get("benchmark_mode") == "standalone-feasibility"
+            recovery = (manifest().get("pilot", {}).get("schema_version") == 5 and
+                        manifest()["pilot"].get("path") == "pilot-plan-v15.json")
             if (not isinstance(fork_evidence, dict) or
                     fork_evidence.get("packet_scope") != scope or
                     data.get("claim_class") != ("standalone-treatment-feasibility" if standalone
+                        else "matched-empirical-scope-unknown" if recovery and mode == DIAGNOSTIC
                         else "non-matched-non-interleaved-diagnostic" if mode == DIAGNOSTIC
                         else "strict-selective") or
                     standalone and mode != DIAGNOSTIC or
@@ -324,6 +327,8 @@ def collect(pair: Path, output: Path) -> dict:
     descriptor = spec.get("pilot") if isinstance(spec.get("pilot"), dict) else {}
     if descriptor.get("schema_version") == 4:
         raise ValueError("standalone plan cannot enter paired collector")
+    if descriptor.get("schema_version") == 5 and descriptor.get("path") == "pilot-plan-v15.json":
+        return collect_recovery(pair, output)
     treatment_path = pair / "treatment" / "run.json"
     treatment_receipt = json.loads(treatment_path.read_text(encoding="utf-8"))
     if (not isinstance(treatment_receipt, dict) or
@@ -375,6 +380,81 @@ def collect(pair: Path, output: Path) -> dict:
                                  else None), "stable_latency_claim": False,
               "critical_path": "UNKNOWN without complete trusted parent/child tool spans",
               "caveat": "Mock transcripts prove only protocol mechanics; live capability and complete controls remain separate gates."}
+    write_json_new(output / "pair.json", result)
+    return result
+
+
+def collect_recovery(pair: Path, output: Path) -> dict:
+    """Emit descriptive matched costs only after both complete quality passes."""
+    from evals.long_horizon_v1.run import pilot_plan
+    from evals.long_horizon_v1.recovery_quality import verify_recovery_arm_quality
+    spec = manifest()
+    plan = pilot_plan(spec)
+    prepared = HERE / plan["preparation_root"]
+    preparation = json.loads((prepared / "preparation.json").read_text(encoding="utf-8"))
+    preparation_sha = file_sha(prepared / "preparation.json")
+    if (preparation.get("fixture_manifest_sha256") != file_sha(HERE / "manifest.json") or
+            list(preparation.get("arms", {})) != plan["arm_order"] or
+            len({preparation["arms"][arm].get("start_tree") for arm in plan["arm_order"]}) != 1 or
+            preparation["arms"]["baseline"].get("revealed") !=
+                preparation["arms"]["treatment"].get("revealed") or
+            any(preparation["arms"][arm].get("start_tree") != spec["start_tree"]
+                for arm in plan["arm_order"])):
+        raise ValueError("paired recovery fresh preparation missing or mismatched")
+    runs, quality = {}, {}
+    for arm in plan["arm_order"]:
+        expected_run = HERE / plan["run_outputs"][arm] / "run.json"
+        supplied_run = pair / arm / "run.json"
+        if file_sha(supplied_run) != file_sha(expected_run):
+            raise ValueError(f"{arm} paired run differs from frozen output")
+        run = _arm(expected_run, arm)
+        if (run.get("claim_class") != "matched-empirical-scope-unknown" or
+                run.get("runtime_binding", {}).get("preparation_sha256") != preparation_sha or
+                run.get("benchmark_mode") is not None or
+                run.get("stop_reason") != "accepted-final" or
+                run.get("cost_status") != "complete" or run.get("usage_issues") != [] or
+                run.get("interruption_proof") is not None):
+            raise ValueError(f"{arm} paired recovery completion or usage incomplete")
+        usage = run.get("usage") if isinstance(run.get("usage"), dict) else {}
+        if (type(usage.get("estimated_usd")) not in (int, float) or
+                type(usage.get("estimated_usd_upper_bound")) not in (int, float) or
+                not 0 <= usage["estimated_usd"] <= usage["estimated_usd_upper_bound"] or
+                usage.get("unknown_models") or usage.get("unknown_usage")):
+            raise ValueError(f"{arm} reconciled observed cost missing")
+        runs[arm] = run
+        quality[arm] = verify_recovery_arm_quality(prepared, plan, run, arm,
+                                                  require_wall=True)
+    baseline, treatment = runs["baseline"], runs["treatment"]
+    if (baseline.get("parent_thread_id") == treatment.get("parent_thread_id") or
+            not baseline.get("shared_initial_prompt_sha256") or
+            baseline["shared_initial_prompt_sha256"] != treatment.get("shared_initial_prompt_sha256") or
+            [event.get("assets") for event in baseline["stage"]["events"]
+             if event.get("kind") == "reveal"] !=
+            [event.get("assets") for event in treatment["stage"]["events"]
+             if event.get("kind") == "reveal"] or
+            treatment.get("packet_scope_mode") != DIAGNOSTIC or
+            (treatment.get("fork_policy") or {}).get("packet_scope") != "UNKNOWN"):
+        raise ValueError("paired recovery prompt, reveal, lineage, or packet scope mismatch")
+    b_cost, t_cost = (runs[arm]["usage"]["estimated_usd"] for arm in plan["arm_order"])
+    result = {"schema_version": 2, "mode": "paired-recovery", "task_id": TASK_ID,
+        "pilot_id": plan["pilot_id"], "status": "matched-empirical-quality-pass-scope-unknown",
+        "manifest_sha256": file_sha(HERE / "manifest.json"),
+        "pilot_plan_sha256": file_sha(HERE / spec["pilot"]["path"]),
+        "preparation_sha256": preparation_sha,
+        "run_sha256": {arm: file_sha(HERE / plan["run_outputs"][arm] / "run.json")
+                       for arm in plan["arm_order"]},
+        "quality_evidence_sha256": {arm: quality[arm]["end_to_end_sha256"]
+                                    for arm in plan["arm_order"]},
+        "estimated_usd": {"baseline": b_cost, "treatment": t_cost},
+        "treatment_to_baseline_cost_ratio": t_cost / b_cost if b_cost > 0 else None,
+        "end_to_end_wall_seconds": {arm: quality[arm]["end_to_end_wall_seconds"]
+                                    for arm in plan["arm_order"]},
+        "quality_parity": True, "packet_scope": "UNKNOWN",
+        "technical_context_isolation_claim": False,
+        "stable_latency_claim": False, "general_savings_claim": False,
+        "interpretation": "One fresh pair; quality and total observed estimated USD are descriptive. "
+                          "Effective child plaintext scope is unverified."}
+    fresh_directory(output)
     write_json_new(output / "pair.json", result)
     return result
 

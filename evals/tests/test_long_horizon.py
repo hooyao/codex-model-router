@@ -1468,8 +1468,10 @@ class LongHorizonProtocolTests(unittest.TestCase):
         with mock_patch("evals.long_horizon_v1.prepare.manifest", return_value=spec):
             prepared = prepare(root)
         treatment = root / "treatment"
-        self.assertEqual(list(prepared["arms"]), ["treatment"])
-        self.assertFalse((root / "baseline").exists())
+        expected_arms = (["baseline", "treatment"] if
+                         spec.get("pilot", {}).get("schema_version") == 5 else ["treatment"])
+        self.assertEqual(list(prepared["arms"]), expected_arms)
+        self.assertEqual((root / "baseline").exists(), "baseline" in expected_arms)
         real_scandir = os.scandir
         git_object_scans = []
 

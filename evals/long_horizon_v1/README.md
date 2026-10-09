@@ -1,5 +1,35 @@
 # Long-horizon OCI benchmark v1: paired recovery preparation
 
+## Pilot 15 independent review freeze (2026-10-09)
+
+[Pilot-plan-v15.json](pilot-plan-v15.json) pins the symmetric recovery quality
+gate and the current execution sources. The prior pilot-14 plan and its
+live-disabled preparation remain historical review evidence. Pilot 15 starts
+both arms from a fresh pinned seed with only R0 revealed. Its disabled-manifest
+preparation receipt is at `_scratch/pilot-15-prep/preparation.json`.
+
+The end-to-end finalizer checks accepted patch identity, hidden and race grade,
+backend grade, and independent arm-blind semantic review for **each** arm
+before writing its wall receipt. The paired collector independently requires
+both final wall receipts, the same preparation and initial shared prompt,
+identical public reveals, accepted G0/G1/G2 event chains, and complete
+reconciled parent and child usage. Only then does it emit descriptive quality
+parity, total observed estimated USD, their ratio, and end-to-end wall times.
+The treatment's effective plaintext packet scope remains `UNKNOWN`; the
+receipt explicitly withholds technical context-isolation, stable latency, and
+general savings claims. Strict selective mode still fails before dispatch.
+
+The pinned Linux cumulative public G2 grader passes the positive control and
+fails the original pilot-13 patch on exactly the two newly visible resource
+tests. Hash-bound grade and raw Go output receipts are under
+`_scratch/pilot-15-evidence/public-controls/linux-positive` and
+`_scratch/pilot-15-evidence/public-controls/linux-pilot13`. No full mutation
+matrix or paid pilot-15 model turn was run. `live_enabled` remains `false`
+pending independent review. Live enabling changes the manifest hash, so the
+disabled review preparation must be preserved and a fresh final preparation,
+zero-model capability rebind, and both zero-turn arm preflights must precede
+any paid run.
+
 ## Pilot 14 review freeze (2026-10-09)
 
 The new [pilot-14 plan](pilot-plan-v14.json) freezes two fresh arms from the
@@ -21,9 +51,9 @@ continue through that turn. The unchanged pilot-13 candidate fails both new
 public cases; the positive control passes them. Pilot 13 and its original
 hidden grade remain historical evidence and have not been relabeled.
 
-The previous manifest bytes are saved as
+The prior R12e manifest bytes are saved as
 [manifest-r12e-20261001.json](manifest-r12e-20261001.json). The current
-[manifest](manifest.json) and pilot-14 plan bind the new public assets and
+[manifest](manifest.json) and pilot-15 plan bind the new public assets and
 execution sources. The old control matrix is historical and does not certify
 this new public gate. The preparation binds the disabled manifest and is for
 independent review. A later live-enable changes that hash, so the reviewed
@@ -31,13 +61,10 @@ preparation must be preserved as evidence and a new clean preparation at the
 plan path made before zero-turn capability rebinding and preflight. Do not use
 the old pilot-13 preparation or capability for a pilot-14 run.
 
-The treatment's native fork evidence still yields effective packet scope
-`UNKNOWN`; strict selective mode fails before dispatch in
-`fork_policy.preflight_packet_scope`. The current paired collector marks a
-diagnostic-scope result `diagnostic-feasibility-pending-independent-review`
-with no cost ratio. Independent review must decide what quality and total-cost
-comparison can be reported without a technical context-isolation claim. This
-plan permits no performance advantage claim from one pair.
+Pilot 14's initial collector still marked a diagnostic-scope result without a
+cost ratio. The revised pilot-15 gate above permits a descriptive matched
+empirical comparison after complete quality evidence; neither plan permits a
+technical context-isolation claim from the current runtime.
 
 ## Repository checkout and evidence scope
 

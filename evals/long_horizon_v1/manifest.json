@@ -96,9 +96,9 @@
     "version": "r9e-20261001"
   },
   "pilot": {
-    "path": "pilot-plan-v14.json",
+    "path": "pilot-plan-v15.json",
     "schema_version": 5,
-    "sha256": "8ca9db855ef0abbcec60a6b13f38cbea86d14764e562f5ff57326c77badd69c8"
+    "sha256": "08eb20bfbfa8a8d5352e3d05be94de05b9ef26e26c1268ba23b10a062d465a4d"
   },
   "pricing": {
     "as_of": "2026-09-24",
@@ -160,7 +160,7 @@
   "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
   "source_tree": "20121a7049c58571664b87989d1fc7bab8562884",
   "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
-  "status": "offline-paired-recovery-v14-review-pending",
+  "status": "offline-paired-recovery-v15-review-pending",
   "task_id": "flipt-oci-reference-rollout-v1",
   "toolchain": {
     "linux_path": "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",

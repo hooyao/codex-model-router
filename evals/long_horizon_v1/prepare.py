@@ -139,7 +139,7 @@ def _arms_for_plan(spec: dict) -> tuple[str, ...]:
         if descriptor.get("schema_version") != 1:
             raise ValueError("paired preparation descriptor drift")
         return ("baseline", "treatment")
-    if name == "pilot-plan-v14.json":
+    if name == "pilot-plan-v15.json":
         if descriptor.get("schema_version") != 5 or descriptor.get("sha256") != file_sha(HERE / name):
             raise ValueError("recovery preparation plan hash drift")
         plan = json.loads((HERE / name).read_text(encoding="utf-8"))
