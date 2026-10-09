@@ -1,12 +1,12 @@
 {
   "arm_execution": {
-    "path": "arm-execution-v3.json",
+    "path": "arm-execution-v4.json",
     "prompt_suffix_sha256": {
       "baseline": "5ece6200be87f54301fdc8eeffee9269bd86b4def20705c11063543d05ae4764",
-      "treatment": "8359b5df089a539d09cbad148d20b1ffb575448c75bfb906f299af536d2562a1"
+      "treatment": "d279171cd5e192876c0aa77deb6023fc624d95d1fc6d823139d463f04523cce9"
     },
     "schema_version": 1,
-    "sha256": "a8bdba79100a8420a275ff17d75a099d4a25988d14d73faa44eaa2d0515294e0"
+    "sha256": "67f9c9aef078c64861c3e7742948d54dfdc51d2dcbe472ff91e6a3513d28ffff"
   },
   "assets": {
     "checkpoint_hash.py": "54347a487ea3057cb9a58f7dba8268f0494f3b1be3eb32909cf5e29471f2dec1",
@@ -81,6 +81,7 @@
     "dispatch_stop_usd": 15.0,
     "planning_envelope_usd": 18.0,
     "public_repairs_per_round": 1,
+    "quality_correction_episodes": 1,
     "wall_seconds": 4500,
     "worker_retries_per_stage": 0
   },
@@ -96,9 +97,9 @@
     "version": "r9e-20261001"
   },
   "pilot": {
-    "path": "pilot-plan-v18.json",
-    "schema_version": 6,
-    "sha256": "4768d8b4b73c4ebdba974c6b4d541dfca2db67ad53b9bcbd7de14114ad079e2f"
+    "path": "pilot-plan-v19.json",
+    "schema_version": 7,
+    "sha256": "25fb9949b7b625884c3b70788e836005e2db2681d63670046a75b52bd0e3801a"
   },
   "pricing": {
     "as_of": "2026-09-24",
@@ -160,7 +161,7 @@
   "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
   "source_tree": "20121a7049c58571664b87989d1fc7bab8562884",
   "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
-  "status": "offline-fixed-baseline-v18-review-pending",
+  "status": "offline-common-quality-v19-review-pending",
   "task_id": "flipt-oci-reference-rollout-v1",
   "toolchain": {
     "linux_path": "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",

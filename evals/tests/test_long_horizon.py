@@ -413,8 +413,13 @@ class LongHorizonProtocolTests(unittest.TestCase):
                     else ["baseline", "treatment"])
         self.assertEqual(plan["arm_order"], expected)
         self.assertEqual(plan["limits_per_arm"]["automatic_retries"], 0)
-        self.assertEqual(plan["feedback"]["repair_checkpoints"], 1)
-        self.assertFalse(plan["feedback"]["hidden_oracle_disclosed"])
+        if plan["mode"] == "common-quality-recovery":
+            self.assertEqual(plan["limits_per_arm"]["quality_correction_episodes"], 1)
+            self.assertEqual(plan["feedback"]["quality_revisions"], [0, 1])
+            self.assertTrue(plan["feedback"]["hidden_assets_private"])
+        else:
+            self.assertEqual(plan["feedback"]["repair_checkpoints"], 1)
+            self.assertFalse(plan["feedback"]["hidden_oracle_disclosed"])
         self.assertEqual(plan["fixture"]["assets_sha256"], spec["assets"])
         from evals.long_horizon_v1.prepare import _arms_for_plan
         self.assertEqual(_arms_for_plan(spec), tuple(expected))
@@ -1470,7 +1475,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
             prepared = prepare(root)
         treatment = root / "treatment"
         expected_arms = (["baseline", "treatment"] if
-                         spec.get("pilot", {}).get("schema_version") == 5 else ["treatment"])
+                         spec.get("pilot", {}).get("schema_version") in (5, 7) else ["treatment"])
         self.assertEqual(list(prepared["arms"]), expected_arms)
         self.assertEqual((root / "baseline").exists(), "baseline" in expected_arms)
         real_scandir = os.scandir
@@ -1521,7 +1526,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
         self.assertEqual(treatment.split("\n\n", 1)[0], shared)
         self.assertIn("Do not start child agents", baseline)
         self.assertIn(("Delegate bounded hard reasoning" if
-                       spec.get("pilot", {}).get("schema_version") == 6 else
+                       spec.get("pilot", {}).get("schema_version") in (6, 7) else
                        "I authorize you to delegate"), treatment)
         self.assertNotIn("fixed child count", baseline)
         self.assertFalse(baseline_has_child("parent", [{"id": "parent"}]))

@@ -1,5 +1,43 @@
 # Long-horizon OCI benchmark v1: paired recovery preparation
 
+## Pilot 19 prospective common quality workflow (2026-10-09)
+
+[Pilot-plan-v19.json](pilot-plan-v19.json) requires a fresh baseline and fresh
+treatment from the pinned seed. The shared task, R0–R2 reports, public tests,
+hidden oracle, rate card, and limits are unchanged. The old v17 baseline and
+failed v18 treatment are historical evidence only; neither is reused or given
+to a model in the new subject input.
+
+An accepted public G2 checkpoint is provisional. The solver's App Server and
+parent thread stay open while [quality_adapter.py](quality_adapter.py) runs an
+independent Astra/xhigh semantic review through the existing transport and
+native meter, then the hidden/race and backend graders. Its product checkout
+is outside the evaluator's writable scratch. The adapter writes a hash-bound
+response under `<arm-live>/quality/`; the solver receives only bounded
+observed/expected behavior tied to already revealed requirements. No hidden
+test name, source, evaluator path, or repair code is sent to the solver.
+
+Revision 0 PASS ends model work. FAIL can open one correction turn on the same
+parent, under the original wall and cost limits; the original public checkpoint
+stays intact. The controller submits a separate revision-1 file, cumulative
+public checks run again, and full quality is repeated once. A second failure,
+stale reply, deadline, or unresolved evaluator usage stops without a whole-run
+retry. Both solver and evaluator native response costs are required before any
+whole-workflow USD ratio. The $15 observed dispatch stop includes both known
+subtotals; $18 remains informational. One pair has no stable speed, general
+savings, or technical context-isolation claim.
+
+The adapter can be started as a watcher in a separate local process before
+each arm. The reviewer must inspect its read-only product boundary and source
+pins before any paid run:
+
+```powershell
+python -m evals.long_horizon_v1.quality_adapter --watch-root evals/long_horizon_v1/_scratch/pilot-19-evidence/baseline-live/quality --prepared evals/long_horizon_v1/_scratch/pilot-19-prep --cli 'C:\Users\yahu2\AppData\Local\OpenAI\Codex\bin\9691020b546a15b2\codex.exe' --session-root 'C:\Users\yahu2\.codex\sessions'
+```
+
+The treatment watcher substitutes `treatment-live` in `--watch-root`. Its
+status and raw evaluator session must be retained alongside the solver run.
+
 ## Pilot 18 fixed historical baseline preparation (2026-10-09)
 
 [Pilot-plan-v18.json](pilot-plan-v18.json) prepares one fresh Sol/low treatment

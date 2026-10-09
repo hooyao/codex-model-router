@@ -164,11 +164,14 @@ def _arm(path: Path, expected: str) -> dict:
                         manifest()["pilot"].get("path") == "pilot-plan-v17.json")
             fixed = (manifest().get("pilot", {}).get("schema_version") == 6 and
                      manifest()["pilot"].get("path") == "pilot-plan-v18.json")
+            common_quality = (manifest().get("pilot", {}).get("schema_version") == 7 and
+                              manifest()["pilot"].get("path") == "pilot-plan-v19.json")
             if (not isinstance(fork_evidence, dict) or
                     fork_evidence.get("packet_scope") != scope or
                     data.get("claim_class") != ("standalone-treatment-feasibility" if standalone
                         else "matched-empirical-scope-unknown" if recovery and mode == DIAGNOSTIC
                         else "fixed-historical-baseline-scope-unknown" if fixed and mode == DIAGNOSTIC
+                        else "fresh-paired-common-quality-scope-unknown" if common_quality and mode == DIAGNOSTIC
                         else "non-matched-non-interleaved-diagnostic" if mode == DIAGNOSTIC
                         else "strict-selective") or
                     standalone and mode != DIAGNOSTIC or
@@ -197,6 +200,9 @@ def _arm(path: Path, expected: str) -> dict:
             attempts = data.get("attempts")
             native_attempts = data.get("native_attempts")
             events = stage.get("events")
+            event_attempt_kinds = (("submit", "protocol_failure", "correction-submission")
+                                   if manifest().get("pilot", {}).get("path") == "pilot-plan-v19.json"
+                                   else ("submit", "protocol_failure"))
             interrupted = any(turn.get("terminal") == "turn_aborted"
                               for session in sessions for turn in session["turns"])
             if interrupted and expected != "treatment":
@@ -207,7 +213,7 @@ def _arm(path: Path, expected: str) -> dict:
                     (not attempts and not interrupted) or
                     not isinstance(native_attempts, list) or
                     not isinstance(events, list) or
-                    len(attempts) != sum(event.get("kind") in ("submit", "protocol_failure") for event in events
+                    len(attempts) != sum(event.get("kind") in event_attempt_kinds for event in events
                                          if isinstance(event, dict)) or
                     any(not isinstance(event, dict) or event.get("thread_id") != parent or
                         event.get("seq") != index or type(event.get("time_ns")) is not int
@@ -232,8 +238,8 @@ def _arm(path: Path, expected: str) -> dict:
                 if (type(start) is not int or type(end) is not int or
                         not 0 <= start < end <= len(events) or
                         len([event for event in events[start:end] if
-                             event["kind"] in ("submit", "protocol_failure")]) != 1 or
-                        events[start].get("kind") not in ("submit", "protocol_failure") or
+                             event["kind"] in event_attempt_kinds]) != 1 or
+                        events[start].get("kind") not in event_attempt_kinds or
                         events[start].get("round") != attempt.get("round")):
                     raise ValueError("complete cost claim lacks stage event span")
             child_ids = {item["id"] for item in sessions if item["id"] != parent}
@@ -334,6 +340,8 @@ def collect(pair: Path, output: Path) -> dict:
         return collect_recovery(pair, output)
     if descriptor.get("schema_version") == 6 and descriptor.get("path") == "pilot-plan-v18.json":
         return collect_fixed_baseline(pair, output)
+    if descriptor.get("schema_version") == 7 and descriptor.get("path") == "pilot-plan-v19.json":
+        return collect_common_quality(pair, output)
     if descriptor.get("schema_version") == 6 and descriptor.get("path") == "pilot-plan-v18.json":
         return collect_fixed_baseline(pair, output)
     treatment_path = pair / "treatment" / "run.json"
@@ -461,6 +469,74 @@ def collect_recovery(pair: Path, output: Path) -> dict:
         "stable_latency_claim": False, "general_savings_claim": False,
         "interpretation": "One fresh pair; quality and total observed estimated USD are descriptive. "
                           "Effective child plaintext scope is unverified."}
+    fresh_directory(output)
+    write_json_new(output / "pair.json", result)
+    return result
+
+
+def collect_common_quality(pair: Path, output: Path) -> dict:
+    """Require both fresh arms and complete solver plus evaluator quality costs."""
+    from evals.long_horizon_v1.quality_bridge import verify_common_arm_quality
+    from evals.long_horizon_v1.run import pilot_plan
+    spec = manifest()
+    plan = pilot_plan(spec)
+    prepared = HERE / plan["preparation_root"]
+    preparation = json.loads((prepared / "preparation.json").read_text(encoding="utf-8"))
+    preparation_sha = file_sha(prepared / "preparation.json")
+    if (preparation.get("fixture_manifest_sha256") != file_sha(HERE / "manifest.json") or
+            list(preparation.get("arms", {})) != ["baseline", "treatment"] or
+            preparation["arms"]["baseline"].get("start_tree") != spec["start_tree"] or
+            preparation["arms"]["treatment"].get("start_tree") != spec["start_tree"] or
+            preparation["arms"]["baseline"].get("revealed") !=
+                preparation["arms"]["treatment"].get("revealed")):
+        raise ValueError("fresh common-quality pair preparation differs")
+    runs, qualities = {}, {}
+    for arm in plan["arm_order"]:
+        path = HERE / plan["run_outputs"][arm] / "run.json"
+        if file_sha(pair / arm / "run.json") != file_sha(path):
+            raise ValueError(f"{arm} paired run differs from frozen output")
+        run = _arm(path, arm)
+        if (run.get("claim_class") != "fresh-paired-common-quality-scope-unknown" or
+                run.get("runtime_binding", {}).get("preparation_sha256") != preparation_sha or
+                run.get("interruption_proof") is not None or
+                run.get("workflow_cost_status") != "complete" or
+                run.get("quality_status") != "PASS" or
+                not isinstance(run.get("session_root"), str)):
+            raise ValueError(f"{arm} common quality run or accounting incomplete")
+        runs[arm] = run
+        qualities[arm] = verify_common_arm_quality(prepared, plan, run, arm,
+            Path(run["session_root"]), require_wall=True)
+    baseline, treatment = runs["baseline"], runs["treatment"]
+    if (baseline.get("parent_thread_id") == treatment.get("parent_thread_id") or
+            not baseline.get("shared_initial_prompt_sha256") or
+            baseline["shared_initial_prompt_sha256"] != treatment.get("shared_initial_prompt_sha256") or
+            [event["assets"] for event in baseline["stage"]["events"]
+             if event.get("kind") == "reveal"] !=
+            [event["assets"] for event in treatment["stage"]["events"]
+             if event.get("kind") == "reveal"] or
+            treatment.get("packet_scope_mode") != DIAGNOSTIC or
+            (treatment.get("fork_policy") or {}).get("packet_scope") != "UNKNOWN"):
+        raise ValueError("common quality pair prompt, reveal, lineage, or packet scope differs")
+    b_cost, t_cost = (runs[arm]["workflow_estimated_usd"] for arm in plan["arm_order"])
+    result = {"schema_version": 1, "mode": "common-quality-recovery",
+        "task_id": TASK_ID, "pilot_id": plan["pilot_id"],
+        "status": "fresh-paired-quality-pass-scope-unknown",
+        "manifest_sha256": file_sha(HERE / "manifest.json"),
+        "pilot_plan_sha256": file_sha(HERE / spec["pilot"]["path"]),
+        "preparation_sha256": preparation_sha,
+        "run_sha256": {arm: file_sha(HERE / plan["run_outputs"][arm] / "run.json")
+                       for arm in plan["arm_order"]},
+        "quality_evidence_sha256": {arm: qualities[arm]["end_to_end_sha256"]
+                                    for arm in plan["arm_order"]},
+        "whole_workflow_estimated_usd": {"baseline": b_cost, "treatment": t_cost},
+        "treatment_to_baseline_total_cost_ratio": t_cost / b_cost if b_cost > 0 else None,
+        "end_to_end_wall_seconds": {arm: qualities[arm]["end_to_end_wall_seconds"]
+                                    for arm in plan["arm_order"]},
+        "quality_parity": True, "packet_scope": "UNKNOWN",
+        "stable_latency_claim": False, "general_savings_claim": False,
+        "technical_context_isolation_claim": False,
+        "interpretation": "One fresh matched pair with complete solver and evaluator costs; "
+                          "latency and general savings remain descriptive only."}
     fresh_directory(output)
     write_json_new(output / "pair.json", result)
     return result

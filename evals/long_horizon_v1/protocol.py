@@ -194,6 +194,45 @@ class StageMachine:
         return {"action": "repair", "reason": reason, "receipt": receipt,
                 "message": message}
 
+    def submit_quality_correction(self, claimed_thread_id: str,
+                                  submission_path: Path) -> dict:
+        """Admit one new candidate without replacing the original public checkpoint."""
+        if (not self.complete or self.round != 2 or claimed_thread_id != self.thread_id or
+                any(event["kind"] == "correction-submission" for event in self.events)):
+            raise ProtocolError("quality correction is unavailable or duplicated")
+        try:
+            authored = json.loads(submission_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as error:
+            raise ProtocolError("quality revision-1 submission missing or invalid") from error
+        patch = capture_patch(self.workspace, self.base_tree)
+        patch_hash = sha(patch)
+        originals = [event for event in self.events if event["kind"] == "accepted-final"]
+        if (not isinstance(authored, dict) or set(authored) != {
+                "schema_version", "revision", "candidate_patch_sha256", "summary"} or
+                authored.get("schema_version") != 1 or authored.get("revision") != 1 or
+                authored.get("candidate_patch_sha256") != patch_hash or
+                not isinstance(authored.get("summary"), str) or
+                not 0 < len(authored["summary"].strip()) <= 4000 or
+                len(originals) != 1 or patch_hash == originals[0]["patch_sha256"]):
+            raise ProtocolError("quality revision-1 submission or patch changed")
+        self.event("correction-submission", revision=1, patch_sha256=patch_hash,
+                   patch_bytes=len(patch), submission_sha256=file_sha(submission_path))
+        receipt = self.public_gate(patch, 2, 2)
+        if (not isinstance(receipt, dict) or receipt.get("round") != 2 or
+                receipt.get("candidate_patch_sha256") != patch_hash or
+                type(receipt.get("behavior_pass")) is not bool):
+            raise ProtocolError("unbound correction public gate")
+        self.event("correction-public-gate", revision=1,
+                   behavior_pass=receipt["behavior_pass"], patch_sha256=patch_hash,
+                   receipt_sha256=sha(json.dumps(receipt, sort_keys=True).encode()))
+        if not receipt["behavior_pass"]:
+            self.event("correction-public-failed", revision=1, patch_sha256=patch_hash)
+            return {"action": "stop", "reason": "correction-public-gate-failed",
+                    "receipt": receipt}
+        self.event("provisional-quality", revision=1, patch_sha256=patch_hash)
+        return {"action": "quality-final", "receipt": receipt,
+                "patch": patch, "patch_sha256": patch_hash}
+
     def receipt(self) -> dict:
         return {"schema_version": 1, "task_id": TASK_ID, "arm": self.arm,
                 "thread_id": self.thread_id, "round": self.round,

@@ -1,0 +1,305 @@
+"""Five offline prospective-quality paths without paid model turns."""
+from __future__ import annotations
+
+import json
+from contextlib import ExitStack
+from pathlib import Path
+import tempfile
+import time
+import unittest
+from unittest.mock import patch
+
+from evals.long_horizon_v1.common import file_sha, sha
+from evals.long_horizon_v1.grade import REVIEW_REQUIREMENTS
+from evals.long_horizon_v1.protocol import StageMachine
+from evals.long_horizon_v1.quality_bridge import QualityBridge
+from evals.long_horizon_v1.run import live_run
+
+
+def save(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, sort_keys=True), encoding="utf-8")
+
+
+class QualityWorkflowTests(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.patch0 = self.root / "candidate-0.patch"
+        self.patch1 = self.root / "candidate-1.patch"
+        self.patch0.write_bytes(b"revision zero")
+        self.patch1.write_bytes(b"revision one")
+        self.bridge = QualityBridge(self.root / "quality", manifest_sha256="a" * 64,
+            preparation_sha256="b" * 64, workflow_id="one-workflow",
+            parent_thread_id="same-parent", session_root=self.root / "sessions",
+            operational_deadline=time.monotonic() + 30,
+            original_deadline_utc_ns=time.time_ns() + 45_000_000_000)
+
+    def respond(self, revision: int, candidate: Path, *, passed: bool,
+                mismatch: dict | None = None) -> dict:
+        request = self.bridge.request(revision, file_sha(candidate), candidate, 0.4)
+        requirements = dict.fromkeys(REVIEW_REQUIREMENTS, passed)
+        review = {"candidate_patch_sha256": file_sha(candidate),
+            "manifest_sha256": "a" * 64, "reviewer_role": "independent",
+            "arm_blind": True, "reviewer_id": "independent-evaluator",
+            "requirements": requirements,
+            "verdict": "pass" if passed else "fail"}
+        hidden = {"candidate_patch_sha256": file_sha(candidate),
+            "manifest_sha256": "a" * 64, "behavior_pass": passed,
+            "quality_pass": passed}
+        backend = dict(hidden)
+        for name, value in (("hidden-grade", hidden), ("backend-grade", backend),
+                            ("semantic-review", review)):
+            save(self.bridge.root / f"r{revision}-{name}.json", value)
+        diagnostics = [] if passed else [{"public_requirement": "R2",
+            "observed_behavior": "The operation returned before cleanup completed",
+            "expected_behavior": "Cleanup should finish before the operation returns"}]
+        response = {"schema_version": 1, "kind": "quality-response",
+            "workflow_id": "one-workflow", "request_id": request["request_id"],
+            "request_sha256": request["request_sha256"], "revision": revision,
+            "candidate_patch_sha256": file_sha(candidate),
+            "verdict": "PASS" if passed else "FAIL",
+            "hidden_grade_sha256": file_sha(self.bridge.root / f"r{revision}-hidden-grade.json"),
+            "backend_grade_sha256": file_sha(self.bridge.root / f"r{revision}-backend-grade.json"),
+            "semantic_review_sha256": file_sha(self.bridge.root / f"r{revision}-semantic-review.json"),
+            "diagnostics": diagnostics,
+            "evaluation_usage": {"status": "complete", "estimated_usd": 0.2,
+                "estimated_usd_upper_bound": 0.2, "model_calls": 1}}
+        response.update(mismatch or {})
+        save(self.bridge.root / f"response-r{revision}.json", response)
+        return request
+
+    def wait(self, revision: int) -> tuple[dict, list[float]]:
+        observed = []
+        def meter(_revision):
+            self.bridge.evaluator_cost_upper = 0.2 * (_revision + 1)
+        def usage(_revision, response):
+            self.bridge.evaluator_cost += 0.2
+            return response["evaluation_usage"]
+        with patch.object(self.bridge, "_meter", side_effect=meter), \
+             patch.object(self.bridge, "_usage", side_effect=usage):
+            result = self.bridge.wait(revision, lambda value: observed.append(value))
+        return result, observed
+
+    def machine(self) -> StageMachine:
+        workspace = self.root / "arm"
+        (workspace / ".benchmark").mkdir(parents=True)
+        machine = StageMachine(workspace, "baseline", "same-parent",
+            lambda patch_bytes, round_id, repair: {"round": round_id,
+                "candidate_patch_sha256": sha(patch_bytes), "behavior_pass": True})
+        machine.round = 2
+        machine.complete = True
+        machine.event("accepted-final", patch_sha256=file_sha(self.patch0))
+        return machine
+
+    def test_immediate_quality_pass_keeps_revision_zero_and_counts_evaluator(self) -> None:
+        self.respond(0, self.patch0, passed=True)
+        response, costs = self.wait(0)
+        self.assertEqual(response["verdict"], "PASS")
+        self.assertEqual(costs, [0.2])
+        self.assertEqual(self.bridge.evaluator_cost, 0.2)
+        self.assertEqual(list(self.bridge.requests), [0])
+
+    def test_failure_one_same_parent_correction_then_pass_preserves_checkpoint(self) -> None:
+        self.respond(0, self.patch0, passed=False)
+        failure, _ = self.wait(0)
+        self.assertEqual(failure["verdict"], "FAIL")
+        self.assertNotIn("benchmark_oracle", self.bridge.correction_message(failure))
+        machine = self.machine()
+        original = machine.workspace / ".benchmark/checkpoint.json"
+        original.write_text("original public checkpoint", encoding="utf-8")
+        submission = machine.workspace / ".benchmark/quality-revision1.json"
+        save(submission, {"schema_version": 1, "revision": 1,
+            "candidate_patch_sha256": file_sha(self.patch1), "summary": "bounded correction"})
+        with patch("evals.long_horizon_v1.protocol.capture_patch",
+                   return_value=self.patch1.read_bytes()):
+            correction = machine.submit_quality_correction("same-parent", submission)
+        self.assertEqual(correction["action"], "quality-final")
+        self.assertEqual(original.read_text(), "original public checkpoint")
+        self.respond(1, self.patch1, passed=True)
+        response, costs = self.wait(1)
+        self.assertEqual(response["verdict"], "PASS")
+        self.assertEqual(costs, [0.4])
+        self.assertEqual(machine.thread_id, "same-parent")
+        self.assertEqual(self.bridge.evaluator_cost, 0.4)
+        self.assertEqual([event["kind"] for event in machine.events].count(
+                         "correction-submission"), 1)
+
+        prepared = self.root / "prepared"
+        (prepared / "preparation.json").parent.mkdir(parents=True)
+        (prepared / "preparation.json").write_text("{}", encoding="utf-8")
+        workspace = prepared / "baseline" / ".benchmark"
+        workspace.mkdir(parents=True)
+        for name in ("checkpoint.json", "round1.md", "round2.md"):
+            (workspace / name).write_text("original public checkpoint" if
+                                           name == "checkpoint.json" else "public report")
+        output = self.root / "runner-output"
+        parent = "one-parent-for-four-turns"
+        holder = {}
+        policy = {"model": "gpt-6-astra", "effort": "xhigh", "cli_options": [],
+                  "prompt_suffix_text": "", "policy_sha256": "policy",
+                  "prompt_suffix_sha256": "suffix"}
+        plan = {"mode": "common-quality-recovery", "pilot_id": "pilot-19",
+                "preparation_root": str(prepared),
+                "run_outputs": {"baseline": str(output)},
+                "packet_scope_mode": "diagnostic-feasibility"}
+        proof = {"cli_sha256": "cli", "code_mode_host_sha256": "host",
+                 "routing_config_canonical_sha256": None,
+                 "preparation": {"preparation_sha256": "prep"},
+                 "zero_model_runtime_binding": {}}
+
+        class Transport:
+            def __init__(self, *_args):
+                self.thread_id = parent
+                self.active_turn_id = None
+                self.active_turn_complete = True
+                self.events = []
+                self.turns = 0
+                holder["transport"] = self
+
+            def start(self): return parent
+
+            def turn(self, _prompt, _budget, _frame):
+                self.turns += 1
+                self.active_turn_id = f"turn-{self.turns}"
+                if self.turns == 4:
+                    save(workspace / "quality-revision1.json", {
+                        "schema_version": 1, "revision": 1,
+                        "candidate_patch_sha256": sha(b"revision one"),
+                        "summary": "one bounded correction"})
+                self.events.append({"method": "turn/completed", "thread_id": parent,
+                    "turn_id": self.active_turn_id, "time_ns": time.time_ns()})
+                return {"thread_id": parent, "turn_id": self.active_turn_id,
+                        "status": "completed"}
+
+            def close(self): pass
+
+        class Meter:
+            def __init__(self, *_args, **_kwargs):
+                self.paths = {}
+                self.unknown_models = set()
+                self.unknown_usage = []
+                self.cost_upper = 0.1
+                self.calls = 1
+
+            def refresh(self):
+                turn = holder["transport"].active_turn_id or "turn-0"
+                self.paths = {Path("parent-rollout"): {"id": parent,
+                    "terminal": "task_complete", "turns": [{"turn_id": turn,
+                    "model": "gpt-6-astra", "effort": "xhigh"}]}}
+
+            def dispatch_coverage_issues(self): return []
+
+            def summary(self):
+                return {"sessions": [{"id": parent, "calls": 1}],
+                    "unknown_models": [], "unknown_usage": [],
+                    "estimated_usd": 0.1, "estimated_usd_upper_bound": 0.1,
+                    "model_calls": 1}
+
+        class Bridge:
+            def __init__(self, root, **_kwargs):
+                self.root = root
+                self.requests = {}
+                self.responses = {}
+                self.evaluator_cost = 0.0
+                self.evaluator_cost_upper = 0.0
+                self.evaluation_usage_complete = True
+                holder["bridge"] = self
+
+            def request(self, revision, candidate_hash, _path, _solver_cost):
+                self.requests[revision] = {"request_sha256": f"request-{revision}"}
+                return self.requests[revision]
+
+            def wait(self, revision, check_budget):
+                self.evaluator_cost += 0.2
+                self.evaluator_cost_upper += 0.2
+                check_budget(self.evaluator_cost_upper)
+                value = {"verdict": "FAIL" if revision == 0 else "PASS",
+                    "candidate_patch_sha256": sha(b"revision zero" if revision == 0
+                                                      else b"revision one"),
+                    "response_sha256": f"response-{revision}",
+                    "evaluation_usage": {"status": "complete"},
+                    "diagnostics": [{"public_requirement": "R2",
+                                     "observed_behavior": "behavior differed",
+                                     "expected_behavior": "contract behavior"}]}
+                self.responses[revision] = value
+                return value
+
+            @staticmethod
+            def correction_message(_response): return "sanitized public correction"
+
+        def account_stub(*_args, **_kwargs):
+            return {"summary": holder["meter"].summary(), "issues": [],
+                "responses": [], "by_model": {}, "failed_child_attempts": 0,
+                "native_attempts": [], "interruption_verified": False}
+
+        def gate_stub(candidate, _prepared, _output, round_id, _deadline):
+            return {"round": round_id, "candidate_patch_sha256": file_sha(candidate),
+                    "behavior_pass": True}
+
+        with ExitStack() as stack:
+            stack.enter_context(patch("evals.long_horizon_v1.run.manifest",
+                                      return_value={"pilot": {"path": "pilot-plan-v19.json"}}))
+            stack.enter_context(patch("evals.long_horizon_v1.run.pilot_plan", return_value=plan))
+            stack.enter_context(patch("evals.long_horizon_v1.run.live_preflight", return_value=proof))
+            stack.enter_context(patch("evals.long_horizon_v1.run.arm_execution", return_value=policy))
+            stack.enter_context(patch("evals.long_horizon_v1.run.verify_cli"))
+            stack.enter_context(patch("evals.long_horizon_v1.run.AppServerTransport", Transport))
+            stack.enter_context(patch("evals.long_horizon_v1.run.SessionMeter",
+                side_effect=lambda *_args, **_kwargs: holder.setdefault("meter", Meter())))
+            stack.enter_context(patch("evals.long_horizon_v1.run.QualityBridge", Bridge))
+            stack.enter_context(patch("evals.long_horizon_v1.run.grade_before_deadline",
+                                      side_effect=gate_stub))
+            stack.enter_context(patch("evals.long_horizon_v1.run.account",
+                                      side_effect=account_stub))
+            stack.enter_context(patch("evals.long_horizon_v1.protocol.manifest",
+                                      return_value={}))
+            stack.enter_context(patch("evals.long_horizon_v1.protocol.capture_patch",
+                side_effect=lambda *_args: b"revision one" if
+                    holder["transport"].turns == 4 else b"revision zero"))
+            stack.enter_context(patch("evals.long_horizon_v1.protocol.checkpoint",
+                                      return_value={}))
+            stack.enter_context(patch("evals.long_horizon_v1.protocol.copy_assets",
+                                      return_value=[]))
+            result = live_run(prepared, output, "baseline", self.root / "cli",
+                              self.root / "capability", self.root / "sessions")
+        self.assertEqual(result["stop_reason"], "accepted-final")
+        self.assertEqual(result["quality_status"], "PASS")
+        self.assertEqual(len(result["attempts"]), 4)
+        self.assertEqual({row["thread_id"] for row in result["attempts"]}, {parent})
+        self.assertEqual(result["workflow_estimated_usd"], 0.5)
+        self.assertEqual((workspace / "checkpoint.json").read_text(),
+                         "original public checkpoint")
+
+    def test_second_quality_failure_stops_without_third_revision(self) -> None:
+        self.respond(0, self.patch0, passed=False)
+        self.wait(0)
+        self.respond(1, self.patch1, passed=False)
+        second, _ = self.wait(1)
+        self.assertEqual(second["verdict"], "FAIL")
+        with self.assertRaisesRegex(ValueError, "invalid, or unbound"):
+            self.bridge.request(2, file_sha(self.patch1), self.patch1, 0.4)
+        self.assertEqual(self.bridge.evaluator_cost, 0.4)
+
+    def test_stale_or_mismatched_response_rejected_before_feedback(self) -> None:
+        self.respond(0, self.patch0, passed=False,
+                     mismatch={"request_sha256": "0" * 64})
+        with patch.object(self.bridge, "_meter", return_value=None), \
+             self.assertRaisesRegex(ValueError, "stale, duplicate, or mismatched"):
+            self.bridge.wait(0, lambda _: None)
+        self.assertEqual(self.bridge.responses, {})
+
+    def test_deadline_while_waiting_requests_cleanup_with_original_boundary(self) -> None:
+        self.bridge.request(0, file_sha(self.patch0), self.patch0, 0.4)
+        self.bridge.operational_deadline = time.monotonic() - 0.01
+        with self.assertRaisesRegex(TimeoutError, "quality-wait-deadline"):
+            self.bridge.wait(0, lambda _: self.fail("no budget after deadline"))
+        cancel = json.loads((self.bridge.root / "cancel-r0.json").read_text())
+        self.assertEqual(cancel["request_sha256"],
+                         self.bridge.requests[0]["request_sha256"])
+        self.assertFalse(self.bridge.evaluation_usage_complete)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -17,6 +17,7 @@ from evals.long_horizon_v1.assets.submit_checkpoint import submit as submit_chec
 from evals.long_horizon_v1.accounting import account
 from evals.long_horizon_v1.grade import record_grader_hazard, stop_wsl_grader
 from evals.long_horizon_v1.protocol import StageMachine
+from evals.long_horizon_v1.quality_bridge import QualityBridge
 from evals.long_horizon_v1.transport import (AppServerTransport, TransportError,
                                              meter_relevant_frame)
 from evals.long_horizon_v1.runtime_binding import verify_arm_config, verify_cli
@@ -106,15 +107,18 @@ def _canary_runtime_equivalent(previous: dict, current: dict, plan: dict | None)
         return False
     if previous == current:
         return True
-    if plan is not None and plan.get("mode") == "fixed-baseline-recovery":
+    if plan is not None and plan.get("mode") in (
+            "fixed-baseline-recovery", "common-quality-recovery"):
         old_plan = json.loads((HERE / "pilot-plan-v17.json").read_text(encoding="utf-8"))
         old_fixture, fixture = old_plan["fixture"], plan["fixture"]
+        arm = ("treatment" if current.get("model_catalog", {}).get("gpt-6-sol") == "low"
+               else "baseline")
         if (previous.get("policy_sha256") != old_fixture["arm_execution_sha256"] or
                 previous.get("prompt_suffix_sha256") !=
-                    old_fixture["prompt_suffix_sha256"]["treatment"] or
+                    old_fixture["prompt_suffix_sha256"][arm] or
                 current.get("policy_sha256") != fixture["arm_execution_sha256"] or
                 current.get("prompt_suffix_sha256") !=
-                    fixture["prompt_suffix_sha256"]["treatment"]):
+                    fixture["prompt_suffix_sha256"][arm]):
             return False
         ignored = {"policy_sha256", "prompt_suffix_sha256"}
         return ({key: value for key, value in previous.items() if key not in ignored} ==
@@ -267,6 +271,8 @@ def _verify_corrected_controls(controls: dict, spec: dict) -> None:
 def pilot_plan(spec: dict) -> dict:
     """Verify the frozen one-pair plan and its offline evidence without a model turn."""
     descriptor = spec.get("pilot")
+    if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v19.json":
+        return _pilot_plan_common(spec)
     if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v18.json":
         return _pilot_plan_fixed(spec)
     if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v17.json":
@@ -485,7 +491,8 @@ def _standalone_source_hashes() -> dict[str, str]:
     names = ("common.py", "protocol.py", "controls.py", "grade.py", "prepare.py",
         "live_preflight.py", "accounting.py", "collect.py", "transport.py",
         "runtime_binding.py", "cancellation_adjudication.py", "fork_policy.py",
-        "standalone_quality.py", "recovery_quality.py", "end_to_end.py")
+        "standalone_quality.py", "recovery_quality.py", "quality_bridge.py",
+        "quality_adapter.py", "fixed_baseline.py", "end_to_end.py")
     return {**{name: file_sha(HERE / name) for name in names},
             "evals/scripts/run_paired_arm.py": file_sha(HERE.parent / "scripts/run_paired_arm.py")}
 
@@ -495,6 +502,81 @@ def _verify_standalone_sources(plan: dict) -> None:
         raise ValueError("standalone runner source drift")
     if plan.get("execution_sources_sha256") != _standalone_source_hashes():
         raise ValueError("standalone execution source drift")
+
+
+def _pilot_plan_common(spec: dict) -> dict:
+    """Bind a fresh pair to the same prospective quality feedback workflow."""
+    descriptor = spec["pilot"]
+    path = HERE / "pilot-plan-v19.json"
+    if descriptor != {"path": path.name, "schema_version": 7,
+                      "sha256": file_sha(path)}:
+        raise ValueError("common quality plan descriptor drift")
+    plan = json.loads(path.read_text(encoding="utf-8"))
+    arms = ("baseline", "treatment")
+    prefix = "_scratch/pilot-19"
+    if (set(plan) != {"schema_version", "mode", "pilot_id", "claim", "arm_order",
+                      "matched_pairs", "packet_scope_mode", "preparation_root",
+                      "evidence_root", "capabilities", "run_outputs", "live_rebind",
+                      "limits_per_arm", "acceptance", "feedback", "end_to_end",
+                      "fixture", "runtime", "runner_normalized_sha256",
+                      "execution_sources_sha256", "current_cancellation", "stop_rule"} or
+            plan.get("schema_version") != 7 or
+            plan.get("mode") != "common-quality-recovery" or
+            plan.get("pilot_id") != "flipt-oci-long-horizon-pilot-19" or
+            plan.get("claim") != "fresh-paired-prospective-quality" or
+            plan.get("arm_order") != list(arms) or plan.get("matched_pairs") != 1 or
+            plan.get("packet_scope_mode") != DIAGNOSTIC or
+            plan.get("preparation_root") != prefix + "-prep" or
+            plan.get("evidence_root") != prefix + "-evidence" or
+            plan.get("capabilities") != {arm: prefix + f"-evidence/{arm}-capability.json"
+                                           for arm in arms} or
+            plan.get("run_outputs") != {arm: prefix + f"-evidence/{arm}-live"
+                                        for arm in arms} or
+            plan.get("live_rebind") != {"mode": "no-model-rebind-v1",
+                "expected_final_manifest_sha256_required": True,
+                "turn_start_forbidden": True} or
+            plan.get("limits_per_arm") != {"planning_envelope_usd": PLANNING_USD,
+                "dispatch_stop_usd": STOP_USD, "wall_seconds": MAX_SECONDS,
+                "cleanup_reserve_seconds": CLEANUP_RESERVE_SECONDS,
+                "automatic_retries": 0, "public_repairs_per_round": 1,
+                "quality_correction_episodes": 1} or
+            plan.get("feedback") != {"gate": "after-provisional-G2",
+                "same_for_both_arms": True, "quality_revisions": [0, 1],
+                "hidden_assets_private": True, "sanitized_functional_diagnostics": True} or
+            plan.get("current_cancellation") != CURRENT_CANCELLATION or
+            plan.get("acceptance") != {"fresh_seed_for_both_arms": True,
+                "same_public_reveals_and_feedback": True,
+                "complete_parent_child_and_evaluator_usage": True,
+                "full_quality_after_final_revision": True,
+                "one_quality_correction_episode": True,
+                "same_parent_thread_across_correction": True,
+                "treatment_astra_hard_stages": True,
+                "end_to_end_wall_includes_quality_wait": True,
+                "stable_latency_or_general_savings_claim_allowed": False}):
+        raise ValueError("common quality plan schema, parity, or limits drift")
+    fixture = {"source_sha256": spec["source_sha256"],
+        "seed_patch_sha256": spec["seed_patch_sha256"],
+        "start_tree": spec["start_tree"],
+        "arm_execution_sha256": spec["arm_execution"]["sha256"],
+        "prompt_suffix_sha256": spec["arm_execution"]["prompt_suffix_sha256"],
+        "routing_config_canonical_sha256": spec["routing_config"]["canonical_sha256"],
+        "assets_sha256": spec["assets"], "grader_sha256": file_sha(HERE / "grade.py"),
+        "end_to_end_sha256": file_sha(HERE / "end_to_end.py"),
+        "fork_policy_sha256": file_sha(HERE / "fork_policy.py")}
+    runtime = {key: spec["runtime"][key] for key in (
+        "cli_sha256", "code_mode_host_sha256", "plugin_manifest_sha256",
+        "plugin_hooks_sha256", "router_hook_sha256", "routing_validator_sha256")}
+    if plan.get("fixture") != fixture or plan.get("runtime") != runtime:
+        raise ValueError("common quality fixture or runtime drift")
+    _verify_standalone_sources(plan)
+    if any(spec.get("limits", {}).get(key) != value for key, value in (
+            ("planning_envelope_usd", PLANNING_USD), ("dispatch_stop_usd", STOP_USD),
+            ("wall_seconds", MAX_SECONDS),
+            ("cleanup_reserve_seconds", CLEANUP_RESERVE_SECONDS),
+            ("worker_retries_per_stage", 0), ("public_repairs_per_round", 1),
+            ("quality_correction_episodes", 1))):
+        raise ValueError("common quality manifest limits drift")
+    return plan
 
 
 def _pilot_plan_fixed(spec: dict) -> dict:
@@ -1088,7 +1170,7 @@ def live_preflight(capability: Path | None, cli: Path | None, arm: str,
     if plan and (prepared.resolve() != (HERE / plan["preparation_root"]).resolve() or
                  capability.resolve() != (HERE / plan["capabilities"][arm]).resolve()):
         raise ValueError("pilot preparation or capability path drift")
-    if plan and plan.get("mode") not in ("paired-recovery", "fixed-baseline-recovery") and file_sha(capability) != PILOT_CAPABILITY_SHA256[arm]:
+    if plan and plan.get("mode") not in ("paired-recovery", "fixed-baseline-recovery", "common-quality-recovery") and file_sha(capability) != PILOT_CAPABILITY_SHA256[arm]:
         raise ValueError("frozen pilot capability hash mismatch")
     policy = arm_execution(spec, arm)
     cli_binding = verify_cli(cli, spec)
@@ -1289,7 +1371,8 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
         if output.resolve() != (HERE / plan["run_outputs"][arm]).resolve():
             raise ValueError("pilot output path drift")
         if arm == "treatment":
-            if plan.get("mode") in ("standalone-feasibility", "paired-recovery"):
+            if plan.get("mode") in ("standalone-feasibility", "paired-recovery",
+                                    "common-quality-recovery"):
                 pass
             elif plan.get("mode") == "fixed-baseline-recovery":
                 from evals.long_horizon_v1.fixed_baseline import verify_fixed_baseline
@@ -1301,7 +1384,8 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
     proof = live_preflight(capability, cli, arm, prepared,
                            benchmark_mode=benchmark_mode)
     if plan and arm == "treatment":
-        if plan.get("mode") in ("standalone-feasibility", "paired-recovery"):
+        if plan.get("mode") in ("standalone-feasibility", "paired-recovery",
+                                "common-quality-recovery"):
             pass
         elif plan.get("mode") == "fixed-baseline-recovery":
             from evals.long_horizon_v1.fixed_baseline import verify_fixed_baseline
@@ -1334,7 +1418,10 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
     turn_calls_at_start = 0
     attempts: list[dict] = []
     shared_initial_prompt_sha256 = None
-    def check_budget(*, force: bool = False):
+    quality_bridge = None
+    quality_revision = 0
+    quality_status = "not-requested"
+    def check_budget(*, force: bool = False, evaluator_upper: float | None = None):
         nonlocal stop_reason
         if time.monotonic() >= operational_deadline:
             stop_reason = "wall-limit"
@@ -1360,7 +1447,9 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
             if meter.unknown_models or meter.unknown_usage:
                 stop_reason = "usage-integrity-failure"
                 raise TransportError(stop_reason)
-            if meter.cost_upper >= STOP_USD:
+            external = (evaluator_upper if evaluator_upper is not None else
+                        quality_bridge.evaluator_cost_upper if quality_bridge else 0.0)
+            if meter.cost_upper + external >= STOP_USD:
                 stop_reason = "cost-safety-threshold"
                 raise TransportError(stop_reason)
             if (refreshed and transport is not None and
@@ -1378,6 +1467,14 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
         meter = SessionMeter(session_root, thread_id, model, effort,
                              require_native_activity=(arm == "treatment"))
         refresh_gate = MeterRefreshGate(meter)
+        if plan and plan.get("mode") == "common-quality-recovery":
+            quality_bridge = QualityBridge(output / "quality",
+                manifest_sha256=file_sha(HERE / "manifest.json"),
+                preparation_sha256=file_sha(prepared / "preparation.json"),
+                workflow_id=plan["pilot_id"] + ":" + thread_id,
+                parent_thread_id=thread_id, session_root=session_root,
+                operational_deadline=operational_deadline,
+                original_deadline_utc_ns=started_utc_ns + int(MAX_SECONDS * 1e9))
         gate_number = 0
         def gate(patch: bytes, round_id: int, repair: int) -> dict:
             nonlocal gate_number
@@ -1440,8 +1537,12 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
                     meter.unknown_usage):
                 raise TransportError("session, selector, or child identity missing after completed turn")
             stage_event_start = len(machine.events)
-            round_id, repair = machine.round, machine.repair
-            action = machine.submit(thread_id, _checkpoint_file(workspace, machine.round))
+            correction = quality_bridge is not None and quality_revision == 1
+            round_id, repair = machine.round, 2 if correction else machine.repair
+            action = (machine.submit_quality_correction(
+                thread_id, workspace / ".benchmark" / "quality-revision1.json")
+                if correction else machine.submit(
+                    thread_id, _checkpoint_file(workspace, machine.round)))
             check_budget()
             completed = [event for event in transport.events
                          if event["method"] == "turn/completed" and
@@ -1451,14 +1552,59 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
                                           for item in attempts):
                 raise TransportError("turn completion identity missing or duplicated")
             attempts.append({"round": round_id, "repair": repair,
+                             "quality_revision": quality_revision,
                              "turn_id": turn["turn_id"], "thread_id": thread_id,
                              "shared_prompt_sha256": sha(shared_prompt.encode("utf-8")),
                              "submitted_prompt_sha256": sha(prompt.encode("utf-8")),
                              "completion_time_ns": completed[0]["time_ns"],
                              "stage_event_start": stage_event_start,
                              "stage_event_end": len(machine.events)})
-            if action["action"] in ("stop", "final"):
-                stop_reason = "accepted-final" if action["action"] == "final" else action["reason"]
+            if action["action"] == "stop":
+                stop_reason = action["reason"]
+                break
+            if quality_bridge is not None and action["action"] in ("final", "quality-final"):
+                revision = quality_revision
+                patch_hash = sha(action["patch"])
+                patch_path = output / f"candidate-g2-attempt{repair}.patch"
+                machine.event("provisional-quality" if revision == 0 else
+                              "correction-quality-request", revision=revision,
+                              patch_sha256=patch_hash)
+                request = quality_bridge.request(revision, patch_hash, patch_path,
+                                                 meter.cost_upper)
+                machine.event("quality-requested", revision=revision,
+                              request_sha256=request["request_sha256"],
+                              patch_sha256=patch_hash)
+                response = quality_bridge.wait(revision, lambda external:
+                    check_budget(force=True, evaluator_upper=external))
+                check_budget(force=True)
+                machine.event("quality-assessed", revision=revision,
+                              verdict=response["verdict"],
+                              response_sha256=response["response_sha256"],
+                              patch_sha256=patch_hash)
+                if response["verdict"] == "PASS":
+                    quality_status = "PASS"
+                    machine.event("final-quality", revision=revision,
+                                  patch_sha256=patch_hash)
+                    stop_reason = "accepted-final"
+                    break
+                if revision == 1:
+                    quality_status = "FAIL"
+                    machine.event("final-quality-failed", revision=revision,
+                                  patch_sha256=patch_hash)
+                    stop_reason = "final-quality-failed"
+                    break
+                if response["evaluation_usage"].get("status") != "complete":
+                    quality_status = "UNKNOWN"
+                    stop_reason = "evaluator-usage-unknown"
+                    break
+                quality_revision = 1
+                machine.event("quality-feedback", revision=0,
+                              response_sha256=response["response_sha256"])
+                shared_prompt = quality_bridge.correction_message(response)
+                prompt = submitted_prompt(shared_prompt, arm, spec)
+                continue
+            if action["action"] == "final":
+                stop_reason = "accepted-final"
                 break
             shared_prompt = (action["message"] if action["action"] == "repair" else
                              action["report"] + "\n\nPublic gate receipt:\n" +
@@ -1624,6 +1770,7 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
     result = {"schema_version": 1, "task_id": TASK_ID, "arm": arm,
               "started_utc_ns": started_utc_ns,
               "parent_thread_id": transport.thread_id if transport else None,
+              "session_root": str(session_root.resolve()),
               "stop_reason": stop_reason or "run-ended-without-terminal-result",
               "wall_seconds": round(time.monotonic() - start, 3),
               "usage": usage, "usage_issues": issues,
@@ -1644,6 +1791,8 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
               "claim_class": "standalone-treatment-feasibility" if
                   benchmark_mode == "standalone-feasibility" else "matched-empirical-scope-unknown" if
                   plan and plan.get("mode") == "paired-recovery" else
+                  "fresh-paired-common-quality-scope-unknown" if
+                  plan and plan.get("mode") == "common-quality-recovery" else
                   "fixed-historical-baseline-scope-unknown" if
                   plan and plan.get("mode") == "fixed-baseline-recovery" else
                   "non-matched-non-interleaved-diagnostic" if
@@ -1651,11 +1800,36 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
               "child_rollout_paths": ({state["id"]: str(path) for path, state in
                   meter.paths.items() if state["id"] != thread_id} if meter is not None else {}),
               "attempts": attempts,
+              "quality_status": quality_status,
+              "quality_bridge": ({"root": str(quality_bridge.root.resolve()),
+                  "request_sha256": {str(revision): value["request_sha256"]
+                      for revision, value in quality_bridge.requests.items()},
+                  "response_sha256": {str(revision): value["response_sha256"]
+                      for revision, value in quality_bridge.responses.items()},
+                  "evaluator_estimated_usd": quality_bridge.evaluator_cost
+                      if quality_bridge.evaluation_usage_complete and
+                         len(quality_bridge.responses) == len(quality_bridge.requests) else None,
+                  "evaluator_estimated_usd_upper_bound": quality_bridge.evaluator_cost_upper,
+                  "evaluator_cost_status": "complete" if
+                      quality_bridge.evaluation_usage_complete and
+                      len(quality_bridge.responses) == len(quality_bridge.requests)
+                      else "UNKNOWN"} if quality_bridge else None),
               "shared_initial_prompt_sha256": shared_initial_prompt_sha256,
               "transport_events": transport.events if transport else [],
               "stage": machine.receipt() if "machine" in locals() else None,
               "cost_status": "complete" if usage and not issues and
                   cancellation.get("status") != "UNKNOWN" else "UNKNOWN"}
+    if quality_bridge is not None:
+        complete = (result["cost_status"] == "complete" and
+                    result["quality_bridge"]["evaluator_cost_status"] == "complete" and
+                    type((usage or {}).get("estimated_usd")) in (int, float))
+        result["workflow_cost_status"] = "complete" if complete else "UNKNOWN"
+        result["workflow_estimated_usd"] = (
+            usage["estimated_usd"] + quality_bridge.evaluator_cost if complete else None)
+        result["workflow_estimated_usd_upper_bound"] = (
+            usage["estimated_usd_upper_bound"] + quality_bridge.evaluator_cost_upper
+            if usage and type(usage.get("estimated_usd_upper_bound")) in (int, float)
+            else None)
     result["runtime_binding"] = {"cli_sha256": proof["cli_sha256"],
         "code_mode_host_sha256": proof["code_mode_host_sha256"],
         "routing_config_canonical_sha256": proof["routing_config_canonical_sha256"],

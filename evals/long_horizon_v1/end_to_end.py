@@ -14,6 +14,7 @@ from evals.long_horizon_v1.grade import REVIEW_REQUIREMENTS
 from evals.long_horizon_v1.quality_admission import (
     _grade, _json, verify_quality_admission)
 from evals.long_horizon_v1.recovery_quality import verify_recovery_arm_quality
+from evals.long_horizon_v1.quality_bridge import verify_common_arm_quality
 
 
 def finalize_arm(prepared: Path, arm: str, plan: dict) -> dict:
@@ -34,7 +35,10 @@ def finalize_arm(prepared: Path, arm: str, plan: dict) -> dict:
             type(run_wall) not in (int, float) or run_wall < 0):
         raise ValueError("arm run or accounting incomplete for end-to-end boundary")
     quality_files: dict[str, str] = {}
-    if plan.get("mode") == "paired-recovery":
+    if plan.get("mode") == "common-quality-recovery":
+        quality_files = verify_common_arm_quality(prepared, plan, run, arm,
+            Path(run["session_root"]), require_wall=False)["quality_files_sha256"]
+    elif plan.get("mode") == "paired-recovery":
         quality_files = verify_recovery_arm_quality(
             prepared, plan, run, arm, require_wall=False)["quality_files_sha256"]
     elif arm == "baseline":
