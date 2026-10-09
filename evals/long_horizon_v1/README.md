@@ -16,6 +16,11 @@ is outside the evaluator's writable scratch. The adapter writes a hash-bound
 response under `<arm-live>/quality/`; the solver receives only bounded
 observed/expected behavior tied to already revealed requirements. No hidden
 test name, source, evaluator path, or repair code is sent to the solver.
+Requests are published atomically. If semantic review passes but a grader
+fails, the adapter asks the same independent evaluator for one bounded,
+evidence-based functional diagnostic; its additional turns and cost are
+included. Unusable diagnostics or setup failures produce bound failure
+evidence and stop the attempt.
 
 Revision 0 PASS ends model work. FAIL can open one correction turn on the same
 parent, under the original wall and cost limits; the original public checkpoint

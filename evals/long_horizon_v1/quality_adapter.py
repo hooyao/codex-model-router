@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import secrets
 import shutil
 import subprocess
 import sys
@@ -20,6 +19,7 @@ from evals.long_horizon_v1.assets.checkpoint_hash import capture_patch
 from evals.long_horizon_v1.grade import REVIEW_REQUIREMENTS, record_grader_hazard, stop_wsl_grader
 from evals.long_horizon_v1.runtime_binding import arm_execution, verify_cli
 from evals.long_horizon_v1.transport import AppServerTransport, TransportError
+from evals.long_horizon_v1.quality_bridge import publish_json_new, validate_diagnostics
 from evals.scripts.run_paired_arm import SessionMeter
 
 
@@ -36,11 +36,7 @@ class ReviewScratchEvaluator(AppServerTransport):
 
 
 def _atomic_new(path: Path, value: dict) -> None:
-    if path.exists():
-        raise ValueError("quality adapter output already exists")
-    temporary = path.with_name(path.name + ".tmp-" + secrets.token_hex(8))
-    write_json_new(temporary, value)
-    temporary.replace(path)
+    publish_json_new(path, value)
 
 
 def _last_message(meter: SessionMeter, thread_id: str) -> str:
@@ -78,6 +74,40 @@ def _review_prompt(product: Path) -> str:
         "Use an empty list only if all requirements pass.\n\n" + reports)
 
 
+def _functional_diagnostics(transport: AppServerTransport, meter: SessionMeter,
+                            evaluator_id: str, hidden: dict, backend: dict,
+                            initial: object, guard) -> list[dict]:
+    failures = []
+    for label, grade in (("hidden behavior and race", hidden),
+                         ("backend regressions", backend)):
+        if grade.get("behavior_pass") is not True or grade.get("quality_pass") is not True:
+            checks = grade.get("checks") or []
+            failures.append({"component": label, "observations": [
+                {"exit_code": row.get("exit_code"),
+                 "stdout_tail": str(row.get("stdout_tail", ""))[-3000:],
+                 "stderr_tail": str(row.get("stderr_tail", ""))[-1000:]}
+                for row in checks if isinstance(row, dict)]})
+    if failures or not initial:
+        prompt = ("The separate evaluator checks below contain confidential failure evidence. "
+            "Interpret it only as functional differences from the already revealed public "
+            "requirements. Return one JSON object with `diagnostics`: one or more specific "
+            "public_requirement, observed_behavior, expected_behavior triples for each failed "
+            "component. Do not repeat hidden test identifiers, source or evaluator paths, "
+            "assertion text, code, or implementation instructions. If the evidence cannot be "
+            "translated into a concrete functional diagnostic, return an empty list so this "
+            "quality request fails closed.\n" +
+            json.dumps({"prior_semantic_diagnostics": initial,
+                        "failed_components": failures}, sort_keys=True))
+        turn = transport.turn(prompt, guard)
+        guard()
+        if turn.get("status") != "completed" or turn.get("thread_id") != evaluator_id:
+            raise ValueError("evaluator diagnostic follow-up did not complete")
+        meter.refresh()
+        value = json.loads(_last_message(meter, evaluator_id))
+        return validate_diagnostics(value.get("diagnostics"), "FAIL")
+    return validate_diagnostics(initial, "FAIL")
+
+
 def _grade(candidate: Path, prepared: Path, output: Path, *,
            hidden: bool, review: Path | None, deadline: float) -> dict:
     remaining = deadline - time.monotonic()
@@ -109,8 +139,8 @@ def _grade(candidate: Path, prepared: Path, output: Path, *,
     return receipt
 
 
-def run_once(request_path: Path, prepared: Path, cli: Path,
-             session_root: Path) -> dict:
+def _run_once(request_path: Path, prepared: Path, cli: Path,
+              session_root: Path) -> dict:
     spec = manifest()
     verify_cli(cli, spec)
     request = json.loads(request_path.read_text(encoding="utf-8"))
@@ -178,14 +208,6 @@ def run_once(request_path: Path, prepared: Path, cli: Path,
                 any(type(value) is not bool for value in requirements.values()) or
                 not isinstance(diagnostics, list)):
             raise ValueError("independent semantic review output invalid")
-        observed = account(session_root, evaluator_id, "gpt-6-astra", "xhigh", False)
-        settle_deadline = min(deadline, time.monotonic() + 10.0)
-        while observed.get("status") != "complete" and time.monotonic() < settle_deadline:
-            time.sleep(0.25)
-            observed = account(session_root, evaluator_id, "gpt-6-astra", "xhigh", False)
-        summary = observed.get("summary") or {}
-        if observed.get("status") != "complete" or observed.get("issues") or not summary.get("model_calls"):
-            raise ValueError("independent evaluator usage incomplete")
         if capture_patch(product) != original_patch:
             raise ValueError("read-only evaluator changed candidate product")
         review = {"schema_version": 1, "reviewer_role": "independent",
@@ -208,10 +230,18 @@ def run_once(request_path: Path, prepared: Path, cli: Path,
         passed = (hidden.get("behavior_pass") is True and hidden.get("quality_pass") is True and
                   backend.get("behavior_pass") is True and backend.get("quality_pass") is True and
                   review["verdict"] == "pass")
-        if not passed and not diagnostics:
-            diagnostics = [{"public_requirement": "revealed cumulative contract",
-                "observed_behavior": "One observable behavior did not satisfy the contract",
-                "expected_behavior": "The behavior should meet the already revealed requirement"}]
+        diagnostics = ([] if passed else _functional_diagnostics(
+            transport, meter, evaluator_id, hidden, backend, diagnostics, guard))
+        observed = account(session_root, evaluator_id, "gpt-6-astra", "xhigh", False)
+        settle_deadline = min(deadline, time.monotonic() + 10.0)
+        while observed.get("status") != "complete" and time.monotonic() < settle_deadline:
+            time.sleep(0.25)
+            observed = account(session_root, evaluator_id, "gpt-6-astra", "xhigh", False)
+        summary = observed.get("summary") or {}
+        if observed.get("status") != "complete" or observed.get("issues") or not summary.get("model_calls"):
+            raise ValueError("independent evaluator usage incomplete")
+        if capture_patch(product) != original_patch:
+            raise ValueError("read-only evaluator changed candidate product")
         response = {"schema_version": 1, "kind": "quality-response",
             "workflow_id": request["workflow_id"], "request_id": request["request_id"],
             "request_sha256": request_sha, "revision": revision,
@@ -240,6 +270,24 @@ def run_once(request_path: Path, prepared: Path, cli: Path,
     finally:
         if transport is not None:
             transport.close()
+
+
+def run_once(request_path: Path, prepared: Path, cli: Path,
+             session_root: Path) -> dict:
+    """Report even setup failures against the visible immutable request bytes."""
+    try:
+        return _run_once(request_path, prepared, cli, session_root)
+    except Exception as error:
+        name = request_path.name
+        if name in ("request-r0.json", "request-r1.json"):
+            revision = int(name[9])
+            failure = request_path.parent / f"failure-r{revision}.json"
+            if not failure.exists() and not (request_path.parent /
+                    f"response-r{revision}.json").exists():
+                digest = file_sha(request_path) if request_path.is_file() else None
+                _atomic_new(failure, {"schema_version": 1,
+                    "request_sha256": digest, "reason": str(error)[:500]})
+        raise
 
 
 def watch(root: Path, prepared: Path, cli: Path, session_root: Path) -> list[dict]:

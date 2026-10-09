@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+import os
 from pathlib import Path
 import re
 import secrets
+import tempfile
 import time
 from typing import Callable
 
@@ -28,6 +30,37 @@ def _json(path: Path) -> dict:
 
 def _digest(value: object) -> bool:
     return isinstance(value, str) and HEX.fullmatch(value) is not None
+
+
+def validate_diagnostics(diagnostics: object, verdict: str) -> list[dict]:
+    if (not isinstance(diagnostics, list) or len(diagnostics) > 8 or
+            (verdict == "FAIL" and not diagnostics) or
+            (verdict == "PASS" and diagnostics)):
+        raise ValueError("quality diagnostics missing, unexpected, or unbounded")
+    for item in diagnostics:
+        if not isinstance(item, dict) or set(item) != {
+                "public_requirement", "observed_behavior", "expected_behavior"}:
+            raise ValueError("quality diagnostic shape invalid")
+        for value in item.values():
+            if (not isinstance(value, str) or not 1 <= len(value) <= 1000 or
+                    PRIVATE.search(value)):
+                raise ValueError("quality diagnostic exposes private or prescriptive detail")
+    return diagnostics
+
+
+def publish_json_new(path: Path, value: dict) -> None:
+    """Expose a complete immutable file at its final name, never partial bytes."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".quality-", dir=path.parent)
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write((json.dumps(value, indent=2, sort_keys=True) + "\n").encode())
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(temporary, path)  # atomic, no-overwrite publication
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 class QualityBridge:
@@ -76,7 +109,7 @@ class QualityBridge:
             "preparation_sha256": self.preparation_sha256,
             "original_deadline_utc_ns": self.original_deadline_utc_ns}
         path = self.root / f"request-r{revision}.json"
-        write_json_new(path, value)
+        publish_json_new(path, value)
         value["request_sha256"] = file_sha(path)
         self.requests[revision] = value
         return value
@@ -178,21 +211,8 @@ class QualityBridge:
                   all(value is True for value in review["requirements"].values()))
         if (response["verdict"] == "PASS") is not passed:
             raise ValueError("quality verdict conflicts with grade or review evidence")
-        diagnostics = response.get("diagnostics")
-        if (response["verdict"] == "FAIL" and
-                (not isinstance(diagnostics, list) or not diagnostics)) or (
-                response["verdict"] == "PASS" and diagnostics != []):
-            raise ValueError("quality diagnostics missing or unexpected")
-        if not isinstance(diagnostics, list) or len(diagnostics) > 8:
-            raise ValueError("quality diagnostics are unbounded")
-        for item in diagnostics:
-            if not isinstance(item, dict) or set(item) != {
-                    "public_requirement", "observed_behavior", "expected_behavior"}:
-                raise ValueError("quality diagnostic shape invalid")
-            for value in item.values():
-                if (not isinstance(value, str) or not 1 <= len(value) <= 1000 or
-                        PRIVATE.search(value)):
-                    raise ValueError("quality diagnostic exposes private or prescriptive detail")
+        diagnostics = validate_diagnostics(response.get("diagnostics"),
+                                           response["verdict"])
         response["evaluation_usage"] = self._usage(revision, response)
         response["response_sha256"] = file_sha(self.root / f"response-r{revision}.json")
         self.responses[revision] = response
@@ -214,8 +234,11 @@ class QualityBridge:
                 raise
             failure = self.root / f"failure-r{revision}.json"
             if failure.is_file():
+                failed = _json(failure)
+                if failed.get("request_sha256") != self.requests[revision]["request_sha256"]:
+                    raise ValueError("stale or mismatched evaluator failure response")
                 raise ValueError("external quality evaluation failed: " +
-                                 str(_json(failure).get("reason", "unknown"))[:180])
+                                 str(failed.get("reason", "unknown"))[:180])
             if path.is_file():
                 return self._validate(revision, _json(path))
             time.sleep(0.25)
@@ -361,28 +384,7 @@ def verify_common_arm_quality(prepared: Path, plan: dict, run: dict,
         result["public_hard_stages"] = verify_hard_stages(
             manifest(), plan, run, prepared / "treatment")
         if revision == 1:
-            attempts = [attempt for attempt in run.get("attempts", [])
-                        if attempt.get("quality_revision") == 1]
-            if len(attempts) != 1:
-                raise ValueError("treatment quality correction attempt missing")
-            correction = attempts[0]
-            submitted_ns = events[correction["stage_event_start"]].get("time_ns")
-            turns = [turn for item in run.get("native_attempts", [])
-                     for turn in item.get("turns", [])
-                     if turn.get("parent_turn_id") == correction.get("turn_id") and
-                        turn.get("model") == "gpt-6-astra" and
-                        turn.get("effort") == "xhigh" and
-                        turn.get("terminal") in ("task_complete", "task_completed")]
-            if len(turns) != 1:
-                raise ValueError("treatment correction Astra hard analysis missing")
-            try:
-                finished_ns = int(datetime.fromisoformat(
-                    turns[0]["terminal_timestamp"].replace("Z", "+00:00")).timestamp() * 1e9)
-            except (KeyError, AttributeError, ValueError, TypeError):
-                raise ValueError("treatment correction Astra terminal time missing") from None
-            if type(submitted_ns) is not int or finished_ns >= submitted_ns:
-                raise ValueError("treatment correction Astra analysis followed submission")
-            result["quality_correction_astra_turn_id"] = turns[0]["turn_id"]
+            result["quality_correction_astra_turn_ids"] = correction_astra_turns(run, events)
     if require_wall:
         wall_path = HERE / plan["end_to_end"]["receipts"][arm]
         wall = _json(wall_path)
@@ -405,3 +407,34 @@ def verify_common_arm_quality(prepared: Path, plan: dict, run: dict,
         result.update(end_to_end_sha256=file_sha(wall_path),
                       end_to_end_wall_seconds=elapsed)
     return result
+
+
+def correction_astra_turns(run: dict, events: list[dict]) -> list[str]:
+    """Allow bounded expert follow-ups inside one correction parent turn."""
+    attempts = [attempt for attempt in run.get("attempts", [])
+                if attempt.get("quality_revision") == 1]
+    if len(attempts) != 1:
+        raise ValueError("treatment quality correction attempt missing or duplicated")
+    correction = attempts[0]
+    submitted_ns = events[correction["stage_event_start"]].get("time_ns")
+    linked = [turn for item in run.get("native_attempts", [])
+              for turn in item.get("turns", [])
+              if turn.get("parent_turn_id") == correction.get("turn_id")]
+    astra = [turn for turn in linked if turn.get("model") == "gpt-6-astra" and
+             turn.get("effort") == "xhigh"]
+    if not astra or type(submitted_ns) is not int:
+        raise ValueError("treatment correction Astra hard analysis missing")
+    ids = []
+    for turn in astra:
+        try:
+            finished_ns = int(datetime.fromisoformat(
+                turn["terminal_timestamp"].replace("Z", "+00:00")).timestamp() * 1e9)
+        except (KeyError, AttributeError, ValueError, TypeError):
+            raise ValueError("treatment correction Astra terminal time missing") from None
+        if (turn.get("terminal") not in ("task_complete", "task_completed") or
+                turn.get("parent_turn_id") != correction.get("turn_id") or
+                not isinstance(turn.get("turn_id"), str) or not turn["turn_id"] or
+                finished_ns >= submitted_ns or turn["turn_id"] in ids):
+            raise ValueError("treatment Astra follow-up lineage or timing differs")
+        ids.append(turn["turn_id"])
+    return ids

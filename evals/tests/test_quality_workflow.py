@@ -5,6 +5,7 @@ import json
 from contextlib import ExitStack
 from pathlib import Path
 import tempfile
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -13,7 +14,9 @@ from evals.long_horizon_v1.common import file_sha, sha
 from evals.long_horizon_v1.grade import REVIEW_REQUIREMENTS
 from evals.long_horizon_v1.protocol import StageMachine
 from evals.long_horizon_v1.quality_bridge import QualityBridge
+from evals.long_horizon_v1.quality_bridge import correction_astra_turns
 from evals.long_horizon_v1.run import live_run
+from evals.long_horizon_v1.quality_adapter import _functional_diagnostics, run_once, watch
 
 
 def save(path: Path, value: dict) -> None:
@@ -299,6 +302,104 @@ class QualityWorkflowTests(unittest.TestCase):
         self.assertEqual(cancel["request_sha256"],
                          self.bridge.requests[0]["request_sha256"])
         self.assertFalse(self.bridge.evaluation_usage_complete)
+
+    def test_request_publication_is_atomic_and_setup_failure_is_bound(self) -> None:
+        entered, release = threading.Event(), threading.Event()
+        seen, errors = [], []
+        import os
+        original_fsync = os.fsync
+        def delayed_fsync(descriptor):
+            entered.set()
+            if not release.wait(5):
+                raise TimeoutError("test writer not released")
+            return original_fsync(descriptor)
+        def reader(_request, *_args):
+            seen.append(json.loads(_request.read_text(encoding="utf-8")))
+            return {"verdict": "PASS"}
+        def writer():
+            try:
+                self.bridge.request(0, file_sha(self.patch0), self.patch0, 0.4)
+            except Exception as error:
+                errors.append(error)
+        with patch("evals.long_horizon_v1.quality_bridge.os.fsync",
+                   side_effect=delayed_fsync), \
+             patch("evals.long_horizon_v1.quality_adapter.run_once", side_effect=reader):
+            writing = threading.Thread(target=writer)
+            reading = threading.Thread(target=lambda: watch(self.bridge.root,
+                self.root, self.root / "cli", self.root / "sessions"))
+            reading.start(); writing.start()
+            self.assertTrue(entered.wait(5))
+            self.assertFalse((self.bridge.root / "request-r0.json").exists())
+            self.assertEqual(seen, [])
+            release.set(); writing.join(5); reading.join(5)
+        self.assertEqual(errors, [])
+        self.assertEqual(len(seen), 1)
+        self.assertEqual(seen[0]["candidate_patch_sha256"], file_sha(self.patch0))
+        self.assertFalse((self.bridge.root / "failure-r0.json").exists())
+
+        other = self.root / "setup-error"
+        request = other / "request-r0.json"
+        save(request, {"schema_version": 1, "broken": True})
+        with patch("evals.long_horizon_v1.quality_adapter.verify_cli",
+                   side_effect=ValueError("setup unavailable")), \
+             self.assertRaisesRegex(ValueError, "setup unavailable"):
+            run_once(request, self.root, self.root / "cli", self.root / "sessions")
+        failure = json.loads((other / "failure-r0.json").read_text())
+        self.assertEqual(failure["request_sha256"], file_sha(request))
+
+    def test_grade_only_failure_gets_specific_sanitized_followup(self) -> None:
+        class Evaluator:
+            calls = []
+            def turn(self, prompt, _guard):
+                self.calls.append(prompt)
+                return {"status": "completed", "thread_id": "evaluator"}
+        class Meter:
+            def refresh(self): pass
+        expected = [{"public_requirement": "R2 resource ownership",
+            "observed_behavior": "A supplied stream remained open after an earlier failure",
+            "expected_behavior": "Every supplied stream is closed when construction fails"}]
+        hidden = {"behavior_pass": False, "quality_pass": False,
+            "checks": [{"exit_code": 1, "stdout_tail":
+                "--- FAIL: TestBenchmarkPrivateStream observed later close count zero"}]}
+        backend = {"behavior_pass": True, "quality_pass": True, "checks": []}
+        evaluator = Evaluator()
+        with patch("evals.long_horizon_v1.quality_adapter._last_message",
+                   return_value=json.dumps({"diagnostics": expected})):
+            actual = _functional_diagnostics(evaluator, Meter(), "evaluator",
+                                             hidden, backend, [], lambda: None)
+        self.assertEqual(actual, expected)
+        self.assertEqual(len(evaluator.calls), 1)
+        self.assertIn("failed_components", evaluator.calls[0])
+        self.assertNotIn("TestBenchmark", json.dumps(actual))
+        with patch("evals.long_horizon_v1.quality_adapter._last_message",
+                   return_value=json.dumps({"diagnostics": [{**expected[0],
+                       "observed_behavior": "TestBenchmarkPrivateStream failed"}]})), \
+             self.assertRaisesRegex(ValueError, "private"):
+            _functional_diagnostics(Evaluator(), Meter(), "evaluator",
+                                    hidden, backend, [], lambda: None)
+
+    def test_multiple_astra_followups_share_one_correction_parent(self) -> None:
+        submit_ns = 1791519000000000000
+        done = "2026-10-09T04:09:00Z"
+        run = {"attempts": [{"quality_revision": 1, "turn_id": "correction-parent",
+                             "stage_event_start": 0}],
+               "native_attempts": [{"child_id": "expert", "turns": [
+                   {"turn_id": "analysis", "parent_turn_id": "correction-parent",
+                    "model": "gpt-6-astra", "effort": "xhigh",
+                    "terminal": "task_complete", "terminal_timestamp": done},
+                   {"turn_id": "review", "parent_turn_id": "correction-parent",
+                    "model": "gpt-6-astra", "effort": "xhigh",
+                    "terminal": "task_complete", "terminal_timestamp": done}]}]}
+        events = [{"kind": "correction-submission", "time_ns": submit_ns}]
+        self.assertEqual(correction_astra_turns(run, events), ["analysis", "review"])
+        run["native_attempts"][0]["turns"][1]["terminal_timestamp"] = "2026-10-09T04:11:00Z"
+        with self.assertRaisesRegex(ValueError, "timing"):
+            correction_astra_turns(run, events)
+        run["native_attempts"][0]["turns"][1]["terminal_timestamp"] = done
+        for turn in run["native_attempts"][0]["turns"]:
+            turn["parent_turn_id"] = "wrong-parent"
+        with self.assertRaisesRegex(ValueError, "missing"):
+            correction_astra_turns(run, events)
 
 
 if __name__ == "__main__":
