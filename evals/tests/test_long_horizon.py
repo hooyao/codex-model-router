@@ -1489,6 +1489,8 @@ class LongHorizonProtocolTests(unittest.TestCase):
         spec = self.local_plugin_spec(manifest())
         with mock_patch("evals.long_horizon_v1.prepare.manifest", return_value=spec):
             prepared = prepare(root)
+        self.assertEqual(git(root / "seed", "config", "--get", "gc.auto").decode().strip(), "0")
+        self.assertEqual(git(root / "seed", "config", "--get", "maintenance.auto").decode().strip(), "false")
         treatment = root / "treatment"
         expected_arms = (["baseline", "treatment"] if
                          spec.get("pilot", {}).get("schema_version") in (5, 7, 8) else ["treatment"])
