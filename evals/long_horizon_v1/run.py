@@ -12,7 +12,7 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from evals.long_horizon_v1.common import (ASSET_ROOT, HERE, TASK_ID, capture_patch,
-    file_sha, fresh_directory, manifest, sha, write_json_new)
+    file_sha, fresh_directory, local_pair_config, manifest, sha, write_json_new)
 from evals.long_horizon_v1.assets.submit_checkpoint import submit as submit_checkpoint
 from evals.long_horizon_v1.accounting import account
 from evals.long_horizon_v1.grade import record_grader_hazard, stop_wsl_grader
@@ -272,7 +272,20 @@ def pilot_plan(spec: dict) -> dict:
     """Verify the frozen one-pair plan and its offline evidence without a model turn."""
     descriptor = spec.get("pilot")
     if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v20.json":
-        return _pilot_plan_common(spec, version=20)
+        plan = _pilot_plan_common(spec, version=20)
+        local = local_pair_config()
+        if local is None:
+            return plan
+        evidence = local["evidence_root"]
+        arms = ("baseline", "treatment")
+        return {**plan,
+            "pilot_id": f"{plan['pilot_id']}:{local['pair_id']}",
+            "preparation_root": local["preparation_root"],
+            "evidence_root": evidence,
+            "capabilities": {arm: f"{evidence}/{arm}-capability.json" for arm in arms},
+            "run_outputs": {arm: f"{evidence}/{arm}-live" for arm in arms},
+            "end_to_end": {**plan["end_to_end"],
+                "receipts": {arm: f"{evidence}/{arm}-end-to-end.json" for arm in arms}}}
     if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v19.json":
         return _pilot_plan_common(spec)
     if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v18.json":

@@ -164,11 +164,22 @@ def _completed_native_review(root: Path, revision: int, request_sha: str,
 def _review_prompt(product: Path) -> str:
     reports = "\n\n".join((ASSET_ROOT / f"round{index}.md").read_text(encoding="utf-8")
                          for index in range(3))
+    go_binary = manifest()["toolchain"]["linux_path"]
     return ("Independently review the implementation at " + str(product.resolve()) +
         " against only these already revealed public requirements. Treat the candidate "
         "product as logically read-only even though this CLI profile has broad execution "
         "access. Put any narrow reproductions only in your separate scratch; "
-        "do not edit the product, "
+        "A separate grader runs the pinned hidden behavior, race, and backend Go suites "
+        "after your semantic report. Focus this review on the ten semantic contracts: "
+        "inspect relevant product code and run only narrow reproductions needed to "
+        "settle an uncertain behavior. Do not rerun broad or repeated package suites, "
+        "install or download a toolchain, or use external services. If a narrow Go "
+        "reproduction is needed, the existing pinned Go binary in WSL is " + go_binary +
+        "; use only that binary, without browsing its surrounding evaluator files. "
+        "For the Close polling contract, judge whether a request starts at the client "
+        "transport after Close returns; a request started earlier can reach the server "
+        "later, so server arrival alone does not establish a late start. "
+        "Do not edit the product, "
         "read hidden evaluator assets, infer a benchmark arm, or provide repair code. "
         "Return one JSON object with `assessment_status`: `COMPLETE` only after "
         "you actually inspect the product and can assess it, otherwise `INCOMPLETE`. "

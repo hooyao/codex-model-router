@@ -17,7 +17,8 @@ from evals.long_horizon_v1.quality_bridge import QualityBridge, InfrastructureIn
 from evals.long_horizon_v1.quality_bridge import correction_astra_turns, verify_common_arm_quality
 from evals.long_horizon_v1.run import live_run
 from evals.long_horizon_v1.quality_adapter import (
-    _functional_diagnostics, _publication_diagnostics, EvaluatorIncomplete, product_snapshot,
+    _functional_diagnostics, _publication_diagnostics, _review_prompt,
+    EvaluatorIncomplete, product_snapshot,
     require_complete_assessment, run_once, watch)
 
 
@@ -27,6 +28,18 @@ def save(path: Path, value: dict) -> None:
 
 
 class QualityWorkflowTests(unittest.TestCase):
+    def test_semantic_packet_avoids_duplicate_broad_go_work(self) -> None:
+        from evals.long_horizon_v1.common import manifest
+
+        prompt = _review_prompt(Path("candidate-product"))
+        self.assertIn("A separate grader runs the pinned hidden behavior, race, and backend Go suites", prompt)
+        self.assertIn("Do not rerun broad or repeated package suites", prompt)
+        self.assertIn("server arrival alone does not establish a late start", prompt)
+        self.assertIn(manifest()["toolchain"]["linux_path"], prompt)
+        self.assertIn("COMPLETE", prompt)
+        for requirement in REVIEW_REQUIREMENTS:
+            self.assertIn(requirement, prompt)
+
     def setUp(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

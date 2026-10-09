@@ -21,7 +21,7 @@
     "public/g1/internal/storage/fs/oci/benchmark_g1_progress_test.go": "71f01c6e0f272a084e388154c9c70d4c63e553e44b6420e473d0116783259f2a",
     "public/g1/internal/storage/fs/oci/benchmark_g1_test.go": "52b0652fa8047ee446fb929a31389c979aa577c0172e77aec68e326942d4e963",
     "public/g2/internal/storage/fs/benchmark_g2_recovery_test.go": "56b839356ea893a5ddea5a9ebaa6cbcaf0ce05088f86a1af2740cfa94b84cdda",
-    "public/g2/internal/storage/fs/oci/benchmark_g2_recovery_test.go": "0e7ecfee67b3e48963131107e6c925ccee2eb15528cee9429c93ea1dd2d5d6ab",
+    "public/g2/internal/storage/fs/oci/benchmark_g2_recovery_test.go": "a0bad7cd303e96fada31e884733a0c61e59777dcffbdbfa795e0141158d7cfd6",
     "public/g2/internal/storage/fs/oci/benchmark_g2_test.go": "b8936b489c3bacc4106b22ed764211c52569c8a18b92795d8a7ade49e4c94706",
     "round0.md": "a3b9961e12f2b8c18d9375c9778afa5297bc70d4eb304cdc9c14c45926309ffd",
     "round1.md": "e6c7ccc37f24ededa3ab34697eca8fa3c605841a27d8690b3a4c9a0e06e766be",
@@ -99,7 +99,7 @@
   "pilot": {
     "path": "pilot-plan-v20.json",
     "schema_version": 8,
-    "sha256": "bd9fac3568d95a0c41827d18c4a9c1e48a6b56f3e2fd4682db3eb729f8541782"
+    "sha256": "a50067e5c556fb8b1ee513542a8f959c6457ca0f724178b66ceb4d6ad64c2a40"
   },
   "pricing": {
     "as_of": "2026-09-24",

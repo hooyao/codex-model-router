@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 
@@ -51,6 +53,31 @@ def manifest() -> dict:
         path = ASSET_ROOT / name
         if not path.is_file() or file_sha(path) != digest:
             raise ValueError(f"fixture asset drift: {name}")
+    if local_pair_config() is not None:
+        if data.get("pilot", {}).get("path") != "pilot-plan-v20.json":
+            raise ValueError("local pair config requires the current paired fixture")
+        data["live_enabled"] = True
+    return data
+
+
+def local_pair_config() -> dict | None:
+    """Opt in to fresh local paths without changing the pinned task fixture."""
+    value = os.environ.get("LONG_HORIZON_LOCAL_RUN_CONFIG")
+    if value is None:
+        return None
+    path = Path(value)
+    scratch = (HERE / "_scratch").resolve()
+    if not path.is_absolute() or not path.resolve().is_relative_to(scratch):
+        raise ValueError("local pair config must be an absolute path under fixture scratch")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if (not isinstance(data, dict) or set(data) != {"schema_version", "pair_id",
+            "live_enabled", "preparation_root", "evidence_root"} or
+            data.get("schema_version") != 1 or data.get("live_enabled") is not True or
+            not isinstance(data.get("pair_id"), str) or
+            re.fullmatch(r"fresh-[a-z0-9-]{1,48}", data["pair_id"]) is None or
+            data.get("preparation_root") != f"_scratch/{data['pair_id']}-prep" or
+            data.get("evidence_root") != f"_scratch/{data['pair_id']}-evidence"):
+        raise ValueError("local pair config schema or fresh paths invalid")
     return data
 
 

@@ -44,6 +44,37 @@ checks. The historical paid failure and usage files were preserved. The
 not start another paid arm. There is no matched quality-parity, savings,
 latency, or technical context-isolation claim from this pair.
 
+A fresh local paired attempt can opt in with `LONG_HORIZON_LOCAL_RUN_CONFIG`
+pointing to an untracked JSON file under `_scratch`. The file must set
+`schema_version: 1`, `live_enabled: true`, a `fresh-...` `pair_id`, and matching
+`_scratch/<pair_id>-prep` and `_scratch/<pair_id>-evidence` roots. The harness
+validates the unchanged v20 task and limits before using those fresh paths;
+without the variable, the historical plan and disabled manifest still apply.
+The independent semantic reviewer can use the pinned Go binary for narrow
+reproductions, while the adapter separately runs the full hidden, race, and
+backend suites. This avoids downloading a toolchain or duplicating broad Go
+tests inside the paid semantic turn.
+
+The public R2 recovery case now also checks cancellation with several acquired
+layer streams and another layer pending. It requires direct Fetch and store
+Close to wait for every acquired stream's cleanup, as the existing R2 contract
+states. Earlier local pair a/b receipts retain the previous task asset SHA-256
+`0e7ecfee67b3e48963131107e6c925ccee2eb15528cee9429c93ea1dd2d5d6ab`,
+manifest SHA-256 `1ecb5495047bd600509c0e4996ee5e1b90b0bc130e07d59ab14d83bbfc1796d7`,
+and plan SHA-256 `bd9fac3568d95a0c41827d18c4a9c1e48a6b56f3e2fd4682db3eb729f8541782`;
+those historical bytes remain recoverable at Git commit `0ef8e2a`.
+
+The earlier local attempts a and b remain failed evidence. Attempt a stopped
+with observed upper estimated cost $15.1628295 after 3040.782 seconds.
+Attempt b stopped with upper estimated cost $15.14416 after 3311.36 seconds;
+its solver subtotal was 67 responses, estimated $12.1279495. Its first
+independent review was complete and found a layer cleanup failure (21
+responses, estimated $2.5996085). The second review was aborted after four
+responses, with $0.416602 upper observed cost and UNKNOWN final usage. The
+revision-1 candidate passed the public gate but never received complete
+quality. No new matched treatment or quality-parity result follows from
+these attempts, and this asset change does not relabel their receipts.
+
 ## Pilot 19 prospective common quality workflow (2026-10-09)
 
 [Pilot-plan-v19.json](pilot-plan-v19.json) requires a fresh baseline and fresh
