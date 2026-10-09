@@ -237,7 +237,7 @@ def _verify_corrected_controls(controls: dict, spec: dict) -> None:
 def pilot_plan(spec: dict) -> dict:
     """Verify the frozen one-pair plan and its offline evidence without a model turn."""
     descriptor = spec.get("pilot")
-    if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v15.json":
+    if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v16.json":
         return _pilot_plan_recovery(spec)
     if isinstance(descriptor, dict) and _standalone_plan_version(descriptor.get("path")) is not None:
         return _pilot_plan_standalone(spec)
@@ -468,13 +468,13 @@ def _verify_standalone_sources(plan: dict) -> None:
 def _pilot_plan_recovery(spec: dict) -> dict:
     """Check the fresh two-arm recovery freeze without using historical runs."""
     descriptor = spec["pilot"]
-    path = HERE / "pilot-plan-v15.json"
+    path = HERE / "pilot-plan-v16.json"
     if descriptor != {"path": path.name, "schema_version": 5,
                       "sha256": file_sha(path)}:
         raise ValueError("recovery plan descriptor drift")
     plan = json.loads(path.read_text(encoding="utf-8"))
     arms = ("baseline", "treatment")
-    prefix = "_scratch/pilot-15"
+    prefix = "_scratch/pilot-16"
     if (set(plan) != {"schema_version", "mode", "pilot_id", "claim", "arm_order",
                       "matched_pairs", "packet_scope_mode", "preparation_root",
                       "evidence_root", "capabilities", "run_outputs", "live_rebind",
@@ -482,7 +482,7 @@ def _pilot_plan_recovery(spec: dict) -> dict:
                       "fixture", "runtime", "runner_normalized_sha256",
                       "execution_sources_sha256", "stop_rule"} or
             plan.get("schema_version") != 5 or plan.get("mode") != "paired-recovery" or
-            plan.get("pilot_id") != "flipt-oci-long-horizon-pilot-15" or
+            plan.get("pilot_id") != "flipt-oci-long-horizon-pilot-16" or
             plan.get("claim") != "fresh-two-arm-diagnostic" or
             plan.get("arm_order") != list(arms) or plan.get("matched_pairs") != 1 or
             plan.get("packet_scope_mode") != DIAGNOSTIC or

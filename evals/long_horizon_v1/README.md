@@ -1,5 +1,30 @@
 # Long-horizon OCI benchmark v1: paired recovery preparation
 
+## Pilot 16 current runtime freeze (2026-10-09)
+
+[Pilot-plan-v16.json](pilot-plan-v16.json) pins the current desktop CLI
+(`codex-cli 0.162.0-alpha.2`) and the installed `codex-model-router@personal`
+plugin version 1.2.3 from the latest primary `main`. The CLI and adjacent
+code-mode host are bound by SHA-256 in the disabled [manifest](manifest.json).
+The primary checkout's installation-only manifest edit was restored byte for
+byte after the documented plugin remove/add refresh. Pilot 15 plan, preparation,
+and Linux control grades remain unchanged historical evidence.
+
+The zero-turn smoke receipt at
+`_scratch/pilot-16-evidence/runtime-smoke-disabled.json` verifies both fresh R0
+arms, the code-mode host, baseline Astra/xhigh with zero router hooks,
+treatment Sol/low plus Astra/xhigh with five trusted router hooks, and the
+required App Server schema including `turn/interrupt`. No `turn/start` was
+sent. The current ClientRequest schema digest differs from the retained
+CLI 0.158 cancellation canary. The strict canary-runtime equivalence check
+therefore fails for both arms, recorded at
+`_scratch/pilot-16-evidence/canary-runtime-gate.json`. This is a capability
+blocker for final rebind and live launch; the historical canary is not relabeled
+as current-runtime evidence. A new bounded cancellation canary on each arm,
+followed by independently checked cancellation receipts and source-pin review,
+is the next prerequisite. `live_enabled` stays `false`; no paid pilot-16 turn
+has started.
+
 ## Pilot 15 independent review freeze (2026-10-09)
 
 [Pilot-plan-v15.json](pilot-plan-v15.json) pins the symmetric recovery quality

@@ -96,9 +96,9 @@
     "version": "r9e-20261001"
   },
   "pilot": {
-    "path": "pilot-plan-v15.json",
+    "path": "pilot-plan-v16.json",
     "schema_version": 5,
-    "sha256": "08eb20bfbfa8a8d5352e3d05be94de05b9ef26e26c1268ba23b10a062d465a4d"
+    "sha256": "65876f5dda5d7174bf7f20c6a5fe5deedbf58910e90d6e40c2c8f7c9dcc8176e"
   },
   "pricing": {
     "as_of": "2026-09-24",
@@ -133,13 +133,13 @@
     "schema_version": 3
   },
   "runtime": {
-    "cli": "C:\\Users\\yahu2\\AppData\\Local\\OpenAI\\Codex\\bin\\faa963e871dd422c\\codex.exe",
-    "cli_sha256": "8f0554ede25bbc5450921897c468b2e84635aa513c5017457997af0954581f49",
-    "cli_version": "codex-cli 0.158.0-alpha.2.1",
-    "code_mode_host_sha256": "4970a4ce8a7c6091a87dfea34cae03b3b95dd70f26f89f392e11de7fd8ea759e",
+    "cli": "C:\\Users\\yahu2\\AppData\\Local\\OpenAI\\Codex\\bin\\9691020b546a15b2\\codex.exe",
+    "cli_sha256": "3553cd6e7df5a093d8cb8301cd8088a57e0971aba71ddbe0e67f7f44a15cdf68",
+    "cli_version": "codex-cli 0.162.0-alpha.2",
+    "code_mode_host_sha256": "28ec719ee36049c60707102e3c7fec95edbe1fea5927ad4061efc2cd5b2dd888",
     "plugin_hooks_sha256": "9cf09fb63c6e3c208f83796ebb51f2425b70a7f528dde3fc77efdfff1a0aa7f2",
-    "plugin_manifest_sha256": "af9d520b3de628fd610678d1dee0e940f9fd63d67ca4a8bf174766480174cc5d",
-    "plugin_root": "C:\\Users\\yahu2\\.codex\\plugins\\cache\\personal\\codex-model-router\\1.2.2+codex.20260930060539",
+    "plugin_manifest_sha256": "c0e41f5c13bf01144f9b6e63112fffca896b465a6ab8d3b8a431106ebf389fff",
+    "plugin_root": "C:\\Users\\yahu2\\.codex\\plugins\\cache\\personal\\codex-model-router\\1.2.3",
     "router_hook_sha256": "5896da6b06ff6462ef7bd9c81a71c7a6a758f00c77435311e5fab4688cf8cc15",
     "routing_validator_sha256": "ab91853ef8673b079f6ef8e1033ea918b61c16bb0ff9aae7ecbd32dd7ab3deb4"
   },
@@ -160,7 +160,7 @@
   "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
   "source_tree": "20121a7049c58571664b87989d1fc7bab8562884",
   "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
-  "status": "offline-paired-recovery-v15-review-pending",
+  "status": "offline-paired-recovery-v16-runtime-review-pending",
   "task_id": "flipt-oci-reference-rollout-v1",
   "toolchain": {
     "linux_path": "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",

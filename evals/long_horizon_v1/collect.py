@@ -161,7 +161,7 @@ def _arm(path: Path, expected: str) -> dict:
             fork_evidence = data.get("fork_policy")
             standalone = data.get("benchmark_mode") == "standalone-feasibility"
             recovery = (manifest().get("pilot", {}).get("schema_version") == 5 and
-                        manifest()["pilot"].get("path") == "pilot-plan-v15.json")
+                        manifest()["pilot"].get("path") == "pilot-plan-v16.json")
             if (not isinstance(fork_evidence, dict) or
                     fork_evidence.get("packet_scope") != scope or
                     data.get("claim_class") != ("standalone-treatment-feasibility" if standalone
@@ -327,7 +327,7 @@ def collect(pair: Path, output: Path) -> dict:
     descriptor = spec.get("pilot") if isinstance(spec.get("pilot"), dict) else {}
     if descriptor.get("schema_version") == 4:
         raise ValueError("standalone plan cannot enter paired collector")
-    if descriptor.get("schema_version") == 5 and descriptor.get("path") == "pilot-plan-v15.json":
+    if descriptor.get("schema_version") == 5 and descriptor.get("path") == "pilot-plan-v16.json":
         return collect_recovery(pair, output)
     treatment_path = pair / "treatment" / "run.json"
     treatment_receipt = json.loads(treatment_path.read_text(encoding="utf-8"))
