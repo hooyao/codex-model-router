@@ -1,5 +1,43 @@
 # Long-horizon OCI benchmark v1: paired recovery preparation
 
+## Pilot 20 evaluator capability draft (2026-10-09)
+
+[Pilot-plan-v20-draft.json](pilot-plan-v20-draft.json) pins the repaired common
+workflow, current CLI and plugin, adapter, bridge, and one neutral public Go
+smoke fixture. The manifest is live-disabled. No v20 solver or evaluator model
+turn has started, and the v19 failed run, failure, usage, plan, and preflight
+files remain unchanged in their reviewed archive.
+
+The evaluator now uses the same working dangerFullAccess App Server transport
+as the solver, with a separate scratch directory and a **logical** read-only
+candidate instruction. Exact before/after content and file-set hashes detect
+product mutation; this does not establish technical sandbox isolation. An
+evaluator report must say `assessment_status: COMPLETE` before product PASS or
+FAIL is possible. Inability to inspect the product is `INCOMPLETE` and stops
+as infrastructure, without a solver correction or diagnostic follow-up.
+Failure receipts bind the evaluator native ID, source request, model report,
+raw usage completeness, known cost, and product hashes. Quality completeness
+and cost completeness are separate. The original v19 workflow-cost status
+remains UNKNOWN; its independently replayed known evaluator subtotal is in
+`_scratch/pilot-19-evidence/evaluator-infrastructure-cost-supplement.json`.
+
+The next separately authorized paid step is **one** neutral evaluator smoke,
+outside either benchmark arm. It has a $1 observed dispatch stop, 180-second
+wall limit, and zero automatic retries. The model must discover an unknown
+fixture token, copy it to private scratch, and execute the pinned Go test with
+exit zero. The receipt must bind native command output, complete usage, and
+unchanged product content and file set. Prepare or inspect the no-spend plan
+with `python -m evals.long_horizon_v1.evaluator_smoke`; after independent
+approval, the exact paid command is:
+
+```powershell
+python -m evals.long_horizon_v1.evaluator_smoke --run --approved-budget-usd 1.0 --output evals/long_horizon_v1/_scratch/pilot-20-evidence/evaluator-smoke --sessions 'C:\Users\yahu2\.codex\sessions'
+```
+
+A smoke PASS and independent receipt review precede a final v20 plan, fresh
+baseline and treatment preparation, capability rebind, zero-turn preflights,
+and any full paid arm. The draft cannot launch an arm.
+
 ## Pilot 19 prospective common quality workflow (2026-10-09)
 
 [Pilot-plan-v19.json](pilot-plan-v19.json) requires a fresh baseline and fresh

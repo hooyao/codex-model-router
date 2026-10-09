@@ -32,6 +32,10 @@ def _digest(value: object) -> bool:
     return isinstance(value, str) and HEX.fullmatch(value) is not None
 
 
+class InfrastructureIncomplete(RuntimeError):
+    """Evaluator could not establish product quality; solver correction is forbidden."""
+
+
 def validate_diagnostics(diagnostics: object, verdict: str) -> list[dict]:
     if (not isinstance(diagnostics, list) or len(diagnostics) > 8 or
             (verdict == "FAIL" and not diagnostics) or
@@ -85,6 +89,7 @@ class QualityBridge:
         self.original_deadline_utc_ns = original_deadline_utc_ns
         self.requests: dict[int, dict] = {}
         self.responses: dict[int, dict] = {}
+        self.failures: dict[int, dict] = {}
         self.evaluator_meters: dict[int, SessionMeter] = {}
         self.evaluator_cost_upper = 0.0
         self.evaluator_cost = 0.0
@@ -141,6 +146,9 @@ class QualityBridge:
     def _usage(self, revision: int, response: dict) -> dict:
         reported = response.get("evaluation_usage")
         meter = self._meter(revision)
+        if isinstance(reported, dict) and reported.get("status") == "UNKNOWN":
+            self.evaluation_usage_complete = False
+            return reported
         if meter is None or not isinstance(reported, dict):
             self.evaluation_usage_complete = False
             return {"status": "UNKNOWN", "estimated_usd": None,
@@ -173,6 +181,7 @@ class QualityBridge:
                 response.get("request_sha256") != request["request_sha256"] or
                 response.get("revision") != revision or
                 response.get("candidate_patch_sha256") != request["candidate_patch_sha256"] or
+                response.get("assessment_status") != "COMPLETE" or
                 response.get("verdict") not in ("PASS", "FAIL") or
                 not all(_digest(response.get(key)) for key in
                         ("hidden_grade_sha256", "backend_grade_sha256",
@@ -191,6 +200,7 @@ class QualityBridge:
                 hidden.get("manifest_sha256") != self.manifest_sha256 or
                 backend.get("manifest_sha256") != self.manifest_sha256 or
                 review.get("manifest_sha256") != self.manifest_sha256 or
+                review.get("assessment_status") != "COMPLETE" or
                 review.get("reviewer_role") != "independent" or
                 review.get("arm_blind") is not True or "arm" in review):
             raise ValueError("quality evidence does not bind candidate or blind review")
@@ -237,8 +247,27 @@ class QualityBridge:
                 failed = _json(failure)
                 if failed.get("request_sha256") != self.requests[revision]["request_sha256"]:
                     raise ValueError("stale or mismatched evaluator failure response")
-                raise ValueError("external quality evaluation failed: " +
-                                 str(failed.get("reason", "unknown"))[:180])
+                if (failed.get("assessment_status") != "INCOMPLETE" or
+                        failed.get("quality_status") != "INFRA"):
+                    raise ValueError("evaluator failure classification is unbound")
+                evaluator_id = failed.get("evaluator_thread_id")
+                if evaluator_id is not None:
+                    registration = _json(self.root / f"evaluator-r{revision}.json")
+                    if (registration.get("request_sha256") !=
+                            self.requests[revision]["request_sha256"] or
+                            registration.get("thread_id") != evaluator_id or
+                            failed.get("session_root") != str(self.session_root)):
+                        raise ValueError("evaluator failure native identity differs")
+                    self._usage(revision, failed)
+                else:
+                    self.evaluation_usage_complete = False
+                report_hash = failed.get("model_report_sha256")
+                if report_hash is not None and file_sha(
+                        self.root / f"r{revision}-incomplete-model-report.json") != report_hash:
+                    raise ValueError("evaluator incomplete model report drift")
+                failed["failure_sha256"] = file_sha(failure)
+                self.failures[revision] = failed
+                raise InfrastructureIncomplete("evaluator-infrastructure-incomplete")
             if path.is_file():
                 return self._validate(revision, _json(path))
             time.sleep(0.25)

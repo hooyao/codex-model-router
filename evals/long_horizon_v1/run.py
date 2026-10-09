@@ -17,7 +17,7 @@ from evals.long_horizon_v1.assets.submit_checkpoint import submit as submit_chec
 from evals.long_horizon_v1.accounting import account
 from evals.long_horizon_v1.grade import record_grader_hazard, stop_wsl_grader
 from evals.long_horizon_v1.protocol import StageMachine
-from evals.long_horizon_v1.quality_bridge import QualityBridge
+from evals.long_horizon_v1.quality_bridge import QualityBridge, InfrastructureIncomplete
 from evals.long_horizon_v1.transport import (AppServerTransport, TransportError,
                                              meter_relevant_frame)
 from evals.long_horizon_v1.runtime_binding import verify_arm_config, verify_cli
@@ -1574,8 +1574,16 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
                 machine.event("quality-requested", revision=revision,
                               request_sha256=request["request_sha256"],
                               patch_sha256=patch_hash)
-                response = quality_bridge.wait(revision, lambda external:
-                    check_budget(force=True, evaluator_upper=external))
+                try:
+                    response = quality_bridge.wait(revision, lambda external:
+                        check_budget(force=True, evaluator_upper=external))
+                except InfrastructureIncomplete:
+                    quality_status = "INFRA"
+                    machine.event("quality-infrastructure", revision=revision,
+                        failure_sha256=quality_bridge.failures[revision]["failure_sha256"],
+                        patch_sha256=patch_hash)
+                    stop_reason = "evaluator-infrastructure-incomplete"
+                    break
                 check_budget(force=True)
                 machine.event("quality-assessed", revision=revision,
                               verdict=response["verdict"],
@@ -1806,13 +1814,17 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
                       for revision, value in quality_bridge.requests.items()},
                   "response_sha256": {str(revision): value["response_sha256"]
                       for revision, value in quality_bridge.responses.items()},
+                  "failure_sha256": {str(revision): value["failure_sha256"]
+                      for revision, value in quality_bridge.failures.items()},
                   "evaluator_estimated_usd": quality_bridge.evaluator_cost
                       if quality_bridge.evaluation_usage_complete and
-                         len(quality_bridge.responses) == len(quality_bridge.requests) else None,
+                         len(quality_bridge.responses) + len(quality_bridge.failures) ==
+                             len(quality_bridge.requests) else None,
                   "evaluator_estimated_usd_upper_bound": quality_bridge.evaluator_cost_upper,
                   "evaluator_cost_status": "complete" if
                       quality_bridge.evaluation_usage_complete and
-                      len(quality_bridge.responses) == len(quality_bridge.requests)
+                      len(quality_bridge.responses) + len(quality_bridge.failures) ==
+                          len(quality_bridge.requests)
                       else "UNKNOWN"} if quality_bridge else None),
               "shared_initial_prompt_sha256": shared_initial_prompt_sha256,
               "transport_events": transport.events if transport else [],

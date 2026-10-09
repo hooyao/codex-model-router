@@ -23,20 +23,44 @@ from evals.long_horizon_v1.quality_bridge import publish_json_new, validate_diag
 from evals.scripts.run_paired_arm import SessionMeter
 
 
-class ReviewScratchEvaluator(AppServerTransport):
-    """Permit review scratch writes while the product remains outside writable roots."""
+class EvaluatorIncomplete(RuntimeError):
+    """The evaluator could not assess product behavior; booleans are unverified."""
 
-    def _send(self, method: str, params: dict, *, notification: bool = False):
-        if method == "thread/start":
-            params = {**params, "sandbox": "workspace-write"}
-        elif method == "turn/start":
-            params = {**params, "sandboxPolicy": {"type": "workspaceWrite",
-                                      "writableRoots": [str(self.workspace.resolve())]}}
-        return super()._send(method, params, notification=notification)
+
+def require_complete_assessment(report: object) -> tuple[dict, list]:
+    if not isinstance(report, dict) or report.get("assessment_status") != "COMPLETE":
+        raise EvaluatorIncomplete("independent product assessment incomplete")
+    requirements, diagnostics = report.get("requirements"), report.get("diagnostics")
+    if (not isinstance(requirements, dict) or set(requirements) != set(REVIEW_REQUIREMENTS) or
+            any(type(value) is not bool for value in requirements.values()) or
+            not isinstance(diagnostics, list)):
+        raise EvaluatorIncomplete("independent semantic review output incomplete")
+    return requirements, diagnostics
 
 
 def _atomic_new(path: Path, value: dict) -> None:
     publish_json_new(path, value)
+
+
+def product_snapshot(product: Path) -> dict:
+    """Record the candidate file set and content independently of Git status."""
+    files = {}
+    for path in product.rglob("*"):
+        relative = path.relative_to(product)
+        if ".git" in relative.parts:
+            continue
+        key = relative.as_posix()
+        if path.is_symlink():
+            files[key] = {"kind": "symlink", "target": os.readlink(path)}
+        elif path.is_file():
+            files[key] = {"kind": "file", "sha256": file_sha(path)}
+        elif path.is_dir():
+            files[key] = {"kind": "directory"}
+    return {"files": files,
+            "fileset_sha256": hashlib.sha256(json.dumps(sorted(files),
+                separators=(",", ":")).encode()).hexdigest(),
+            "content_sha256": hashlib.sha256(json.dumps(files, sort_keys=True,
+                separators=(",", ":")).encode()).hexdigest()}
 
 
 def _last_message(meter: SessionMeter, thread_id: str) -> str:
@@ -62,16 +86,21 @@ def _review_prompt(product: Path) -> str:
     reports = "\n\n".join((ASSET_ROOT / f"round{index}.md").read_text(encoding="utf-8")
                          for index in range(3))
     return ("Independently review the implementation at " + str(product.resolve()) +
-        " against only these already revealed public requirements. The product is outside "
-        "your writable review scratch. Put any narrow reproductions only in your scratch; "
+        " against only these already revealed public requirements. Treat the candidate "
+        "product as logically read-only even though this CLI profile has broad execution "
+        "access. Put any narrow reproductions only in your separate scratch; "
         "do not edit the product, "
         "read hidden evaluator assets, infer a benchmark arm, or provide repair code. "
-        "Return one JSON object with `requirements`: exactly these keys mapped to "
+        "Return one JSON object with `assessment_status`: `COMPLETE` only after "
+        "you actually inspect the product and can assess it, otherwise `INCOMPLETE`. "
+        "For a complete assessment include `requirements`: exactly these keys mapped to "
         "booleans: " + ", ".join(REVIEW_REQUIREMENTS) + ". Also return `diagnostics`: "
         "a list of functional differences with exactly `public_requirement`, "
         "`observed_behavior`, and `expected_behavior` strings. Do not include test names, "
         "source paths, implementation prescriptions, or private evaluator details. "
-        "Use an empty list only if all requirements pass.\n\n" + reports)
+        "Use an empty list only if all requirements pass. For `INCOMPLETE`, explain "
+        "the infrastructure limitation and mark requirement values as unverified; do not "
+        "claim product failures or functional differences.\n\n" + reports)
 
 
 def _functional_diagnostics(transport: AppServerTransport, meter: SessionMeter,
@@ -171,18 +200,21 @@ def _run_once(request_path: Path, prepared: Path, cli: Path,
         checked_run(["git", "apply", "--binary", "-"], cwd=product,
                     input=candidate.read_bytes())
     original_patch = capture_patch(product)
+    original_snapshot = product_snapshot(product)
     if (file_sha(candidate) != request["candidate_patch_sha256"] or
             hashlib.sha256(original_patch).hexdigest() != request["candidate_patch_sha256"]):
         raise ValueError("evaluator product differs from requested candidate")
     transport = None
     meter = None
+    evaluator_id = None
+    review_data = None
     try:
         review_env = os.environ.copy()
         review_env.update(TEMP=str(scratch), TMP=str(scratch),
                           GOCACHE=str(scratch / "go-cache"))
-        transport = ReviewScratchEvaluator(cli, scratch, options,
-                                           "gpt-6-astra", "xhigh", deadline,
-                                           env=review_env)
+        transport = AppServerTransport(cli, scratch, options,
+                                       "gpt-6-astra", "xhigh", deadline,
+                                       env=review_env)
         evaluator_id = transport.start()
         _atomic_new(root / f"evaluator-r{revision}.json", {
             "schema_version": 1, "request_sha256": request_sha,
@@ -202,15 +234,11 @@ def _run_once(request_path: Path, prepared: Path, cli: Path,
             raise ValueError("evaluator turn or parent identity incomplete")
         meter.refresh()
         review_data = json.loads(_last_message(meter, evaluator_id))
-        requirements = review_data.get("requirements")
-        diagnostics = review_data.get("diagnostics")
-        if (not isinstance(requirements, dict) or set(requirements) != set(REVIEW_REQUIREMENTS) or
-                any(type(value) is not bool for value in requirements.values()) or
-                not isinstance(diagnostics, list)):
-            raise ValueError("independent semantic review output invalid")
-        if capture_patch(product) != original_patch:
+        requirements, diagnostics = require_complete_assessment(review_data)
+        if capture_patch(product) != original_patch or product_snapshot(product) != original_snapshot:
             raise ValueError("read-only evaluator changed candidate product")
-        review = {"schema_version": 1, "reviewer_role": "independent",
+        review = {"schema_version": 1, "assessment_status": "COMPLETE",
+            "reviewer_role": "independent",
             "arm_blind": True, "reviewer_id": evaluator_id,
             "candidate_patch_sha256": request["candidate_patch_sha256"],
             "manifest_sha256": request["manifest_sha256"],
@@ -240,9 +268,10 @@ def _run_once(request_path: Path, prepared: Path, cli: Path,
         summary = observed.get("summary") or {}
         if observed.get("status") != "complete" or observed.get("issues") or not summary.get("model_calls"):
             raise ValueError("independent evaluator usage incomplete")
-        if capture_patch(product) != original_patch:
+        if capture_patch(product) != original_patch or product_snapshot(product) != original_snapshot:
             raise ValueError("read-only evaluator changed candidate product")
         response = {"schema_version": 1, "kind": "quality-response",
+            "assessment_status": "COMPLETE",
             "workflow_id": request["workflow_id"], "request_id": request["request_id"],
             "request_sha256": request_sha, "revision": revision,
             "candidate_patch_sha256": request["candidate_patch_sha256"],
@@ -258,13 +287,44 @@ def _run_once(request_path: Path, prepared: Path, cli: Path,
         _atomic_new(root / f"response-r{revision}.json", response)
         return response
     except Exception as error:
-        if transport is not None and meter is not None:
+        if transport is not None and meter is not None and not transport.active_turn_complete:
             try:
                 transport.cancel_and_drain(meter, absolute_deadline=time.monotonic() + 15)
             except (RuntimeError, OSError, ValueError):
                 pass
+        report_sha = None
+        if isinstance(review_data, dict):
+            report_path = root / f"r{revision}-incomplete-model-report.json"
+            _atomic_new(report_path, review_data)
+            report_sha = file_sha(report_path)
+        usage = {"status": "UNKNOWN", "estimated_usd": None,
+                 "estimated_usd_upper_bound": meter.cost_upper if meter else None,
+                 "model_calls": meter.calls if meter else None}
+        if evaluator_id:
+            try:
+                observed = account(session_root, evaluator_id, "gpt-6-astra", "xhigh", False)
+                summary = observed.get("summary") or {}
+                if observed.get("status") == "complete" and observed.get("issues") == [] and \
+                        summary.get("unknown_models") == [] and summary.get("unknown_usage") == []:
+                    usage = {"status": "complete",
+                        "estimated_usd": summary.get("estimated_usd"),
+                        "estimated_usd_upper_bound": summary.get("estimated_usd_upper_bound"),
+                        "model_calls": summary.get("model_calls")}
+            except (RuntimeError, OSError, ValueError):
+                pass
+        after = product_snapshot(product) if product.is_dir() else None
         _atomic_new(root / f"failure-r{revision}.json", {
             "schema_version": 1, "request_sha256": request_sha,
+            "assessment_status": "INCOMPLETE", "quality_status": "INFRA",
+            "evaluator_thread_id": evaluator_id,
+            "session_root": str(session_root.resolve()),
+            "evaluation_usage": usage,
+            "model_report_sha256": report_sha,
+            "candidate_unchanged": after == original_snapshot,
+            "product_before_fileset_sha256": original_snapshot["fileset_sha256"],
+            "product_after_fileset_sha256": after["fileset_sha256"] if after else None,
+            "product_before_content_sha256": original_snapshot["content_sha256"],
+            "product_after_content_sha256": after["content_sha256"] if after else None,
             "reason": str(error)[:500]})
         raise
     finally:
@@ -286,7 +346,12 @@ def run_once(request_path: Path, prepared: Path, cli: Path,
                     f"response-r{revision}.json").exists():
                 digest = file_sha(request_path) if request_path.is_file() else None
                 _atomic_new(failure, {"schema_version": 1,
-                    "request_sha256": digest, "reason": str(error)[:500]})
+                    "request_sha256": digest, "assessment_status": "INCOMPLETE",
+                    "quality_status": "INFRA", "evaluator_thread_id": None,
+                    "evaluation_usage": {"status": "UNKNOWN", "estimated_usd": None,
+                        "estimated_usd_upper_bound": None, "model_calls": None},
+                    "model_report_sha256": None, "candidate_unchanged": None,
+                    "reason": str(error)[:500]})
         raise
 
 

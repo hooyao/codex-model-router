@@ -85,7 +85,7 @@
     "wall_seconds": 4500,
     "worker_retries_per_stage": 0
   },
-  "live_enabled": true,
+  "live_enabled": false,
   "oracle_erratum": {
     "adjudication_sha256": "4a23b29c5f9bb2d337b2f511333bdc69af9f855f3356d1ab91e8f2de3d682909",
     "changed_assets": [
@@ -97,9 +97,9 @@
     "version": "r9e-20261001"
   },
   "pilot": {
-    "path": "pilot-plan-v19.json",
-    "schema_version": 7,
-    "sha256": "4940c8c0e86f4cda52748d9b52f4e346a0b920b514118d9f434eeb84a29801b7"
+    "path": "pilot-plan-v20-draft.json",
+    "schema_version": 8,
+    "sha256": "f7d0d561f349ba157f80647db1d0d93f7d2d263ae2c9aefff992acb4d0ed6766"
   },
   "pricing": {
     "as_of": "2026-09-24",
@@ -161,7 +161,7 @@
   "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
   "source_tree": "20121a7049c58571664b87989d1fc7bab8562884",
   "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
-  "status": "offline-common-quality-v19-review-pending",
+  "status": "offline-v20-evaluator-smoke-pending",
   "task_id": "flipt-oci-reference-rollout-v1",
   "toolchain": {
     "linux_path": "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",

@@ -13,10 +13,12 @@ from unittest.mock import patch
 from evals.long_horizon_v1.common import file_sha, sha
 from evals.long_horizon_v1.grade import REVIEW_REQUIREMENTS
 from evals.long_horizon_v1.protocol import StageMachine
-from evals.long_horizon_v1.quality_bridge import QualityBridge
+from evals.long_horizon_v1.quality_bridge import QualityBridge, InfrastructureIncomplete
 from evals.long_horizon_v1.quality_bridge import correction_astra_turns
 from evals.long_horizon_v1.run import live_run
-from evals.long_horizon_v1.quality_adapter import _functional_diagnostics, run_once, watch
+from evals.long_horizon_v1.quality_adapter import (
+    _functional_diagnostics, EvaluatorIncomplete, product_snapshot,
+    require_complete_assessment, run_once, watch)
 
 
 def save(path: Path, value: dict) -> None:
@@ -44,7 +46,8 @@ class QualityWorkflowTests(unittest.TestCase):
         request = self.bridge.request(revision, file_sha(candidate), candidate, 0.4)
         requirements = dict.fromkeys(REVIEW_REQUIREMENTS, passed)
         review = {"candidate_patch_sha256": file_sha(candidate),
-            "manifest_sha256": "a" * 64, "reviewer_role": "independent",
+            "manifest_sha256": "a" * 64, "assessment_status": "COMPLETE",
+            "reviewer_role": "independent",
             "arm_blind": True, "reviewer_id": "independent-evaluator",
             "requirements": requirements,
             "verdict": "pass" if passed else "fail"}
@@ -59,6 +62,7 @@ class QualityWorkflowTests(unittest.TestCase):
             "observed_behavior": "The operation returned before cleanup completed",
             "expected_behavior": "Cleanup should finish before the operation returns"}]
         response = {"schema_version": 1, "kind": "quality-response",
+            "assessment_status": "COMPLETE",
             "workflow_id": "one-workflow", "request_id": request["request_id"],
             "request_sha256": request["request_sha256"], "revision": revision,
             "candidate_patch_sha256": file_sha(candidate),
@@ -178,6 +182,9 @@ class QualityWorkflowTests(unittest.TestCase):
 
             def close(self): pass
 
+            def cancel_and_drain(self, *_args, **_kwargs):
+                return {"status": "verified-drained"}
+
         class Meter:
             def __init__(self, *_args, **_kwargs):
                 self.paths = {}
@@ -205,6 +212,7 @@ class QualityWorkflowTests(unittest.TestCase):
                 self.root = root
                 self.requests = {}
                 self.responses = {}
+                self.failures = {}
                 self.evaluator_cost = 0.0
                 self.evaluator_cost_upper = 0.0
                 self.evaluation_usage_complete = True
@@ -218,6 +226,9 @@ class QualityWorkflowTests(unittest.TestCase):
                 self.evaluator_cost += 0.2
                 self.evaluator_cost_upper += 0.2
                 check_budget(self.evaluator_cost_upper)
+                if holder.get("infra"):
+                    self.failures[revision] = {"failure_sha256": "bound-failure"}
+                    raise InfrastructureIncomplete("evaluator-infrastructure-incomplete")
                 value = {"verdict": "FAIL" if revision == 0 else "PASS",
                     "candidate_patch_sha256": sha(b"revision zero" if revision == 0
                                                       else b"revision one"),
@@ -274,6 +285,39 @@ class QualityWorkflowTests(unittest.TestCase):
         self.assertEqual(result["workflow_estimated_usd"], 0.5)
         self.assertEqual((workspace / "checkpoint.json").read_text(),
                          "original public checkpoint")
+        holder["infra"] = True
+        infra_output = self.root / "infra-runner-output"
+        plan["run_outputs"]["baseline"] = str(infra_output)
+        with ExitStack() as stack:
+            stack.enter_context(patch("evals.long_horizon_v1.run.manifest",
+                                      return_value={"pilot": {"path": "pilot-plan-v19.json"}}))
+            stack.enter_context(patch("evals.long_horizon_v1.run.pilot_plan", return_value=plan))
+            stack.enter_context(patch("evals.long_horizon_v1.run.live_preflight", return_value=proof))
+            stack.enter_context(patch("evals.long_horizon_v1.run.arm_execution", return_value=policy))
+            stack.enter_context(patch("evals.long_horizon_v1.run.verify_cli"))
+            stack.enter_context(patch("evals.long_horizon_v1.run.AppServerTransport", Transport))
+            stack.enter_context(patch("evals.long_horizon_v1.run.SessionMeter",
+                side_effect=lambda *_args, **_kwargs: holder.setdefault("meter", Meter())))
+            stack.enter_context(patch("evals.long_horizon_v1.run.QualityBridge", Bridge))
+            stack.enter_context(patch("evals.long_horizon_v1.run.grade_before_deadline",
+                                      side_effect=gate_stub))
+            stack.enter_context(patch("evals.long_horizon_v1.run.account",
+                                      side_effect=account_stub))
+            stack.enter_context(patch("evals.long_horizon_v1.protocol.manifest",
+                                      return_value={}))
+            stack.enter_context(patch("evals.long_horizon_v1.protocol.capture_patch",
+                                      return_value=b"revision zero"))
+            stack.enter_context(patch("evals.long_horizon_v1.protocol.checkpoint",
+                                      return_value={}))
+            stack.enter_context(patch("evals.long_horizon_v1.protocol.copy_assets",
+                                      return_value=[]))
+            incomplete = live_run(prepared, infra_output, "baseline", self.root / "cli",
+                                  self.root / "capability", self.root / "sessions")
+        self.assertEqual(incomplete["quality_status"], "INFRA")
+        self.assertEqual(incomplete["stop_reason"], "evaluator-infrastructure-incomplete")
+        self.assertEqual(len(incomplete["attempts"]), 3)
+        self.assertNotIn("quality-feedback",
+                         [event["kind"] for event in incomplete["stage"]["events"]])
 
     def test_second_quality_failure_stops_without_third_revision(self) -> None:
         self.respond(0, self.patch0, passed=False)
@@ -400,6 +444,58 @@ class QualityWorkflowTests(unittest.TestCase):
             turn["parent_turn_id"] = "wrong-parent"
         with self.assertRaisesRegex(ValueError, "missing"):
             correction_astra_turns(run, events)
+
+    def test_incomplete_assessment_is_infrastructure_and_retains_known_cost(self) -> None:
+        report = {"assessment_status": "INCOMPLETE",
+            "requirements": dict.fromkeys(REVIEW_REQUIREMENTS, False),
+            "diagnostics": [{"public_requirement": "all",
+                "observed_behavior": "The evaluator could not read the candidate",
+                "expected_behavior": "A complete product assessment is required"}]}
+        with self.assertRaises(EvaluatorIncomplete):
+            require_complete_assessment(report)
+        request = self.bridge.request(0, file_sha(self.patch0), self.patch0, 0.4)
+        save(self.bridge.root / "evaluator-r0.json", {
+            "schema_version": 1, "request_sha256": request["request_sha256"],
+            "thread_id": "evaluator-thread", "session_root": str(self.bridge.session_root),
+            "model": "gpt-6-astra", "effort": "xhigh"})
+        save(self.bridge.root / "r0-incomplete-model-report.json", report)
+        save(self.bridge.root / "failure-r0.json", {
+            "schema_version": 1, "request_sha256": request["request_sha256"],
+            "assessment_status": "INCOMPLETE", "quality_status": "INFRA",
+            "evaluator_thread_id": "evaluator-thread",
+            "session_root": str(self.bridge.session_root),
+            "model_report_sha256": file_sha(
+                self.bridge.root / "r0-incomplete-model-report.json"),
+            "evaluation_usage": {"status": "complete", "estimated_usd": 0.3775635,
+                "estimated_usd_upper_bound": 0.3775635, "model_calls": 8},
+            "candidate_unchanged": True, "reason": "helper setup failed"})
+        def meter(_revision):
+            self.bridge.evaluator_cost_upper = 0.3775635
+        def usage(_revision, failure):
+            self.bridge.evaluator_cost += failure["evaluation_usage"]["estimated_usd"]
+            return failure["evaluation_usage"]
+        with patch.object(self.bridge, "_meter", side_effect=meter), \
+             patch.object(self.bridge, "_usage", side_effect=usage), \
+             self.assertRaises(InfrastructureIncomplete):
+            self.bridge.wait(0, lambda _: None)
+        self.assertEqual(self.bridge.evaluator_cost, 0.3775635)
+        self.assertEqual(self.bridge.responses, {})
+        self.assertEqual(list(self.bridge.failures), [0])
+        self.assertTrue(self.bridge.evaluation_usage_complete)
+
+    def test_product_content_and_file_set_changes_are_detected(self) -> None:
+        product = self.root / "product"
+        product.mkdir()
+        (product / "main.go").write_text("package main\n", encoding="utf-8")
+        original = product_snapshot(product)
+        (product / "main.go").write_text("package changed\n", encoding="utf-8")
+        changed = product_snapshot(product)
+        self.assertEqual(changed["fileset_sha256"], original["fileset_sha256"])
+        self.assertNotEqual(changed["content_sha256"], original["content_sha256"])
+        (product / "main.go").write_text("package main\n", encoding="utf-8")
+        (product / "extra.txt").write_text("new", encoding="utf-8")
+        added = product_snapshot(product)
+        self.assertNotEqual(added["fileset_sha256"], original["fileset_sha256"])
 
 
 if __name__ == "__main__":
