@@ -216,6 +216,18 @@ def _functional_diagnostics(transport: AppServerTransport, meter: SessionMeter,
     return validate_diagnostics(initial, "FAIL")
 
 
+def _publication_diagnostics(revision: int, passed: bool, initial: object,
+                             transport: AppServerTransport | None, meter: SessionMeter,
+                             evaluator_id: str, hidden: dict, backend: dict,
+                             guard) -> list[dict]:
+    if passed or revision == 1:
+        return []  # A final failure has no remaining correction to explain.
+    if transport is None:
+        return validate_diagnostics(initial, "FAIL")
+    return _functional_diagnostics(transport, meter, evaluator_id, hidden, backend,
+                                   initial, guard)
+
+
 def _grade(candidate: Path, prepared: Path, output: Path, *,
            hidden: bool, review: Path | None, deadline: float) -> dict:
     remaining = deadline - time.monotonic()
@@ -339,10 +351,8 @@ def _run_once(request_path: Path, prepared: Path, cli: Path,
         passed = (hidden.get("behavior_pass") is True and hidden.get("quality_pass") is True and
                   backend.get("behavior_pass") is True and backend.get("quality_pass") is True and
                   review["verdict"] == "pass")
-        diagnostics = ([] if passed else
-            validate_diagnostics(diagnostics, "FAIL") if transport is None else
-            _functional_diagnostics(transport, meter, evaluator_id, hidden, backend,
-                                    diagnostics, guard))
+        diagnostics = _publication_diagnostics(revision, passed, diagnostics,
+            transport, meter, evaluator_id, hidden, backend, guard)
         observed = account(session_root, evaluator_id, "gpt-6-astra", "xhigh", False)
         settle_deadline = min(deadline, time.monotonic() + 10.0)
         while observed.get("status") != "complete" and time.monotonic() < settle_deadline:

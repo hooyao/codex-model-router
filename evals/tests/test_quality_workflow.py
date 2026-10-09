@@ -17,7 +17,7 @@ from evals.long_horizon_v1.quality_bridge import QualityBridge, InfrastructureIn
 from evals.long_horizon_v1.quality_bridge import correction_astra_turns, verify_common_arm_quality
 from evals.long_horizon_v1.run import live_run
 from evals.long_horizon_v1.quality_adapter import (
-    _functional_diagnostics, EvaluatorIncomplete, product_snapshot,
+    _functional_diagnostics, _publication_diagnostics, EvaluatorIncomplete, product_snapshot,
     require_complete_assessment, run_once, watch)
 
 
@@ -328,6 +328,35 @@ class QualityWorkflowTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid, or unbound"):
             self.bridge.request(2, file_sha(self.patch1), self.patch1, 0.4)
         self.assertEqual(self.bridge.evaluator_cost, 0.4)
+
+    def test_final_complete_semantic_fail_publishes_cost_without_followup(self) -> None:
+        with patch("evals.long_horizon_v1.quality_adapter._functional_diagnostics",
+                   side_effect=AssertionError("final revision requested a follow-up")) as followup:
+            self.assertEqual(_publication_diagnostics(1, False, [{"malformed": "ignored"}],
+                object(), object(), "evaluator", {}, {}, lambda: None), [])
+            followup.assert_not_called()
+        with self.assertRaisesRegex(ValueError, "diagnostics missing"):
+            _publication_diagnostics(0, False, [], None, object(), "evaluator",
+                                     {}, {}, lambda: None)
+
+        self.respond(1, self.patch1, passed=False)
+        response_path = self.bridge.root / "response-r1.json"
+        response = json.loads(response_path.read_text(encoding="utf-8"))
+        for kind in ("hidden", "backend"):
+            path = self.bridge.root / f"r1-{kind}-grade.json"
+            grade = json.loads(path.read_text(encoding="utf-8"))
+            grade.update(behavior_pass=True, quality_pass=True)
+            save(path, grade)
+            response[f"{kind}_grade_sha256"] = file_sha(path)
+        response["diagnostics"] = []
+        save(response_path, response)
+        result, observed_costs = self.wait(1)
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertEqual(result["assessment_status"], "COMPLETE")
+        self.assertEqual(result["evaluation_usage"]["status"], "complete")
+        self.assertEqual(observed_costs, [0.4])
+        self.assertEqual(self.bridge.evaluator_cost, 0.2)
+        self.assertFalse((self.bridge.root / "failure-r1.json").exists())
 
     def test_stale_or_mismatched_response_rejected_before_feedback(self) -> None:
         self.respond(0, self.patch0, passed=False,

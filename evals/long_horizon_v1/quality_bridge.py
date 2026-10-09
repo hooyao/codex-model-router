@@ -221,8 +221,11 @@ class QualityBridge:
                   all(value is True for value in review["requirements"].values()))
         if (response["verdict"] == "PASS") is not passed:
             raise ValueError("quality verdict conflicts with grade or review evidence")
-        diagnostics = validate_diagnostics(response.get("diagnostics"),
-                                           response["verdict"])
+        if revision == 1 and response["verdict"] == "FAIL" and response.get("diagnostics") == []:
+            diagnostics = []
+        else:
+            diagnostics = validate_diagnostics(response.get("diagnostics"),
+                                               response["verdict"])
         response["evaluation_usage"] = self._usage(revision, response)
         response["response_sha256"] = file_sha(self.root / f"response-r{revision}.json")
         self.responses[revision] = response
