@@ -142,6 +142,21 @@ class RouterPluginTests(unittest.TestCase):
         with self.assertRaisesRegex(config_module.RoutingConfigError, "contains unknown fields"):
             config_module.validate_config(template)
 
+    def test_sol_preference_requires_runtime_model_and_effort_evidence(self) -> None:
+        config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        guidance = config["runtime_resolution"]
+        self.assertIn("Sol prefers gpt-6.1-sol", guidance)
+        self.assertIn("requested effort", guidance)
+        self.assertIn("gpt-6-sol is a compatibility fallback only", guidance)
+        self.assertIn("runtime exposes the fallback model/effort", guidance)
+        self.assertIn("https://developers.openai.com/codex/models", config["official_sources"])
+        for relative in ("README.md", "skills/model-router/references/routing-policy.md"):
+            with self.subTest(path=relative):
+                content = (PLUGIN_ROOT / relative).read_text(encoding="utf-8")
+                self.assertIn("GPT-6.1 Sol", content)
+                self.assertIn("gpt-6.1-sol", content)
+                self.assertIn("compatibility fallback", content)
+
     def test_existing_terra_workspace_is_loaded_as_sol_without_rewriting_file(self) -> None:
         template = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
         template["examples"][0]["preferred_model_class"] = "Terra"
@@ -1131,7 +1146,18 @@ class RouterPluginTests(unittest.TestCase):
                 ):
                     self.assertIn(expected.lower(), normalized_content)
         skill = (PLUGIN_ROOT / "skills" / "model-router" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("implement-naming-gpt-6-sol-high", skill)
+        self.assertIn("implement-naming-gpt-6-1-sol-high", skill)
+
+    def test_current_sol_name_normalizes_dot_without_changing_selector(self) -> None:
+        model = "gpt-6.1-sol"
+        expected = "implement-naming-gpt-6-1-sol-high"
+        actual = naming.build_subagent_name("Implement / Naming", model, "high")
+        self.assertEqual(expected, actual)
+        naming.validate_subagent_name(actual, "Implement / Naming", model, "high")
+        self.assertEqual("implement_naming_gpt_6_1_sol_high", naming.native_task_name(actual))
+        legacy = naming.build_subagent_name("Implement / Naming", "gpt-6-sol", "high")
+        naming.validate_unique_subagent_names((actual, legacy))
+        naming.validate_unique_native_task_names((actual, legacy))
 
     def test_worker_name_helper_builds_and_validates_canonical_name(self) -> None:
         expected = "implement-naming-gpt-6-sol-high"
@@ -1394,7 +1420,7 @@ class RouterPluginTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             hook.build_hook_output({"hook_event_name": "Stop"})
 
-    def dispatch_contract(self, mode="explicit") -> dict:
+    def dispatch_contract(self, mode="explicit", model="gpt-6-sol", efforts=None) -> dict:
         evidence_root = self.policy_workspace / "dispatch-evidence"
         evidence_root.mkdir(exist_ok=True)
         spawn_path = evidence_root / "spawn-schema.json"
@@ -1403,10 +1429,10 @@ class RouterPluginTests(unittest.TestCase):
         spawn_path.write_text(json.dumps({"schema_version": 1, "kind": "spawn_schema",
             "tool": "spawn_agent", "supported_arguments": ["task_name", "message", "model", "reasoning_effort"]}), encoding="utf-8")
         catalog_path.write_text(json.dumps({"schema_version": 1, "kind": "model_catalog", "models": [
-            {"id": "gpt-6-sol", "reasoning_efforts": ["low", "high"]}]}), encoding="utf-8")
+            {"id": model, "reasoning_efforts": ["low", "high"] if efforts is None else efforts}]}), encoding="utf-8")
         inheritance_path.write_text(json.dumps({"schema_version": 1, "kind": "inheritance_contract",
             "tool": "spawn_agent", "when_omitted": True,
-            "inherits": {"model": "gpt-6-sol", "reasoning_effort": "high"}}), encoding="utf-8")
+            "inherits": {"model": model, "reasoning_effort": "high"}}), encoding="utf-8")
         evidence = [
             {"id": "schema", "kind": "spawn_schema", "source": str(spawn_path),
              "sha256": hashlib.sha256(spawn_path.read_bytes()).hexdigest(), "captured_at": "2026-09-23T04:00:00Z"},
@@ -1420,17 +1446,55 @@ class RouterPluginTests(unittest.TestCase):
                              "sha256": hashlib.sha256(inheritance_path.read_bytes()).hexdigest(),
                              "captured_at": "2026-09-23T04:00:00Z"})
             refs = ["inheritance"]
+        canonical = naming.build_subagent_name("edit", model, "high")
+        native = naming.native_task_name(canonical)
         return {
             "schema_version": 1, "dispatch_id": "edit-worker", "purpose": "edit",
-            "canonical_name": "edit-gpt-6-sol-high",
-            "packet": {"worker_name": "edit-gpt-6-sol-high", "task_id": "edit-gpt-6-sol-high",
-                       "native_task_name": "edit_gpt_6_sol_high"},
+            "canonical_name": canonical,
+            "packet": {"worker_name": canonical, "task_id": canonical,
+                       "native_task_name": native},
             "native_dispatch": {"tool": "spawn_agent", "naming_field": "task_name",
-                                "native_name": "edit_gpt_6_sol_high", "schema_evidence_ref": "schema"},
-            "selection": {"mode": mode, "model": "gpt-6-sol", "reasoning_effort": "high",
+                                "native_name": native, "schema_evidence_ref": "schema"},
+            "selection": {"mode": mode, "model": model, "reasoning_effort": "high",
                           "evidence_refs": refs},
             "capability_evidence": evidence,
         }
+
+    def test_current_sol_dispatch_preserves_exact_selector_and_supported_efforts(self) -> None:
+        efforts = ["low", "medium", "high", "xhigh", "max"]
+        for effort in efforts:
+            with self.subTest(effort=effort):
+                value = self.dispatch_contract(model="gpt-6.1-sol", efforts=efforts)
+                canonical = naming.build_subagent_name("edit", "gpt-6.1-sol", effort)
+                native = naming.native_task_name(canonical)
+                value["canonical_name"] = canonical
+                value["packet"] = {"worker_name": canonical, "task_id": canonical,
+                                   "native_task_name": native}
+                value["native_dispatch"]["native_name"] = native
+                value["selection"]["reasoning_effort"] = effort
+                checked = dispatch.validate_dispatch_contract(value)
+                self.assertEqual("gpt-6.1-sol", checked["selection"]["model"])
+                self.assertEqual(effort, checked["selection"]["reasoning_effort"])
+        inherited = self.dispatch_contract("verified_inheritance", model="gpt-6.1-sol")
+        self.assertEqual(inherited, dispatch.validate_dispatch_contract(inherited))
+
+    def test_current_sol_dispatch_rejects_missing_model_or_effort_and_ultra(self) -> None:
+        value = self.dispatch_contract(model="gpt-6.1-sol", efforts=["low"])
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "high is unsupported for model gpt-6.1-sol"):
+            dispatch.validate_dispatch_contract(value)
+        value = self.dispatch_contract(model="gpt-6.1-sol")
+        catalog_item = next(item for item in value["capability_evidence"] if item["kind"] == "model_catalog")
+        catalog_path = Path(catalog_item["source"])
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        catalog["models"][0]["id"] = "gpt-6-sol"
+        catalog_path.write_text(json.dumps(catalog), encoding="utf-8")
+        catalog_item["sha256"] = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "selected model is absent from model catalog"):
+            dispatch.validate_dispatch_contract(value)
+        value = self.dispatch_contract(model="gpt-6.1-sol")
+        value["selection"]["reasoning_effort"] = "ultra"
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "unsupported by the router"):
+            dispatch.validate_dispatch_contract(value)
 
     def test_dispatch_contract_requires_observed_selectors_and_resolved_values(self) -> None:
         value = self.dispatch_contract()

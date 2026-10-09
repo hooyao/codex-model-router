@@ -61,7 +61,10 @@ CHILD_NONBUSINESS_ITEM_TYPES = {"userMessage", "agentMessage", "reasoning", "pla
 ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}\Z")
 MODEL_RE = re.compile(r"[a-z0-9][a-z0-9.-]{0,63}\Z")
 EFFORTS = {"minimal", "low", "medium", "high", "xhigh", "max", "ultra"}
-APPROVED_PARENT_SELECTORS = {("gpt-6-sol", "low"), ("gpt-6-luna", "medium")}
+DEFAULT_PARENT_MODEL = "gpt-6.1-sol"
+# Keep the older Sol selector for explicitly pinned compatibility campaigns.
+APPROVED_PARENT_SELECTORS = {(DEFAULT_PARENT_MODEL, "low"), ("gpt-6-sol", "low"),
+                             ("gpt-6-luna", "medium")}
 HOOK_EVENTS = {"preToolUse", "postToolUse"}
 ALL_HOOK_EVENTS = {"preToolUse", "permissionRequest", "postToolUse", "preCompact",
                    "postCompact", "sessionStart", "userPromptSubmit", "subagentStart",
@@ -1797,12 +1800,13 @@ def run_fixed_sentinel_probe(cli: Path, expected_cli_hash: str, audit_script: Pa
 def dry_run() -> dict:
     sentinel = "capability sentinel"
     fake_hook_path = "C:\\installed-plugin\\hooks\\hooks.json"
-    reducer = Reducer(sentinel, requested_parent_model="gpt-6-sol",
+    reducer = Reducer(sentinel, requested_parent_model=DEFAULT_PARENT_MODEL,
                       requested_parent_effort="low", expected_hook_source_path=fake_hook_path)
     events = [
         {"jsonrpc": "2.0", "id": 1, "result": {"userAgent": "synthetic"}},
         {"jsonrpc": "2.0", "id": 2, "result": {"thread": {"id": "parent-1",
-            "model": "gpt-6-sol", "reasoningEffort": "low"}, "model": "gpt-6-sol"}},
+            "model": DEFAULT_PARENT_MODEL, "reasoningEffort": "low"},
+            "model": DEFAULT_PARENT_MODEL}},
         {"jsonrpc": "2.0", "id": 4, "result": {"data": [
             {"name": "multi_agent", "enabled": True}]}},
         {"jsonrpc": "2.0", "id": 3, "result": {"turn": {"id": "turn-1"}}},
@@ -1879,7 +1883,7 @@ def main(argv: list[str] | None = None) -> int:
                         help="Absolute installed dispatch_audit.py path")
     parser.add_argument("--hook-file", type=Path, action="append", default=[],
                         help="Operator-selected hook file to hash; repeat as needed")
-    parser.add_argument("--model", default="gpt-6-sol")
+    parser.add_argument("--model", default=DEFAULT_PARENT_MODEL)
     parser.add_argument("--effort", default="low", choices=sorted(EFFORTS))
     parser.add_argument("--timeout", type=float, default=90.0)
     arguments = sys.argv[1:] if argv is None else argv
