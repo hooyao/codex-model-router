@@ -45,32 +45,160 @@ def plan() -> dict:
 
 
 def _go_command_proof(rollout: Path, go_binary: Path) -> dict:
-    calls, outputs = {}, {}
+    calls, outputs, native = {}, {}, []
+    turn_ids, completed_turns, session_ids = set(), set(), set()
+    duplicate_call_id = False
     for line in rollout.read_text(encoding="utf-8").splitlines():
         row = json.loads(line)
         payload = row.get("payload") or {}
-        if row.get("type") != "response_item":
-            continue
-        if payload.get("type") == "custom_tool_call":
-            calls[payload.get("call_id")] = str(payload.get("input", ""))
-        elif payload.get("type") == "custom_tool_call_output":
-            value = payload.get("output")
-            outputs[payload.get("call_id")] = "\n".join(
-                item.get("text", "") for item in value if isinstance(item, dict)) \
-                if isinstance(value, list) else str(value)
+        if row.get("type") == "session_meta":
+            session_ids.add(payload.get("id"))
+        if row.get("type") == "response_item":
+            turn_id = (payload.get("internal_chat_message_metadata_passthrough") or {}).get("turn_id")
+            if payload.get("type") == "custom_tool_call":
+                duplicate_call_id |= payload.get("call_id") in calls
+                calls[payload.get("call_id")] = (str(payload.get("input", "")), turn_id)
+            elif payload.get("type") == "custom_tool_call_output":
+                duplicate_call_id |= payload.get("call_id") in outputs
+                value = payload.get("output")
+                content = "\n".join(item.get("text", "") for item in value
+                                    if isinstance(item, dict)) if isinstance(value, list) else str(value)
+                outputs[payload.get("call_id")] = (content, turn_id)
+            if turn_id:
+                turn_ids.add(turn_id)
+        elif row.get("type") == "event_msg" and payload.get("type") == "item_completed":
+            item = payload.get("item") or {}
+            if item.get("type") == "CommandExecution":
+                native.append((item, payload.get("thread_id"), payload.get("turn_id")))
+        elif row.get("type") == "event_msg" and payload.get("type") == "task_complete":
+            completed_turns.add(payload.get("turn_id"))
     expected_path = str(go_binary).lower().replace("\\", "")
-    for call_id, command in calls.items():
+    proofs = []
+    for call_id, (command, turn_id) in calls.items():
         normalized = command.lower().replace("\\", "")
-        output = outputs.get(call_id, "")
-        if (expected_path in normalized and "test" in normalized and
-                "-count=1" in normalized and
-                re.search(r'"exit_code"\s*:\s*0', output) and
-                "example.com/evaluator-smoke" in output):
-            return {"call_id": call_id,
-                "command_sha256": hashlib.sha256(command.encode()).hexdigest(),
-                "output_sha256": hashlib.sha256(output.encode()).hexdigest(),
-                "go_exit_code": 0}
+        if not (expected_path in normalized and re.search(r"\btest\s+-count=1\s+\./\.\.\.", normalized)):
+            continue
+        if call_id not in outputs or outputs[call_id][1] != turn_id or not turn_id:
+            continue
+        start_output = outputs[call_id][0]
+        starts = [json.loads(line) for line in start_output.splitlines()
+                  if line.startswith("{") and '"session_id"' in line]
+        if len(starts) != 1 or type(starts[0].get("session_id")) is not int:
+            continue
+        session_id = starts[0]["session_id"]
+        matching_native = [(item, thread, native_turn) for item, thread, native_turn in native
+                           if str(item.get("process_id")) == str(session_id)]
+        polls = [(poll_id, poll_command, outputs[poll_id][0])
+                 for poll_id, (poll_command, poll_turn) in calls.items()
+                 if poll_turn == turn_id and poll_id in outputs and
+                 outputs[poll_id][1] == turn_id and
+                 re.search(r"tools\.write_stdin\(\{\s*session_id\s*:\s*" +
+                           str(session_id) + r"\b", poll_command)]
+        origins = [origin_id for origin_id, (_, origin_turn) in calls.items()
+                   if origin_turn == turn_id and origin_id in outputs and
+                   any(line.startswith("{") and
+                       re.search(r'"session_id"\s*:\s*' + str(session_id) + r'\b', line)
+                       for line in outputs[origin_id][0].splitlines())]
+        if (len(origins) != 1 or origins[0] != call_id or len(polls) != 1 or
+                len(matching_native) != 1 or turn_id not in completed_turns or
+                len(turn_ids) != 1 or len(session_ids) != 1 or duplicate_call_id):
+            continue
+        item, thread_id, native_turn = matching_native[0]
+        poll_id, _, final_output = polls[0]
+        final_results = [json.loads(line) for line in final_output.splitlines()
+                         if line.startswith("{") and '"exit_code"' in line]
+        native_command = "\n".join(item.get("command", []))
+        if (native_turn != turn_id or thread_id not in session_ids or
+                item.get("status") != "completed" or item.get("exit_code") != 0 or
+                expected_path not in native_command.lower().replace("\\", "") or
+                not re.search(r"\btest\s+-count=1\s+\./\.\.\.", native_command) or
+                len(final_results) != 1 or final_results[0].get("exit_code") != 0 or
+                "example.com/evaluator-smoke" not in item.get("stdout", "") or
+                "example.com/evaluator-smoke" not in final_results[0].get("output", "")):
+            continue
+        proofs.append({"call_id": call_id, "continuation_call_id": poll_id,
+            "native_exec_session_id": session_id, "thread_id": thread_id,
+            "turn_id": turn_id,
+            "command_sha256": hashlib.sha256(command.encode()).hexdigest(),
+            "output_sha256": hashlib.sha256(final_output.encode()).hexdigest(),
+            "go_exit_code": 0})
+    if len(proofs) == 1:
+        return proofs[0]
     raise ValueError("pinned Go test exit-zero native command proof missing")
+
+
+def verify_original_smoke(output: Path, sessions: Path, receipt_path: Path) -> dict:
+    """Record a corrected offline verdict without changing the original UNKNOWN receipt."""
+    failure_path = output / "smoke-failure.json"
+    review_path = output / "independent-adjudication.json"
+    preparation_path = output.parent / "smoke-preparation.json"
+    failure = json.loads(failure_path.read_text(encoding="utf-8"))
+    review = json.loads(review_path.read_text(encoding="utf-8"))
+    preparation = json.loads(preparation_path.read_text(encoding="utf-8"))
+    evaluator_id = review["evaluator_thread_id"]
+    if (failure.get("status") != "UNKNOWN" or
+            failure.get("reason") != "pinned Go test exit-zero native command proof missing" or
+            failure.get("evaluator_thread_id") != evaluator_id or
+            file_sha(failure_path) != review.get("source_receipt_sha256") or
+            file_sha(preparation_path) != review.get("smoke_preparation_sha256") or
+            review.get("status") != "verified-capability-from-original-trace" or
+            review.get("paid_rerun_required") is not False or
+            review.get("paid_calls_in_review") != 0 or
+            preparation.get("fixture_sha256") != fixture_hashes() or
+            review.get("fixture_sha256") != fixture_hashes()):
+        raise ValueError("original smoke or independent adjudication drift")
+    rollout = Path(review["rollout_path"])
+    if (not rollout.is_file() or file_sha(rollout) != review.get("rollout_sha256") or
+            sessions.resolve() not in rollout.resolve().parents):
+        raise ValueError("original smoke rollout identity drift")
+    go_binary = Path(manifest()["toolchain"]["windows_path"])
+    if file_sha(go_binary) != review["go_chain"]["go_binary_sha256"]:
+        raise ValueError("pinned Go binary drift")
+    proof = _go_command_proof(rollout, go_binary)
+    if (proof["thread_id"] != evaluator_id or proof["turn_id"] != review["turn_id"] or
+            proof["call_id"] != review["go_chain"]["start_call_id"] or
+            proof["continuation_call_id"] != review["go_chain"]["continuation_call_id"] or
+            proof["native_exec_session_id"] != review["go_chain"]["native_exec_session_id"] or
+            proof["go_exit_code"] != review["go_chain"]["exit_code"]):
+        raise ValueError("original smoke Go command chain differs from independent review")
+    observed = account(sessions, evaluator_id, "gpt-6-astra", "xhigh", False)
+    usage = observed.get("summary") or {}
+    if (observed.get("status") != "complete" or observed.get("issues") or
+            usage != failure.get("usage") or usage.get("model_calls") != review.get("model_calls") or
+            usage.get("estimated_usd") != review.get("estimated_usd") or
+            len(usage.get("sessions", [])) != 1 or
+            usage["sessions"][0].get("id") != evaluator_id):
+        raise ValueError("original smoke native usage incomplete or changed")
+    product = output / "product"
+    snapshot = product_snapshot(product)
+    token_file = product / "unknown-token.txt"
+    scratch_file = output / "scratch" / "observed-token.txt"
+    if (set(snapshot["files"]) != set(fixture_hashes()) | {"unknown-token.txt"} or
+            any(snapshot["files"][name].get("sha256") != digest
+                for name, digest in fixture_hashes().items()) or
+            snapshot["fileset_sha256"] != review["product_fileset_sha256"] or
+            snapshot["content_sha256"] != review["product_content_sha256"] or
+            file_sha(token_file) != review["token_file_sha256"] or
+            file_sha(scratch_file) != review["scratch_output_sha256"] or
+            token_file.read_bytes() != scratch_file.read_bytes() or
+            hashlib.sha256(token_file.read_text(encoding="utf-8").strip().encode()).hexdigest()
+                != review["unknown_token_sha256"]):
+        raise ValueError("original smoke product or scratch evidence drift")
+    result = {"schema_version": 1, "kind": "evaluator-smoke-derived-verification",
+        "status": "PASS", "original_receipt_status": "UNKNOWN",
+        "original_failure_sha256": file_sha(failure_path),
+        "independent_adjudication_sha256": file_sha(review_path),
+        "smoke_preparation_sha256": file_sha(preparation_path),
+        "raw_rollout_sha256": file_sha(rollout),
+        "checker_source_sha256": file_sha(Path(__file__)),
+        "evaluator_thread_id": evaluator_id, "go_command": proof,
+        "product_fileset_sha256": snapshot["fileset_sha256"],
+        "product_content_sha256": snapshot["content_sha256"],
+        "scratch_output_sha256": file_sha(scratch_file),
+        "usage": usage, "benchmark_arm_cost_included": False,
+        "paid_calls_in_verification": 0}
+    write_json_new(receipt_path, result)
+    return result
 
 
 def run(output: Path, sessions: Path, approved_budget_usd: float) -> dict:
@@ -189,8 +317,17 @@ if __name__ == "__main__":
     parser.add_argument("--approved-budget-usd", type=float)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--sessions", type=Path)
+    parser.add_argument("--verify-original", action="store_true")
+    parser.add_argument("--receipt", type=Path)
     args = parser.parse_args()
-    if not args.run:
+    if args.verify_original:
+        if args.output is None or args.sessions is None or args.receipt is None:
+            parser.error("--verify-original requires --output, --sessions, and --receipt")
+        result = verify_original_smoke(args.output.resolve(), args.sessions.resolve(),
+                                       args.receipt.resolve())
+        print(json.dumps({"status": result["status"], "receipt": str(args.receipt.resolve()),
+                          "receipt_sha256": file_sha(args.receipt.resolve())}, indent=2))
+    elif not args.run:
         print(json.dumps(plan(), indent=2))
     else:
         if args.output is None or args.sessions is None:

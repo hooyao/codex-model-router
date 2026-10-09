@@ -1,12 +1,13 @@
 # Long-horizon OCI benchmark v1: paired recovery preparation
 
-## Pilot 20 evaluator capability draft (2026-10-09)
+## Pilot 20 final paired quality freeze (2026-10-09)
 
-[Pilot-plan-v20-draft.json](pilot-plan-v20-draft.json) pins the repaired common
-workflow, current CLI and plugin, adapter, bridge, and one neutral public Go
-smoke fixture. The manifest is live-disabled. No v20 solver or evaluator model
-turn has started, and the v19 failed run, failure, usage, plan, and preflight
-files remain unchanged in their reviewed archive.
+[Pilot-plan-v20.json](pilot-plan-v20.json) freezes one fresh baseline/treatment
+pair under the same staged public task, start tree, public reveals, hidden
+grader, and common quality callback. The final [manifest](manifest.json) is
+live-enabled for an approved arm, but no v20 solver arm has started. The old
+[draft](pilot-plan-v20-draft.json), v19 paid failure, and earlier paid evidence
+remain historical and unchanged.
 
 The evaluator now uses the same working dangerFullAccess App Server transport
 as the solver, with a separate scratch directory and a **logical** read-only
@@ -21,22 +22,75 @@ and cost completeness are separate. The original v19 workflow-cost status
 remains UNKNOWN; its independently replayed known evaluator subtotal is in
 `_scratch/pilot-19-evidence/evaluator-infrastructure-cost-supplement.json`.
 
-The next separately authorized paid step is **one** neutral evaluator smoke,
-outside either benchmark arm. It has a $1 observed dispatch stop, 180-second
-wall limit, and zero automatic retries. The model must discover an unknown
-fixture token, copy it to private scratch, and execute the pinned Go test with
-exit zero. The receipt must bind native command output, complete usage, and
-unchanged product content and file set. Prepare or inspect the no-spend plan
-with `python -m evals.long_horizon_v1.evaluator_smoke`; after independent
-approval, the exact paid command is:
+The one separately approved evaluator smoke already ran. Its original
+`smoke-failure.json` remains `UNKNOWN`: the old checker missed a successful
+native Go command because the CLI returned a session ID, then delivered its
+final output through `write_stdin`. Independent adjudication and the corrected
+checker joined the original call, session 8251, native command completion,
+poll result, and terminal turn within the same thread. The derived
+`machine-verification.json` records PASS against the unchanged original raw
+rollout and failure receipt. Five Astra/xhigh responses cost an estimated
+$0.350294 over 87.28 seconds; this is setup cost outside both arm totals.
+There was no paid rerun. The smoke product content and file set were unchanged,
+the unknown token was copied into scratch, and the pinned Go test exited 0.
+
+The final plan SHA-256 is
+`13ea88e3f0dc01f6a93a3d21e18bd361eb3682cb25d9ce96bfd672abe8218ece`;
+the live manifest SHA-256 is
+`45691b2d5347ce8ff44a31762d5b3877249a901fc45dd8e252eaeeff25a21fa6`.
+The derived smoke receipt SHA-256 is
+`0823c64f5d7a45fc3deef9fefb7ad9c9d9dfa97cedebfffb257aa7dd4a88c8c0`.
+Fresh R0 preparation SHA-256 is
+`2db46dbe7818fb2262c8a394fde1eb813ca583f74b7a1c5c63d16ca657afa601`.
+Baseline/treatment capability SHA-256 values are respectively
+`0e46fef97cb12955b3a75298671075325a49a8c6014cf50cda0b1daed27af2b1`
+and `8b4c06b0c6761078e12c06cbd02c4424b6d20d731405f3adcc876eb8de3296da`.
+Both final preflights passed with zero model turns. Their receipt SHA-256
+values are respectively
+`95eef321519cc84347224d131895021d21f23e701cab96bcdf05bc0b13cbdee1`
+and `0920e0ae2ec541121f9549d5811d8b41cb48d9ba8c396b758c50738cfcbfd17b`.
+
+The common protocol retains the $15 observed combined solver/evaluator
+dispatch stop, $18 informational envelope, 4500-second original arm clock,
+one public repair per round, one quality correction episode, and zero
+whole-run retries. `INCOMPLETE` evaluator assessment stops as infrastructure
+without using the correction. A failed candidate and its native usage and
+cost receipts are preserved. The treatment's hard-stage prompts contain
+conditional rules only; no prior paid candidate or unrevealed domain detail
+is sent into either fresh arm. One pair supports descriptive quality, total
+USD, and common-boundary wall observations only.
+
+After approval for each paid arm, use a separate terminal for its quality
+watcher and keep it running while `run.py --live` executes. From this
+repository root, substitute `baseline` first, then `treatment` only after
+the baseline quality and end-to-end checks pass:
 
 ```powershell
-python -m evals.long_horizon_v1.evaluator_smoke --run --approved-budget-usd 1.0 --output evals/long_horizon_v1/_scratch/pilot-20-evidence/evaluator-smoke --sessions 'C:\Users\yahu2\.codex\sessions'
+$prepared = 'evals/long_horizon_v1/_scratch/pilot-20-prep'
+$evidence = 'evals/long_horizon_v1/_scratch/pilot-20-evidence'
+$cli = 'C:\Users\yahu2\AppData\Local\OpenAI\Codex\bin\9691020b546a15b2\codex.exe'
+$sessions = 'C:\Users\yahu2\.codex\sessions'
+$arm = 'baseline'
+python -m evals.long_horizon_v1.quality_adapter --watch-root "$evidence/${arm}-live/quality" --prepared $prepared --cli $cli --session-root $sessions
 ```
 
-A smoke PASS and independent receipt review precede a final v20 plan, fresh
-baseline and treatment preparation, capability rebind, zero-turn preflights,
-and any full paid arm. The draft cannot launch an arm.
+In the arm runner terminal, with the same variables and `$arm`, run:
+
+```powershell
+python evals/long_horizon_v1/run.py --prepared $prepared --output "$evidence/${arm}-live" --arm $arm --live --cli $cli --capability "$evidence/${arm}-capability.json" --session-root $sessions
+python -m evals.long_horizon_v1.end_to_end --prepared $prepared --arm $arm
+```
+
+The finalizer requires completed quality evidence and writes the common wall
+receipt. Stop after any failed or incomplete arm. After both arms complete,
+copy their exact run receipts into a paired input directory, then collect:
+
+```powershell
+New-Item -ItemType Directory "$evidence/pair/baseline", "$evidence/pair/treatment" | Out-Null
+Copy-Item "$evidence/baseline-live/run.json" "$evidence/pair/baseline/run.json"
+Copy-Item "$evidence/treatment-live/run.json" "$evidence/pair/treatment/run.json"
+python -m evals.long_horizon_v1.collect --pair "$evidence/pair" --output "$evidence/pair-summary"
+```
 
 ## Pilot 19 prospective common quality workflow (2026-10-09)
 

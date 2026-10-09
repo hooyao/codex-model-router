@@ -164,8 +164,8 @@ def _arm(path: Path, expected: str) -> dict:
                         manifest()["pilot"].get("path") == "pilot-plan-v17.json")
             fixed = (manifest().get("pilot", {}).get("schema_version") == 6 and
                      manifest()["pilot"].get("path") == "pilot-plan-v18.json")
-            common_quality = (manifest().get("pilot", {}).get("schema_version") == 7 and
-                              manifest()["pilot"].get("path") == "pilot-plan-v19.json")
+            common_quality = (manifest().get("pilot", {}).get("path") in
+                              ("pilot-plan-v19.json", "pilot-plan-v20.json"))
             if (not isinstance(fork_evidence, dict) or
                     fork_evidence.get("packet_scope") != scope or
                     data.get("claim_class") != ("standalone-treatment-feasibility" if standalone
@@ -201,7 +201,8 @@ def _arm(path: Path, expected: str) -> dict:
             native_attempts = data.get("native_attempts")
             events = stage.get("events")
             event_attempt_kinds = (("submit", "protocol_failure", "correction-submission")
-                                   if manifest().get("pilot", {}).get("path") == "pilot-plan-v19.json"
+                                   if manifest().get("pilot", {}).get("path") in
+                                   ("pilot-plan-v19.json", "pilot-plan-v20.json")
                                    else ("submit", "protocol_failure"))
             interrupted = any(turn.get("terminal") == "turn_aborted"
                               for session in sessions for turn in session["turns"])
@@ -341,6 +342,8 @@ def collect(pair: Path, output: Path) -> dict:
     if descriptor.get("schema_version") == 6 and descriptor.get("path") == "pilot-plan-v18.json":
         return collect_fixed_baseline(pair, output)
     if descriptor.get("schema_version") == 7 and descriptor.get("path") == "pilot-plan-v19.json":
+        return collect_common_quality(pair, output)
+    if descriptor.get("schema_version") == 8 and descriptor.get("path") == "pilot-plan-v20.json":
         return collect_common_quality(pair, output)
     if descriptor.get("schema_version") == 6 and descriptor.get("path") == "pilot-plan-v18.json":
         return collect_fixed_baseline(pair, output)

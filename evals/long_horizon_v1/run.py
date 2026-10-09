@@ -271,6 +271,8 @@ def _verify_corrected_controls(controls: dict, spec: dict) -> None:
 def pilot_plan(spec: dict) -> dict:
     """Verify the frozen one-pair plan and its offline evidence without a model turn."""
     descriptor = spec.get("pilot")
+    if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v20.json":
+        return _pilot_plan_common(spec, version=20)
     if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v19.json":
         return _pilot_plan_common(spec)
     if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v18.json":
@@ -504,25 +506,79 @@ def _verify_standalone_sources(plan: dict) -> None:
         raise ValueError("standalone execution source drift")
 
 
-def _pilot_plan_common(spec: dict) -> dict:
+def _verify_v20_smoke(binding: dict, spec: dict) -> None:
+    """Bind the corrected offline verdict to immutable original paid evidence."""
+    if (binding.get("status") != "verified-original-trace" or
+            binding.get("automatic_retries") != 0 or
+            binding.get("observed_dispatch_stop_usd") != 1.0 or
+            binding.get("maximum_wall_seconds") != 180 or
+            binding.get("adapter_sha256") != file_sha(HERE / "quality_adapter.py") or
+            binding.get("checker_source_sha256") != file_sha(HERE / "evaluator_smoke.py") or
+            binding.get("fixture_sha256") != {path.name: file_sha(path)
+                for path in (HERE / "smoke_fixture").iterdir() if path.is_file()}):
+        raise ValueError("v20 evaluator smoke source or bounds drift")
+    def bound(name: str) -> dict:
+        descriptor = binding.get(name)
+        if not isinstance(descriptor, dict):
+            raise ValueError(f"v20 {name} binding missing")
+        path = HERE / descriptor.get("path", "")
+        if not path.is_file() or file_sha(path) != descriptor.get("sha256"):
+            raise ValueError(f"v20 {name} evidence drift")
+        return json.loads(path.read_text(encoding="utf-8"))
+    original = bound("original_failure")
+    review = bound("independent_adjudication")
+    machine = bound("machine_verification")
+    preparation = bound("smoke_preparation")
+    raw = binding.get("native_rollout", {})
+    raw_path = Path(raw.get("path", ""))
+    if (not raw_path.is_file() or file_sha(raw_path) != raw.get("sha256") or
+            raw_path.resolve() != Path(review.get("rollout_path", "")).resolve() or
+            original.get("status") != "UNKNOWN" or
+            review.get("status") != "verified-capability-from-original-trace" or
+            machine.get("status") != "PASS" or
+            machine.get("original_receipt_status") != "UNKNOWN" or
+            machine.get("original_failure_sha256") != binding["original_failure"]["sha256"] or
+            machine.get("smoke_preparation_sha256") != binding["smoke_preparation"]["sha256"] or
+            machine.get("independent_adjudication_sha256") !=
+                binding["independent_adjudication"]["sha256"] or
+            machine.get("raw_rollout_sha256") != raw["sha256"] or
+            machine.get("checker_source_sha256") != binding["checker_source_sha256"] or
+            machine.get("evaluator_thread_id") != review.get("evaluator_thread_id") or
+            machine.get("usage") != original.get("usage") or
+            machine.get("paid_calls_in_verification") != 0 or
+            machine.get("benchmark_arm_cost_included") is not False or
+            machine.get("go_command", {}).get("go_exit_code") != 0 or
+            machine.get("go_command", {}).get("thread_id") != review.get("evaluator_thread_id") or
+            machine.get("go_command", {}).get("turn_id") != review.get("turn_id") or
+            review.get("paid_rerun_required") is not False or
+            preparation.get("smoke_source_sha256") != binding.get("smoke_source_sha256") or
+            preparation.get("bridge_sha256") != binding.get("bridge_sha256") or
+            preparation.get("adapter_sha256") != binding.get("adapter_sha256") or
+            review.get("estimated_usd", 1.0) >= 1.0):
+        raise ValueError("v20 original evaluator smoke proof incomplete")
+
+
+def _pilot_plan_common(spec: dict, *, version: int = 19) -> dict:
     """Bind a fresh pair to the same prospective quality feedback workflow."""
     descriptor = spec["pilot"]
-    path = HERE / "pilot-plan-v19.json"
-    if descriptor != {"path": path.name, "schema_version": 7,
+    path = HERE / f"pilot-plan-v{version}.json"
+    schema_version = 8 if version == 20 else 7
+    if descriptor != {"path": path.name, "schema_version": schema_version,
                       "sha256": file_sha(path)}:
         raise ValueError("common quality plan descriptor drift")
     plan = json.loads(path.read_text(encoding="utf-8"))
     arms = ("baseline", "treatment")
-    prefix = "_scratch/pilot-19"
+    prefix = f"_scratch/pilot-{version}"
     if (set(plan) != {"schema_version", "mode", "pilot_id", "claim", "arm_order",
                       "matched_pairs", "packet_scope_mode", "preparation_root",
                       "evidence_root", "capabilities", "run_outputs", "live_rebind",
                       "limits_per_arm", "acceptance", "feedback", "end_to_end",
                       "fixture", "runtime", "runner_normalized_sha256",
-                      "execution_sources_sha256", "current_cancellation", "stop_rule"} or
-            plan.get("schema_version") != 7 or
+                      "execution_sources_sha256", "current_cancellation", "stop_rule"} |
+                      ({"evaluator_smoke"} if version == 20 else set()) or
+            plan.get("schema_version") != schema_version or
             plan.get("mode") != "common-quality-recovery" or
-            plan.get("pilot_id") != "flipt-oci-long-horizon-pilot-19" or
+            plan.get("pilot_id") != f"flipt-oci-long-horizon-pilot-{version}" or
             plan.get("claim") != "fresh-paired-prospective-quality" or
             plan.get("arm_order") != list(arms) or plan.get("matched_pairs") != 1 or
             plan.get("packet_scope_mode") != DIAGNOSTIC or
@@ -568,7 +624,14 @@ def _pilot_plan_common(spec: dict) -> dict:
         "plugin_hooks_sha256", "router_hook_sha256", "routing_validator_sha256")}
     if plan.get("fixture") != fixture or plan.get("runtime") != runtime:
         raise ValueError("common quality fixture or runtime drift")
-    _verify_standalone_sources(plan)
+    expected_sources = _standalone_source_hashes()
+    if version == 20:
+        expected_sources["evaluator_smoke.py"] = file_sha(HERE / "evaluator_smoke.py")
+    if (plan.get("runner_normalized_sha256") != _runner_source_sha256() or
+            plan.get("execution_sources_sha256") != expected_sources):
+        raise ValueError("common quality execution source drift")
+    if version == 20:
+        _verify_v20_smoke(plan["evaluator_smoke"], spec)
     if any(spec.get("limits", {}).get(key) != value for key, value in (
             ("planning_envelope_usd", PLANNING_USD), ("dispatch_stop_usd", STOP_USD),
             ("wall_seconds", MAX_SECONDS),

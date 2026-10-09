@@ -12,7 +12,7 @@ import time
 from typing import Callable
 
 from .accounting import account
-from .common import HERE, TASK_ID, file_sha, sha, write_json_new
+from .common import HERE, TASK_ID, file_sha, manifest, sha, write_json_new
 from .grade import REVIEW_REQUIREMENTS
 from evals.scripts.run_paired_arm import SessionMeter
 
@@ -423,7 +423,7 @@ def verify_common_arm_quality(prepared: Path, plan: dict, run: dict,
         if (wall.get("schema_version") != 1 or wall.get("kind") != "arm-end-to-end-boundary" or
                 wall.get("pilot_id") != plan["pilot_id"] or wall.get("task_id") != TASK_ID or
                 wall.get("arm") != arm or wall.get("manifest_sha256") != manifest_sha or
-                wall.get("pilot_plan_sha256") != file_sha(HERE / "pilot-plan-v19.json") or
+                wall.get("pilot_plan_sha256") != file_sha(HERE / manifest()["pilot"]["path"]) or
                 wall.get("preparation_sha256") != preparation_sha or
                 wall.get("run_sha256") != file_sha(run_path) or
                 wall.get("quality_files_sha256") != files or

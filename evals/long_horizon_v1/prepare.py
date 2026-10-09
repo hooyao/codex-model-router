@@ -156,11 +156,12 @@ def _arms_for_plan(spec: dict) -> tuple[str, ...]:
                 plan.get("arm_order") != ["treatment"] or plan.get("matched_pairs") != 0):
             raise ValueError("fixed baseline treatment preparation scope drift")
         return ("treatment",)
-    if name == "pilot-plan-v19.json":
-        if descriptor.get("schema_version") != 7 or descriptor.get("sha256") != file_sha(HERE / name):
+    if name in ("pilot-plan-v19.json", "pilot-plan-v20.json"):
+        version = 8 if name == "pilot-plan-v20.json" else 7
+        if descriptor.get("schema_version") != version or descriptor.get("sha256") != file_sha(HERE / name):
             raise ValueError("common quality preparation plan hash drift")
         plan = json.loads((HERE / name).read_text(encoding="utf-8"))
-        if (plan.get("schema_version") != 7 or plan.get("mode") != "common-quality-recovery" or
+        if (plan.get("schema_version") != version or plan.get("mode") != "common-quality-recovery" or
                 plan.get("arm_order") != ["baseline", "treatment"] or
                 plan.get("matched_pairs") != 1):
             raise ValueError("common quality preparation arm scope drift")

@@ -73,7 +73,7 @@ def _verify_standalone_rebind(spec: dict, plan: dict, rebinding: bool) -> None:
                             "common-quality-recovery"):
         fixed = plan.get("mode") == "fixed-baseline-recovery"
         common = plan.get("mode") == "common-quality-recovery"
-        version = 6 if fixed else 7 if common else 5
+        version = 6 if fixed else plan.get("schema_version") if common else 5
         if (not rebinding or pilot.get("schema_version") != version or
                 plan.get("schema_version") != version or
                 plan.get("arm_order") != (["treatment"] if fixed else ["baseline", "treatment"]) or
