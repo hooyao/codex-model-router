@@ -43,10 +43,10 @@ class EvaluatorSmokeChainTests(unittest.TestCase):
             path = Path(directory) / "rollout.jsonl"
             path.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
             if valid:
-                self.assertEqual(_go_command_proof(path, Path("C:/go.exe"))["go_exit_code"], 0)
+                self.assertEqual(_go_command_proof(path, Path("C:\\go.exe"))["go_exit_code"], 0)
             else:
                 with self.assertRaises(ValueError):
-                    _go_command_proof(path, Path("C:/go.exe"))
+                    _go_command_proof(path, Path("C:\\go.exe"))
 
     def test_valid_native_completion_before_poll(self) -> None:
         self.check(chain(), True)

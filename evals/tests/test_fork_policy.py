@@ -370,9 +370,12 @@ class ForkPolicyTests(unittest.TestCase):
                 raise AssertionError("baseline sentinel was read")
             return original(path, *args, **kwargs)
 
+        historical = json.loads((Path(__file__).parents[1] / "long_horizon_v1" /
+                                 "manifest-r12e-20261001.json").read_text(encoding="utf-8"))
         with patch.object(Path, "read_text", guarded):
-            with self.assertRaisesRegex(ValueError, "standalone plan"):
-                collect(pair, self.root / "rejected-manifest")
+            with patch("evals.long_horizon_v1.collect.manifest", return_value=historical):
+                with self.assertRaisesRegex(ValueError, "standalone plan"):
+                    collect(pair, self.root / "rejected-manifest")
             with patch("evals.long_horizon_v1.collect.manifest",
                        return_value={"pilot": {"path": "pilot-plan-v9.json", "schema_version": 1}}):
                 with self.assertRaisesRegex(ValueError, "standalone treatment"):

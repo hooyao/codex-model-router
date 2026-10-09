@@ -86,6 +86,12 @@ def git(workspace: Path, *args: str) -> bytes:
                           capture_output=True).stdout
 
 
+def historical_r12e_manifest() -> dict:
+    """Keep v13 standalone assertions tied to their recorded manifest."""
+    return json.loads((ASSET_ROOT.parent / "manifest-r12e-20261001.json").read_text(
+        encoding="utf-8"))
+
+
 class LongHorizonProtocolTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -217,6 +223,10 @@ class LongHorizonProtocolTests(unittest.TestCase):
             else:
                 continue
             with self.subTest(asset=name):
+                if relative not in old_tests:
+                    self.assertTrue(name.startswith("public/g2/") and
+                                    "recovery_test.go" in name)
+                    continue
                 self.assertIn(relative, old_tests)
                 self.assertEqual(digest != old_tests[relative],
                                  name in erratum["changed_assets"])
@@ -226,7 +236,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
                 live_preflight(None, None, "baseline")
 
     def test_shutdown_join_oracle_is_offline_and_preserves_pilot13(self) -> None:
-        spec = manifest()
+        spec = historical_r12e_manifest()
         binding = spec["shutdown_join_oracle"]
         self.assertFalse(spec["live_enabled"])
         self.assertEqual(spec["status"], "offline-shutdown-join-r12e")
@@ -512,7 +522,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
 
     def test_diagnostic_treatment_plan_and_reference_fail_closed(self) -> None:
         self.require_retained_adjudication()
-        spec = manifest()
+        spec = historical_r12e_manifest()
         self.assertIs(spec["live_enabled"], False)
         plan = json.loads((ASSET_ROOT.parent / "pilot-plan-v11.json").read_text(
             encoding="utf-8"))
@@ -539,7 +549,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
 
     def test_standalone_plan_rejects_comparator_fields_and_requires_explicit_mode(self) -> None:
         self.require_retained_adjudication()
-        spec = manifest()
+        spec = historical_r12e_manifest()
         plan = json.loads((ASSET_ROOT.parent / "pilot-plan-v12.json").read_text(encoding="utf-8"))
         self.assertEqual(plan["mode"], "standalone-feasibility")
         self.assertEqual(plan["arm_order"], ["treatment"])
@@ -589,7 +599,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
                  mock_patch("evals.long_horizon_v1.run.file_sha", side_effect=tampered), \
                  self.assertRaisesRegex(ValueError, "standalone execution source drift"):
                 _verify_standalone_sources(plan)
-        spec = {**manifest(), "live_enabled": True}
+        spec = {**historical_r12e_manifest(), "live_enabled": True}
         with mock_patch("evals.long_horizon_v1.run.manifest", return_value=spec), \
              mock_patch("evals.long_horizon_v1.run._runner_source_sha256",
                         return_value="0" * 64), \
@@ -694,11 +704,12 @@ class LongHorizonProtocolTests(unittest.TestCase):
                          capabilities={"treatment": "_scratch/pilot-13-evidence/treatment-capability.json"},
                          run_outputs={"treatment": "_scratch/pilot-13-evidence/treatment-live"},
                          runner_normalized_sha256=_runner_source_sha256(),
-                         execution_sources_sha256=_standalone_source_hashes())
+                         execution_sources_sha256={name: digest for name, digest in
+                             _standalone_source_hashes().items() if "baseline" not in name})
         candidate["end_to_end"]["receipts"] = {
             "treatment": "_scratch/pilot-13-evidence/treatment-end-to-end.json"}
         synthetic_path = HERE / "pilot-plan-v13.json"
-        spec = copy.deepcopy(manifest())
+        spec = copy.deepcopy(historical_r12e_manifest())
         spec["pilot"] = {"path": synthetic_path.name, "schema_version": 4,
                          "sha256": "f" * 64}
         original_read = Path.read_text
@@ -766,8 +777,9 @@ class LongHorizonProtocolTests(unittest.TestCase):
             self.assertEqual(action["action"], "final" if round_id == 2 else "continue")
         root = self.workspace / "standalone-fixture"
         root.mkdir()
-        for name in ("manifest.json", "pilot-plan-v13.json"):
-            (root / name).write_bytes((HERE / name).read_bytes())
+        (root / "manifest.json").write_bytes(
+            (HERE / "manifest-r12e-20261001.json").read_bytes())
+        (root / "pilot-plan-v13.json").write_bytes((HERE / "pilot-plan-v13.json").read_bytes())
         prepared = root / "prepared"
         prepared.mkdir()
         (prepared / "preparation.json").write_text("{}", encoding="utf-8")
@@ -779,8 +791,10 @@ class LongHorizonProtocolTests(unittest.TestCase):
         (run_path.parent / "candidate-g2-attempt0.patch").write_bytes(b"")
         self.assertEqual(file_sha(run_path.parent / "candidate-g2-attempt0.patch"), patch_sha)
         started = 1_700_000_000_000_000_000
+        with mock_patch("evals.long_horizon_v1.protocol.HERE", root):
+            stage_receipt = machine.receipt()
         run = {"stop_reason": "accepted-final", "cost_status": "complete",
-            "usage_issues": [], "stage": machine.receipt(), "attempts": attempts,
+            "usage_issues": [], "stage": stage_receipt, "attempts": attempts,
             "parent_thread_id": "parent", "runtime_binding": {"preparation_sha256": prep_sha},
             "started_utc_ns": started, "wall_seconds": 5.0}
         run_path.write_text(json.dumps(run), encoding="utf-8")
@@ -804,6 +818,8 @@ class LongHorizonProtocolTests(unittest.TestCase):
         wall_path.parent.mkdir(parents=True, exist_ok=True)
         wall_path.write_text(json.dumps(wall), encoding="utf-8")
         with mock_patch("evals.long_horizon_v1.standalone_quality.HERE", root), \
+             mock_patch("evals.long_horizon_v1.standalone_quality.manifest",
+                        return_value=historical_r12e_manifest()), \
              mock_patch("evals.long_horizon_v1.standalone_quality._grade",
                         side_effect=["h" * 64, "b" * 64]):
             receipt = verify_standalone_quality(prepared, plan, run)
@@ -825,7 +841,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
             verify_prepared(stale, "treatment", manifest())
 
     def test_standalone_capability_rebind_requires_exact_live_manifest(self) -> None:
-        spec = manifest()
+        spec = historical_r12e_manifest()
         with mock_patch("evals.long_horizon_v1.live_preflight.verify_cli") as cli:
             with self.assertRaisesRegex(ValueError, "standalone feasibility requires no-model rebind"):
                 bind_capabilities()
@@ -842,7 +858,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
         self.assertEqual(spec["pilot"]["schema_version"], 4)
 
     def test_standalone_capability_rebind_rejects_cross_mode_and_comparator(self) -> None:
-        spec = {**manifest(), "live_enabled": True}
+        spec = {**historical_r12e_manifest(), "live_enabled": True}
         plan = json.loads((ASSET_ROOT.parent / "pilot-plan-v12.json").read_text(encoding="utf-8"))
         cases = (("cross-mode", {**plan, "mode": "diagnostic-feasibility"}),
                  ("baseline", {**plan, "baseline": {"forged": True}}),
@@ -869,7 +885,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
 
     def test_standalone_rebind_rejects_stale_capability_and_manifest_swap(self) -> None:
         from evals.long_horizon_v1.common import write_json_new
-        spec = {**manifest(), "live_enabled": True}
+        spec = {**historical_r12e_manifest(), "live_enabled": True}
         frozen = json.loads((ASSET_ROOT.parent / "pilot-plan-v13.json").read_text(encoding="utf-8"))
         for scenario in ("stale-capability", "manifest-swap"):
             with self.subTest(scenario=scenario):
@@ -1475,7 +1491,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
             prepared = prepare(root)
         treatment = root / "treatment"
         expected_arms = (["baseline", "treatment"] if
-                         spec.get("pilot", {}).get("schema_version") in (5, 7) else ["treatment"])
+                         spec.get("pilot", {}).get("schema_version") in (5, 7, 8) else ["treatment"])
         self.assertEqual(list(prepared["arms"]), expected_arms)
         self.assertEqual((root / "baseline").exists(), "baseline" in expected_arms)
         real_scandir = os.scandir
@@ -1526,7 +1542,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
         self.assertEqual(treatment.split("\n\n", 1)[0], shared)
         self.assertIn("Do not start child agents", baseline)
         self.assertIn(("Delegate bounded hard reasoning" if
-                       spec.get("pilot", {}).get("schema_version") in (6, 7) else
+                       spec.get("pilot", {}).get("schema_version") in (6, 7, 8) else
                        "I authorize you to delegate"), treatment)
         self.assertNotIn("fixed child count", baseline)
         self.assertFalse(baseline_has_child("parent", [{"id": "parent"}]))
@@ -2290,6 +2306,10 @@ class LongHorizonProtocolTests(unittest.TestCase):
         self.assertIn("turn/completed", [event["method"] for event in transport.events])
 
     def test_collector_independently_requires_closed_child_ledger(self) -> None:
+        legacy = mock_patch("evals.long_horizon_v1.collect.manifest",
+                            return_value=historical_r12e_manifest())
+        legacy.start()
+        self.addCleanup(legacy.stop)
         root, parent_id, child_id, parent, child = self._observed_multiturn_rollouts()
         self._write_multiturn(root, parent, child)
         plans = self._fork_plan(root, parent)
@@ -2345,6 +2365,10 @@ class LongHorizonProtocolTests(unittest.TestCase):
                     _arm(path, "treatment")
 
     def test_interrupted_child_cost_requires_exact_drain_proof(self) -> None:
+        legacy = mock_patch("evals.long_horizon_v1.collect.manifest",
+                            return_value=historical_r12e_manifest())
+        legacy.start()
+        self.addCleanup(legacy.stop)
         fixture = json.loads((Path(__file__).parent / "fixtures" /
                               "native-abort-observed-sanitized.json").read_text(
                                   encoding="utf-8"))

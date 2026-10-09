@@ -1,96 +1,48 @@
 # Long-horizon OCI benchmark v1: paired recovery preparation
 
-## Pilot 20 final paired quality freeze (2026-10-09)
+## Pilot 20 observed outcome (2026-10-09)
 
-[Pilot-plan-v20.json](pilot-plan-v20.json) freezes one fresh baseline/treatment
-pair under the same staged public task, start tree, public reveals, hidden
-grader, and common quality callback. The final [manifest](manifest.json) is
-live-enabled for an approved arm, but no v20 solver arm has started. The old
-[draft](pilot-plan-v20-draft.json), v19 paid failure, and earlier paid evidence
-remain historical and unchanged.
+The two paid v20 arms and their original receipts are complete. The baseline
+stopped at its cost safety threshold before independent quality review. Its
+solver usage reconciled at an estimated $11.905734 across 67 responses; whole
+workflow cost and product quality remain UNKNOWN. The treatment reached a
+revision-1 semantic assessment that found a remaining Close error precedence
+bug. Its original run ended as evaluator infrastructure incomplete after an
+unnecessary diagnostic follow-up. The solver receipt records $7.3394229
+across 179 responses, but its official cost status and whole workflow cost
+remain UNKNOWN. The original treatment failure receipt separately retains
+complete revision-1 evaluator usage of $2.6513305 across 20 responses.
+Neither arm is relabeled as a successful matched result.
 
-The evaluator now uses the same working dangerFullAccess App Server transport
-as the solver, with a separate scratch directory and a **logical** read-only
-candidate instruction. Exact before/after content and file-set hashes detect
-product mutation; this does not establish technical sandbox isolation. An
-evaluator report must say `assessment_status: COMPLETE` before product PASS or
-FAIL is possible. Inability to inspect the product is `INCOMPLETE` and stops
-as infrastructure, without a solver correction or diagnostic follow-up.
-Failure receipts bind the evaluator native ID, source request, model report,
-raw usage completeness, known cost, and product hashes. Quality completeness
-and cost completeness are separate. The original v19 workflow-cost status
-remains UNKNOWN; its independently replayed known evaluator subtotal is in
-`_scratch/pilot-19-evidence/evaluator-infrastructure-cost-supplement.json`.
+The separate baseline correction underwent a complete quality check and
+passed; its evaluator used 19 Astra/xhigh responses, estimated $2.3745065.
+The treatment candidate's remaining product bug was fixed in a separate copy.
+The tracked [fixed candidate patch](controls/pilot20-fixed-candidate.patch)
+(SHA-256 `520ad9d6c72fb16462def8e9eaeb64aff970273796cb767f15e52fa95ae92808`)
+checks the OCI store's closed state before rejecting a malformed selector.
+It also adds a focused after-Close regression for empty, valid, unknown, and
+malformed selectors. The patch applies to the pinned seed and passed the
+focused reference and public G2 lifecycle tests with the pinned Go toolchain.
 
-The one separately approved evaluator smoke already ran. Its original
-`smoke-failure.json` remains `UNKNOWN`: the old checker missed a successful
-native Go command because the CLI returned a session ID, then delivered its
-final output through `write_stdin`. Independent adjudication and the corrected
-checker joined the original call, session 8251, native command completion,
-poll result, and terminal turn within the same thread. The derived
-`machine-verification.json` records PASS against the unchanged original raw
-rollout and failure receipt. Five Astra/xhigh responses cost an estimated
-$0.350294 over 87.28 seconds; this is setup cost outside both arm totals.
-There was no paid rerun. The smoke product content and file set were unchanged,
-the unknown token was copied into scratch, and the pinned Go test exited 0.
+A separate full assessment of that fixed patch passed all ten independent
+semantic requirements and the hidden behavior, race, and backend checks
+(all recorded exit 0). Its evaluator used 25 Astra/xhigh responses, estimated
+$3.050387 over about 860 seconds. The local complete response SHA-256 is
+`49287396aaf6caa80c466d3235b35e0a1bcc9ee11207e79b535fe2cb7813acb7`.
+This verifies the fixed product patch, not the original paid treatment arm.
+The local raw paid sessions and quality outputs under `_scratch` remain
+untracked; this PR does not contain enough evidence to replay their cost or
+quality claims independently.
 
-The final plan SHA-256 is
-`bd9fac3568d95a0c41827d18c4a9c1e48a6b56f3e2fd4682db3eb729f8541782`;
-the live manifest SHA-256 is
-`7296cf2049e18f112ffa44406e49755164bb41b1300963ba37882cc3b113aae1`.
-The derived smoke receipt SHA-256 is
-`0823c64f5d7a45fc3deef9fefb7ad9c9d9dfa97cedebfffb257aa7dd4a88c8c0`.
-Fresh R0 preparation SHA-256 is
-`1eef6307f3c07a37ec50713d41a1ca0c4ee6f651a83c3d80632c86e48920390c`.
-Baseline/treatment capability SHA-256 values are respectively
-`aabd07638a7589f8a21f5fcac933ea21ec09e49066b950e7d843625d6aa6ca9a`
-and `b57e8eb3de8400fea97e9e28b38ae99a0a9524ad32424ebd68d195f14a583973`.
-Both final preflights passed with zero model turns. Their receipt SHA-256
-values are respectively
-`d3abf22f91c9e4dd2d4d2279e4b851cd736f046121c7c72436a5e07f166e62cc`
-and `72aba6cd52e27733225c4103c102dc246acfa93146d12447ad134f0926bb6583`.
-
-The common protocol retains the $15 observed combined solver/evaluator
-dispatch stop, $18 informational envelope, 4500-second original arm clock,
-one public repair per round, one quality correction episode, and zero
-whole-run retries. `INCOMPLETE` evaluator assessment stops as infrastructure
-without using the correction. A failed candidate and its native usage and
-cost receipts are preserved. The treatment's hard-stage prompts contain
-conditional rules only; no prior paid candidate or unrevealed domain detail
-is sent into either fresh arm. One pair supports descriptive quality, total
-USD, and common-boundary wall observations only.
-
-After approval for each paid arm, use a separate terminal for its quality
-watcher and keep it running while `run.py --live` executes. From this
-repository root, substitute `baseline` first, then `treatment` only after
-the baseline quality and end-to-end checks pass:
-
-```powershell
-$prepared = 'evals/long_horizon_v1/_scratch/pilot-20-prep'
-$evidence = 'evals/long_horizon_v1/_scratch/pilot-20-evidence'
-$cli = 'C:\Users\yahu2\AppData\Local\OpenAI\Codex\bin\9691020b546a15b2\codex.exe'
-$sessions = 'C:\Users\yahu2\.codex\sessions'
-$arm = 'baseline'
-python -m evals.long_horizon_v1.quality_adapter --watch-root "$evidence/${arm}-live/quality" --prepared $prepared --cli $cli --session-root $sessions
-```
-
-In the arm runner terminal, with the same variables and `$arm`, run:
-
-```powershell
-python evals/long_horizon_v1/run.py --prepared $prepared --output "$evidence/${arm}-live" --arm $arm --live --cli $cli --capability "$evidence/${arm}-capability.json" --session-root $sessions
-python -m evals.long_horizon_v1.end_to_end --prepared $prepared --arm $arm
-```
-
-The finalizer requires completed quality evidence and writes the common wall
-receipt. Stop after any failed or incomplete arm. After both arms complete,
-copy their exact run receipts into a paired input directory, then collect:
-
-```powershell
-New-Item -ItemType Directory "$evidence/pair/baseline", "$evidence/pair/treatment" | Out-Null
-Copy-Item "$evidence/baseline-live/run.json" "$evidence/pair/baseline/run.json"
-Copy-Item "$evidence/treatment-live/run.json" "$evidence/pair/treatment/run.json"
-python -m evals.long_horizon_v1.collect --pair "$evidence/pair" --output "$evidence/pair-summary"
-```
+During the trial, the benchmark adapter was corrected to batch native usage
+scans, reuse only the exact closed evaluator turn for the same request, and
+publish final revision-1 product failures without requesting a further
+correction diagnostic. V20 permits local benchmark Python bug fixes while
+keeping task assets, runtime identity, candidate identity, and native usage
+checks. The historical paid failure and usage files were preserved. The
+[manifest](manifest.json) now has `live_enabled=false`, so this checkout does
+not start another paid arm. There is no matched quality-parity, savings,
+latency, or technical context-isolation claim from this pair.
 
 ## Pilot 19 prospective common quality workflow (2026-10-09)
 
