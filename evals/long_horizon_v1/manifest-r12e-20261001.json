@@ -1,0 +1,170 @@
+{
+  "arm_execution": {
+    "path": "arm-execution-v2.json",
+    "prompt_suffix_sha256": {
+      "baseline": "5ece6200be87f54301fdc8eeffee9269bd86b4def20705c11063543d05ae4764",
+      "treatment": "2efb00985a77449b9528cb9478164340984f1ac7feafe8645a50f476e412e921"
+    },
+    "schema_version": 1,
+    "sha256": "1f368c2565747f7e7dc99bd53ff2eef3984ff41a2f0554c92bd640e1566b2956"
+  },
+  "assets": {
+    "checkpoint_hash.py": "54347a487ea3057cb9a58f7dba8268f0494f3b1be3eb32909cf5e29471f2dec1",
+    "environment.md": "bb588603ab4f26f88766b880815e6d1c9af42ceaf684723a494870c0ddcccf0b",
+    "oracle/internal/oci/benchmark_oracle_test.go": "65002ecd2469ff0197dd067ac0879f26499304dc84e39529c3061e25904c7965",
+    "oracle/internal/storage/fs/benchmark_oracle_test.go": "61048feecbf4f09fa19566faaa7514346786c0ddd2020ba63cb1d33e5f815d53",
+    "oracle/internal/storage/fs/oci/benchmark_oracle_schedule_test.go": "08117edf37252c8671850dd823c678bc5a9fb7928a68e2255e3f71606a6870cc",
+    "oracle/internal/storage/fs/oci/benchmark_oracle_shutdown_join_test.go": "a3360231dd1e70dd51c1b7a29371e2798b87ce31c22e5bc2804a66a8e4c20e71",
+    "oracle/internal/storage/fs/oci/benchmark_oracle_test.go": "f19d9e6e4caffdb70298edceada05286282d95a0b7abaf42365a47d999cd655e",
+    "oracle/internal/storage/fs/store/benchmark_oracle_test.go": "0f2ecb08ba2b03367f44291596a8e4f9e6417f21d923862759d05f1e52c54383",
+    "public/g0/internal/storage/fs/oci/benchmark_g0_test.go": "7d59f2c577144c7ed4d93e518f570b08113c82e936ba8a9055ebdbf01d7eb2c9",
+    "public/g1/internal/storage/fs/oci/benchmark_g1_progress_test.go": "71f01c6e0f272a084e388154c9c70d4c63e553e44b6420e473d0116783259f2a",
+    "public/g1/internal/storage/fs/oci/benchmark_g1_test.go": "52b0652fa8047ee446fb929a31389c979aa577c0172e77aec68e326942d4e963",
+    "public/g2/internal/storage/fs/oci/benchmark_g2_test.go": "b8936b489c3bacc4106b22ed764211c52569c8a18b92795d8a7ade49e4c94706",
+    "round0.md": "a3b9961e12f2b8c18d9375c9778afa5297bc70d4eb304cdc9c14c45926309ffd",
+    "round1.md": "e6c7ccc37f24ededa3ab34697eca8fa3c605841a27d8690b3a4c9a0e06e766be",
+    "round2.md": "a7a1b0f19521f3555877805244dad122efec5b6cab303372c441a63bd22b104c",
+    "submit_checkpoint.py": "b38f0256ab6587afb14b48c6fee074fdd5ef658f78d2e25beeab33a1327df136"
+  },
+  "controls": {
+    "broken-close": {
+      "path": "controls/broken-close.patch",
+      "sha256": "5c6ed0bf84bf778d16abc89600586e400e9a8d23f4f92d81e833fdd26e3b401b"
+    },
+    "global-blocking": {
+      "path": "controls/global-blocking.patch",
+      "sha256": "a6cbf1a2b90c757571739449cfcff862529a2ed4599b12c4e1d310da2850c52f"
+    },
+    "ignore-reference": {
+      "path": "controls/ignore-reference.patch",
+      "sha256": "ffee0b31dd048642f289b82a6beb5ec43fb2e426f562935fed1dc623744b773e"
+    },
+    "leaked-stream": {
+      "path": "controls/leaked-stream.patch",
+      "sha256": "fa3c9bfb20f6228690b98a5e170a0c1a3a51bce79f5c26c4270e558eb0f846dd"
+    },
+    "per-reference-serialization": {
+      "path": "controls/per-reference-serialization.patch",
+      "sha256": "384cc88f0ca95bc5522df2ad5f97938462146e549ed0e515d66b6986362af983"
+    },
+    "positive": {
+      "path": "controls/positive.patch",
+      "sha256": "4a91fb11fbb898791ec30b37d926fa541a10c37b070c40fc0ce892a2b6c11f65"
+    },
+    "round0-only": {
+      "path": "controls/round0-only.patch",
+      "sha256": "932f7f20421267f2a441593343e5673f76b8fe6790074adde80a4d9444a24216"
+    },
+    "round1-only": {
+      "path": "controls/round1-only.patch",
+      "sha256": "78f2e00cc21c7fb7c39db63c9a35fac8c26cd6c66c6d36c3666f2d23a74620f8"
+    },
+    "stale-publication": {
+      "path": "controls/stale-publication.patch",
+      "sha256": "efc7283262cb8ba362af63018fac1f9d136bdd2870116fce47e06112cc9035a1"
+    },
+    "swallowed-explicit-error": {
+      "path": "controls/swallowed-explicit-error.patch",
+      "sha256": "02a9c4afa807953127fccc7729b8a129302120b9213c58ccdea2b08a8301c0f7"
+    },
+    "wrong-manifest-digest": {
+      "path": "controls/wrong-manifest-digest.patch",
+      "sha256": "7795a4db4957fb31beb1bb0b32ffb644899407c6cdcbf44cf1df88b41775dfc8"
+    }
+  },
+  "go_sum_sha256": "96e3e2be26f962e5e058ffcc7485f5d6dd2f99526423e041d8223943c08d4373",
+  "limits": {
+    "cleanup_reserve_seconds": 25.0,
+    "concurrency_including_parent": 3,
+    "dispatch_stop_usd": 15.0,
+    "planning_envelope_usd": 18.0,
+    "public_repairs_per_round": 1,
+    "wall_seconds": 4500,
+    "worker_retries_per_stage": 0
+  },
+  "live_enabled": false,
+  "oracle_erratum": {
+    "adjudication_sha256": "4a23b29c5f9bb2d337b2f511333bdc69af9f855f3356d1ab91e8f2de3d682909",
+    "changed_assets": [
+      "oracle/internal/oci/benchmark_oracle_test.go",
+      "oracle/internal/storage/fs/oci/benchmark_oracle_schedule_test.go"
+    ],
+    "historical_hidden_grade_sha256": "8f992d3b1621eb90bc8d99a2a9e682f81898c058f9abaed8041c4cc875d55661",
+    "prior_manifest_sha256": "05c04ed1e3e54b1b11e8e9ed27f663ea4cba44140651e6e558de6b5a7b914daa",
+    "version": "r9e-20261001"
+  },
+  "pilot": {
+    "path": "pilot-plan-v13.json",
+    "schema_version": 4,
+    "sha256": "0c61bb837f0afc5293f37585587e1acfe56738aca210798a58c510566479f422"
+  },
+  "pricing": {
+    "as_of": "2026-09-24",
+    "long_context_threshold_input_tokens": 272000,
+    "per_million": {
+      "gpt-6-astra": [
+        10.0,
+        1.0,
+        12.5,
+        50.0
+      ],
+      "gpt-6-luna": [
+        0.1,
+        0.01,
+        0.125,
+        0.5
+      ],
+      "gpt-6-sol": [
+        2.0,
+        0.2,
+        2.5,
+        10.0
+      ]
+    },
+    "source": "https://developers.openai.com/api/docs/pricing",
+    "tier": "Standard"
+  },
+  "routing_config": {
+    "canonical_sha256": "81827c8776172fe5b0bb7164f8713e59992e658ac86ca7a156321c32e2522ace",
+    "path": "routing-config-v1.json",
+    "raw_sha256": "081f75e2f16e5bd957f4ea6b8c60293931f68fe0b0af289d5ca3512f54e94220",
+    "schema_version": 3
+  },
+  "runtime": {
+    "cli": "C:\\Users\\yahu2\\AppData\\Local\\OpenAI\\Codex\\bin\\faa963e871dd422c\\codex.exe",
+    "cli_sha256": "8f0554ede25bbc5450921897c468b2e84635aa513c5017457997af0954581f49",
+    "cli_version": "codex-cli 0.158.0-alpha.2.1",
+    "code_mode_host_sha256": "4970a4ce8a7c6091a87dfea34cae03b3b95dd70f26f89f392e11de7fd8ea759e",
+    "plugin_hooks_sha256": "9cf09fb63c6e3c208f83796ebb51f2425b70a7f528dde3fc77efdfff1a0aa7f2",
+    "plugin_manifest_sha256": "af9d520b3de628fd610678d1dee0e940f9fd63d67ca4a8bf174766480174cc5d",
+    "plugin_root": "C:\\Users\\yahu2\\.codex\\plugins\\cache\\personal\\codex-model-router\\1.2.2+codex.20260930060539",
+    "router_hook_sha256": "5896da6b06ff6462ef7bd9c81a71c7a6a758f00c77435311e5fab4688cf8cc15",
+    "routing_validator_sha256": "ab91853ef8673b079f6ef8e1033ea918b61c16bb0ff9aae7ecbd32dd7ab3deb4"
+  },
+  "schema_version": 1,
+  "seed_patch_sha256": "3d824219a77b11d8b6f6ec506403daad092594d07c9a697a3c2280a2c935c74b",
+  "shutdown_join_oracle": {
+    "historical_candidate_patch_sha256": "993cd8f272954727cb31754dd78e77abd640b5c33994e8de43c818a3cb485e93",
+    "historical_hidden_grade_sha256": "200efc669aade7fa332f53bf44b16f8d232290131ed5ca7e873e73a633a9794d",
+    "historical_semantic_review_sha256": "c739dec5acf790ad88bbc29322498112a4eaebc27f55fcc621de93fe64f97709",
+    "new_asset": "oracle/internal/storage/fs/oci/benchmark_oracle_shutdown_join_test.go",
+    "prior_asset_sha256": "24b8fa422e480010e3d4e157f04c06835f7dadc43a32cc4ae6f9c325f766f871",
+    "prior_manifest_sha256": "43576a136e2d22722fcba589b3e1675f14c0bc19191e8321bcbca4232196c3d6",
+    "prior_matrix_sha256": "96fcfe7aede4c3721b46946813c4de6d546ef50f2c8bb16a99ade53a07da43c6",
+    "prior_receipt_sha256": "b0b9eac509ebe4af85566a18c67357e9f1fd1a7979d73a918050b785d9111a78",
+    "test": "TestBenchmarkOracleCloseWaitsForAcquisitionCleanup",
+    "version": "r12e-20261001"
+  },
+  "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
+  "source_tree": "20121a7049c58571664b87989d1fc7bab8562884",
+  "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
+  "status": "offline-shutdown-join-r12e",
+  "task_id": "flipt-oci-reference-rollout-v1",
+  "toolchain": {
+    "linux_path": "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",
+    "linux_sha256": "89b81bd72c27404ccfd701c136b7e3ace9a4ccb26d96d97e874b48829aed27a1",
+    "sha256": "edc83e6820401bcdbe40d774e5a7b6e376a29a4d5a74b7b3c5a631964d45cb3f",
+    "version": "go version go1.22.2 linux/amd64",
+    "windows_path": "Q:\\MyProjects\\codex-model-router\\evals\\live\\paired-swepro-flipt-20260923\\tools\\windows-go\\go\\bin\\go.exe"
+  }
+}

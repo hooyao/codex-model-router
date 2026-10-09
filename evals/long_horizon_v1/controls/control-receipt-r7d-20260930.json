@@ -1,0 +1,587 @@
+{
+  "checkpoint_helper_sha256": "54347a487ea3057cb9a58f7dba8268f0494f3b1be3eb32909cf5e29471f2dec1",
+  "control_count": 12,
+  "control_patch_hashes": {
+    "broken-close": "5c6ed0bf84bf778d16abc89600586e400e9a8d23f4f92d81e833fdd26e3b401b",
+    "global-blocking": "a6cbf1a2b90c757571739449cfcff862529a2ed4599b12c4e1d310da2850c52f",
+    "ignore-reference": "ffee0b31dd048642f289b82a6beb5ec43fb2e426f562935fed1dc623744b773e",
+    "leaked-stream": "fa3c9bfb20f6228690b98a5e170a0c1a3a51bce79f5c26c4270e558eb0f846dd",
+    "per-reference-serialization": "384cc88f0ca95bc5522df2ad5f97938462146e549ed0e515d66b6986362af983",
+    "positive": "4a91fb11fbb898791ec30b37d926fa541a10c37b070c40fc0ce892a2b6c11f65",
+    "round0-only": "932f7f20421267f2a441593343e5673f76b8fe6790074adde80a4d9444a24216",
+    "round1-only": "78f2e00cc21c7fb7c39db63c9a35fac8c26cd6c66c6d36c3666f2d23a74620f8",
+    "stale-publication": "efc7283262cb8ba362af63018fac1f9d136bdd2870116fce47e06112cc9035a1",
+    "swallowed-explicit-error": "02a9c4afa807953127fccc7729b8a129302120b9213c58ccdea2b08a8301c0f7",
+    "wrong-manifest-digest": "7795a4db4957fb31beb1bb0b32ffb644899407c6cdcbf44cf1df88b41775dfc8"
+  },
+  "control_runner_sha256": "008eaadcd63cc2ba4d43b7a88c00e184bfb60827f7903877059ebe9091d711e0",
+  "controls_pass": true,
+  "fixture_manifest_sha256": "9b63e5eaa642e823ca9068c393e0ed3ba67e3f8c619f9ee7764829dc0e5696d2",
+  "fixture_task_id": "flipt-oci-reference-rollout-v1",
+  "go_invocation_count": 22,
+  "grade_count": 20,
+  "grader_hazard_absent": true,
+  "grader_source": {
+    "path": "grade.py",
+    "sha256": "b5a2626adc89bb2bb6c823e60afd8d4735662a00bbada22c63c2fefa2bd72cf2",
+    "status_contract": "LF file-backed Linux Go exit status must match WSL and receipt; marked process group cleanup must confirm exit before receipt"
+  },
+  "grades": [
+    {
+      "candidate_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 1,
+          "process_group_marker_absent": true,
+          "script_sha256": "3131648d105fab1a30d3c58c1442188416e669107dd0434f696993acfffc5df2",
+          "status_file_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "124d734aaa63df5459ab5a03740b06ac63fa4a6cd7fa990944a6dc860d0d3c99"
+        }
+      ],
+      "control": "seed",
+      "expected_failures": [
+        "TestBenchmarkG0ReferenceSelection"
+      ],
+      "expected_pass": false,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/seed-g0/grade.json",
+      "grade_sha256": "45a1f0368f71c97e18b0c39c6fe75b9d1d3009bf8f462c1b5c032ab07be3bb01",
+      "observed_failures": [
+        "TestBenchmarkG0ReferenceSelection"
+      ],
+      "observed_pass": false,
+      "quality_pass": false,
+      "round": 0
+    },
+    {
+      "candidate_patch_sha256": "4a91fb11fbb898791ec30b37d926fa541a10c37b070c40fc0ce892a2b6c11f65",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "126a8332aecd3ae99b7c27f7a5a8db9c6e0181a084c3606e729423ddde7cc6a8",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "07d47bf3fe531694a01879817aed769084c57516e7dee5fd6751a4b14c679998"
+        }
+      ],
+      "control": "positive",
+      "expected_failures": [],
+      "expected_pass": true,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/positive-g0/grade.json",
+      "grade_sha256": "f8ee66de2784f5db6aaf3d4a0e5351c7304c2362ac376d6acddbbbf070cf06da",
+      "observed_failures": [],
+      "observed_pass": true,
+      "quality_pass": true,
+      "round": 0
+    },
+    {
+      "candidate_patch_sha256": "4a91fb11fbb898791ec30b37d926fa541a10c37b070c40fc0ce892a2b6c11f65",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "c45cf2de2c697637f59ac657195f131797257e5980185c1b4aacfb9d94dabf57",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "242c73209759b7a87a2d5c72b543eb047a2a99417867d3347b2335d7454b819b"
+        }
+      ],
+      "control": "positive",
+      "expected_failures": [],
+      "expected_pass": true,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/positive-g1/grade.json",
+      "grade_sha256": "2bb28aae652351c6a075cd148fbf2ab8ff6d36ea6dadefff5459a2f7512384dd",
+      "observed_failures": [],
+      "observed_pass": true,
+      "quality_pass": true,
+      "round": 1
+    },
+    {
+      "candidate_patch_sha256": "4a91fb11fbb898791ec30b37d926fa541a10c37b070c40fc0ce892a2b6c11f65",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "70fce9954d4f1e02860c3548727826ecb7c8112cadf097a3683cbd8e0ae18535",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "81c1bbd2c641ae2731f73a7b4e7da064f6e344ea0dff3c20c6db4cbd00b2a10c"
+        },
+        {
+          "kind": "race",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "36be5b75444847ef1ed2da2dee151d95be55f004144176be92d72acc038d92f5",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "1509a2bd7f15d16929eac895319626fd4245fd252134ff04d4d6de6b141bdea7"
+        }
+      ],
+      "control": "positive",
+      "expected_failures": [],
+      "expected_pass": true,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/positive-g2/grade.json",
+      "grade_sha256": "80a1bcb389101f518c01cf8fd75b3c5bc51724c1537ad59c13b8a1f42d1745b0",
+      "observed_failures": [],
+      "observed_pass": true,
+      "quality_pass": null,
+      "round": 2
+    },
+    {
+      "candidate_patch_sha256": "932f7f20421267f2a441593343e5673f76b8fe6790074adde80a4d9444a24216",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "190433a836ac34ebc61c6e7c8b939e80d94e2929bcc36aaa4be2f89226794cf2",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "c5206fb7ad6bc246777cc4b202d8dae88109a09917a25560c1c4bb16459dbf18"
+        }
+      ],
+      "control": "round0-only",
+      "expected_failures": [],
+      "expected_pass": true,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/round0-only-g0/grade.json",
+      "grade_sha256": "4c2ef99ec1a108c73568c5df8ca8efb58ad8a78d6600c5e728b7e4419be9242c",
+      "observed_failures": [],
+      "observed_pass": true,
+      "quality_pass": true,
+      "round": 0
+    },
+    {
+      "candidate_patch_sha256": "932f7f20421267f2a441593343e5673f76b8fe6790074adde80a4d9444a24216",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 1,
+          "process_group_marker_absent": true,
+          "script_sha256": "2ac91042e13a143f3e25bfab79b832e838f587578230464ff520a728630d6eb9",
+          "status_file_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "5c37dd508b78cfb1a3ab85a59410d37742eb7e9feabe4a3abc3218762ea6610b"
+        }
+      ],
+      "control": "round0-only",
+      "expected_failures": [
+        "TestBenchmarkG1AliasAndMove"
+      ],
+      "expected_pass": false,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/round0-only-g1/grade.json",
+      "grade_sha256": "76a6fa51ed7356fe3bcb3d6a5634dfda1f9762139fe6e7046d9b71430d80a546",
+      "observed_failures": [
+        "TestBenchmarkG1AliasAndMove"
+      ],
+      "observed_pass": false,
+      "quality_pass": false,
+      "round": 1
+    },
+    {
+      "candidate_patch_sha256": "78f2e00cc21c7fb7c39db63c9a35fac8c26cd6c66c6d36c3666f2d23a74620f8",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "f3ad665999eb314ffc5505e13eec2f281c4fc1d1642560a1e119461c8b602122",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "5fa79e4cbed162ec86a0e923f100cddc4f3607b77200790faf3383b7c9b587cd"
+        }
+      ],
+      "control": "round1-only",
+      "expected_failures": [],
+      "expected_pass": true,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/round1-only-g0/grade.json",
+      "grade_sha256": "5c420bba7accdd28bd5df2fc7ff3190095b2527d32038c7dc600ebd76651fadc",
+      "observed_failures": [],
+      "observed_pass": true,
+      "quality_pass": true,
+      "round": 0
+    },
+    {
+      "candidate_patch_sha256": "78f2e00cc21c7fb7c39db63c9a35fac8c26cd6c66c6d36c3666f2d23a74620f8",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "657eaf1be25d73b3387635300e0f51c27ea8822fb26d7a30a25ea2ac656969da",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "7212c141d7d22d1a0cfc0f71a337f0cdb5d899260b643d2cccf2d3903f3bc781"
+        }
+      ],
+      "control": "round1-only",
+      "expected_failures": [],
+      "expected_pass": true,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/round1-only-g1/grade.json",
+      "grade_sha256": "1c0a0fdcd15adbed5f41ee8af2503876e14d8c9032798c74a331dfa41c3839b0",
+      "observed_failures": [],
+      "observed_pass": true,
+      "quality_pass": true,
+      "round": 1
+    },
+    {
+      "candidate_patch_sha256": "78f2e00cc21c7fb7c39db63c9a35fac8c26cd6c66c6d36c3666f2d23a74620f8",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 1,
+          "process_group_marker_absent": true,
+          "script_sha256": "246ec220bb72dba7e246786312f0901816fbc6c135a23dc96a009647a50bde40",
+          "status_file_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e106e59190b4b78d6e700b9ab2c7542552e5a3a80a2a913690715f584194f3da"
+        }
+      ],
+      "control": "round1-only",
+      "expected_failures": [
+        "TestBenchmarkG2CancelledAndClosed",
+        "TestBenchmarkOracleHeldCallbackPublicationAndShutdown"
+      ],
+      "expected_pass": false,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/round1-only-g2/grade.json",
+      "grade_sha256": "fff0a4ce55d070d8b69cf65d04f346654a39d6b90ccca87b969e01a35b9cc543",
+      "observed_failures": [
+        "TestBenchmarkG2CancelledAndClosed",
+        "TestBenchmarkOracleHeldCallbackPublicationAndShutdown"
+      ],
+      "observed_pass": false,
+      "quality_pass": null,
+      "round": 2
+    },
+    {
+      "candidate_patch_sha256": "ffee0b31dd048642f289b82a6beb5ec43fb2e426f562935fed1dc623744b773e",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 1,
+          "process_group_marker_absent": true,
+          "script_sha256": "f11ee21b771f8babac56c4e659f3c34d6c2d0702b062f0df3a002507ac1eb21f",
+          "status_file_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "54c0541ea4502e1b5ba2a8d90be42e99f7f835394dfca4533fbcc142c33bf891"
+        }
+      ],
+      "control": "ignore-reference",
+      "expected_failures": [
+        "TestBenchmarkG0ReferenceSelection"
+      ],
+      "expected_pass": false,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/ignore-reference-g0/grade.json",
+      "grade_sha256": "821bb07f43f367a0d129b82d2c64da56ab4eeba56f5c7c1b8df3d9df2b00902b",
+      "observed_failures": [
+        "TestBenchmarkG0ReferenceSelection"
+      ],
+      "observed_pass": false,
+      "quality_pass": false,
+      "round": 0
+    },
+    {
+      "candidate_patch_sha256": "7795a4db4957fb31beb1bb0b32ffb644899407c6cdcbf44cf1df88b41775dfc8",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 1,
+          "process_group_marker_absent": true,
+          "script_sha256": "c16a58882c335f53afdaaffcb7b05f3f1d544105ac387a61050edbef8172143e",
+          "status_file_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "6b53fba4b2072458f16f3df881e230c899aecc777b6d994d6c5be76a05b78d28"
+        }
+      ],
+      "control": "wrong-manifest-digest",
+      "expected_failures": [
+        "TestBenchmarkOracleManifestIdentityViews"
+      ],
+      "expected_pass": false,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/wrong-manifest-digest-g2/grade.json",
+      "grade_sha256": "c765e21ab7d1a001c79cf9a3b283f4524faf4af2602e223b672a4679e46fbc12",
+      "observed_failures": [
+        "TestBenchmarkOracleManifestIdentityViews"
+      ],
+      "observed_pass": false,
+      "quality_pass": null,
+      "round": 2
+    },
+    {
+      "candidate_patch_sha256": "efc7283262cb8ba362af63018fac1f9d136bdd2870116fce47e06112cc9035a1",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 1,
+          "process_group_marker_absent": true,
+          "script_sha256": "b7fd22e994c3cb7b4b1e07e46ddc6ba883f863c96bc509d3a50f4500c0830987",
+          "status_file_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "7e950cc760c1d2ca6f50f1438e9cf3978441dbb193b0759f0b2c3d8d86f014ab"
+        }
+      ],
+      "control": "stale-publication",
+      "expected_failures": [
+        "TestBenchmarkG1AliasAndMove"
+      ],
+      "expected_pass": false,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/stale-publication-g1/grade.json",
+      "grade_sha256": "15b123a954eaf8c92a9e1d16be2a146ac51232b5ec088e5689bf3b8b6734976c",
+      "observed_failures": [
+        "TestBenchmarkG1AliasAndMove"
+      ],
+      "observed_pass": false,
+      "quality_pass": false,
+      "round": 1
+    },
+    {
+      "candidate_patch_sha256": "02a9c4afa807953127fccc7729b8a129302120b9213c58ccdea2b08a8301c0f7",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 1,
+          "process_group_marker_absent": true,
+          "script_sha256": "174fbf7374e3ac3f4e4ef371647ddc0ca4a1523a602ed023dcfd7408e1972370",
+          "status_file_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "bc742b25d3bfca02eb37c0e898dfc4e88276d198a255dfa5e921db9b474cffe0"
+        }
+      ],
+      "control": "swallowed-explicit-error",
+      "expected_failures": [
+        "TestBenchmarkG1AliasAndMove"
+      ],
+      "expected_pass": false,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/swallowed-explicit-error-g1/grade.json",
+      "grade_sha256": "78e89b17fb9aaaa9bf2d2d6ccc880ca224dc24d4933827620b97c9192911fc71",
+      "observed_failures": [
+        "TestBenchmarkG1AliasAndMove"
+      ],
+      "observed_pass": false,
+      "quality_pass": false,
+      "round": 1
+    },
+    {
+      "candidate_patch_sha256": "fa3c9bfb20f6228690b98a5e170a0c1a3a51bce79f5c26c4270e558eb0f846dd",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 1,
+          "process_group_marker_absent": true,
+          "script_sha256": "5ed82c07f0d7bc6095b69d88e09b2281eb466d2a631fc0dd76cf55a63c7a5950",
+          "status_file_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "a4b630b89958b244253d65c806ee059cefbcc09b2fa6edc4b28f74970e5806cf"
+        }
+      ],
+      "control": "leaked-stream",
+      "expected_failures": [
+        "TestBenchmarkOracleAllSuppliedStreamsCloseOnFailure"
+      ],
+      "expected_pass": false,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/leaked-stream-g2/grade.json",
+      "grade_sha256": "c701cbb3925477e11cf4a032db227768b6ff2585e0194d4381c1eec4fc4033d4",
+      "observed_failures": [
+        "TestBenchmarkOracleAllSuppliedStreamsCloseOnFailure"
+      ],
+      "observed_pass": false,
+      "quality_pass": null,
+      "round": 2
+    },
+    {
+      "candidate_patch_sha256": "5c6ed0bf84bf778d16abc89600586e400e9a8d23f4f92d81e833fdd26e3b401b",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 1,
+          "process_group_marker_absent": true,
+          "script_sha256": "63fd20e27a2b0fd357190283cb293050a0d5715b02f78a2bfead1bd214b4dcf1",
+          "status_file_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "fe4184a7c76d170c974dd6509cfe4619abb7ee1646721037ed73024ba4ebe886"
+        }
+      ],
+      "control": "broken-close",
+      "expected_failures": [
+        "TestBenchmarkG2CancelledAndClosed"
+      ],
+      "expected_pass": false,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/broken-close-g2/grade.json",
+      "grade_sha256": "7cf2b4f44d1ae3cffceed0b05bf3c0be7f3126df5b6673e2ba4c52a32573dc17",
+      "observed_failures": [
+        "TestBenchmarkG2CancelledAndClosed"
+      ],
+      "observed_pass": false,
+      "quality_pass": null,
+      "round": 2
+    },
+    {
+      "candidate_patch_sha256": "a6cbf1a2b90c757571739449cfcff862529a2ed4599b12c4e1d310da2850c52f",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "9dff64cd312b3b46eff85ffd4d57e27532c22775c7865c5e56087e92ee2814a2",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "806c02fb730c8546e2d03cd26c12f159831354281348e14524a072f039c7d0a1"
+        }
+      ],
+      "control": "global-blocking",
+      "expected_failures": [],
+      "expected_pass": true,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/global-blocking-g0/grade.json",
+      "grade_sha256": "55ee6f5a48f1313d55ee449760dcdab77e3f493ba7cc58444c44787995675db6",
+      "observed_failures": [],
+      "observed_pass": true,
+      "quality_pass": true,
+      "round": 0
+    },
+    {
+      "candidate_patch_sha256": "a6cbf1a2b90c757571739449cfcff862529a2ed4599b12c4e1d310da2850c52f",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 1,
+          "process_group_marker_absent": true,
+          "script_sha256": "865f3e21d1f8c609c65f0310b70afb2c4c7b311760d74398767e954e67b054a5",
+          "status_file_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "428b22747f568d87835a32d89a59f3055cd0cb4c52b1a843dbe92840410f161c"
+        }
+      ],
+      "control": "global-blocking",
+      "expected_failures": [
+        "TestBenchmarkG1UnrelatedReferenceProgress"
+      ],
+      "expected_pass": false,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/global-blocking-g1/grade.json",
+      "grade_sha256": "d68361c7a423d66e1afa429c603b4f51b49b3e3d56252ae4f2d4b7ff132f7327",
+      "observed_failures": [
+        "TestBenchmarkG1UnrelatedReferenceProgress"
+      ],
+      "observed_pass": false,
+      "quality_pass": false,
+      "round": 1
+    },
+    {
+      "candidate_patch_sha256": "384cc88f0ca95bc5522df2ad5f97938462146e549ed0e515d66b6986362af983",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "6162939ab1c40c2b3dffb0a882a4683648d3a02c02226722395376c3731069e2",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "8ccb3cc6dab6863af84cafd927363cdb98227f745da43e319fd2970678cb0e04"
+        }
+      ],
+      "control": "per-reference-serialization",
+      "expected_failures": [],
+      "expected_pass": true,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/per-reference-serialization-g0/grade.json",
+      "grade_sha256": "b73e7d62effcd2ce77f090adc56d2a588e7afd0e1c05c734427b912c6ec4b411",
+      "observed_failures": [],
+      "observed_pass": true,
+      "quality_pass": true,
+      "round": 0
+    },
+    {
+      "candidate_patch_sha256": "384cc88f0ca95bc5522df2ad5f97938462146e549ed0e515d66b6986362af983",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "ecaadc03bbf147b7df858aab478c07ababe87ecd030dddab84b52b0c0a018f4f",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "644042c5fd05dd3e44272e84f8f4908798c010b9d9f920c0b62b4f83b62ccdee"
+        }
+      ],
+      "control": "per-reference-serialization",
+      "expected_failures": [],
+      "expected_pass": true,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/per-reference-serialization-g1/grade.json",
+      "grade_sha256": "42d1d30984efb8beef08ad3396f222a1e6b457f8d7e35571077eec0885b7c2e7",
+      "observed_failures": [],
+      "observed_pass": true,
+      "quality_pass": true,
+      "round": 1
+    },
+    {
+      "candidate_patch_sha256": "384cc88f0ca95bc5522df2ad5f97938462146e549ed0e515d66b6986362af983",
+      "checks": [
+        {
+          "kind": "go-test",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "e70f21762e45b7a2d9dc68f8f887f334c255977b3701a9715e9a1151ab7b0fce",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "23c3b2d2d2cefc6ec641668c308cd3cf97bf43396c75a53ed42ab18bc38b81db"
+        },
+        {
+          "kind": "race",
+          "linux_status": 0,
+          "process_group_marker_absent": true,
+          "script_sha256": "0c05a02b84a7cea57804b8580546a1a78e99f7b56502a44baf6ae4bb1fac43bc",
+          "status_file_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "4e10b5c1a243b8a4100d1300fb051e6c42f8b66aa31ca9997c605bcfa38ba1cb"
+        }
+      ],
+      "control": "per-reference-serialization",
+      "expected_failures": [],
+      "expected_pass": true,
+      "grade_path": "_scratch/control-matrix-r7d-20260930/per-reference-serialization-g2/grade.json",
+      "grade_sha256": "d19ce1b01383b37f990c9edbf205c9c20346563ae592b82df5f1485d9951c4fb",
+      "observed_failures": [],
+      "observed_pass": true,
+      "quality_pass": null,
+      "round": 2
+    }
+  ],
+  "historical_evidence_preserved": {
+    "matrix_path": "controls/control-matrix.json",
+    "matrix_sha256": "70a53aa008e7d3a45670ca0a591fde2a81b1ab5fd9b06e6db43dfb501e1986a7",
+    "pilot_02_capability_hashes": {
+      "baseline-capability.json": "13414c94fcdba335dbc8a41566b2a4a818ae9c4d77237b013c5e1856ed5316e7",
+      "treatment-capability.json": "a67edbee0f7537ae8074b06838d6be81b24e171a4ece6073757911ff51308b57"
+    },
+    "pilot_02_raw_root": "_scratch/pilot-02-evidence",
+    "receipt_path": "controls/control-receipt.json",
+    "receipt_sha256": "1afb623ac4422b7de4329bf4a2e9bef7bbfa037e29b7fb4ec358360fa8b0d617"
+  },
+  "kind": "corrected-grader-offline-control-rerun",
+  "live_enabled": false,
+  "matrix": {
+    "path": "controls/control-matrix-r7d-20260930.json",
+    "raw_path": "_scratch/control-matrix-r7d-20260930/controls.json",
+    "raw_sha256": "77273262ae13ce5c77579b0905a1ac2c6c3c7d0a6d955e503f51faaec055897f",
+    "sha256": "77273262ae13ce5c77579b0905a1ac2c6c3c7d0a6d955e503f51faaec055897f"
+  },
+  "positive_hidden_quality_pass": null,
+  "preparation": {
+    "path": "_scratch/control-prepared-r7d-20260930/preparation.json",
+    "preparation_id": "ecf5d56a-3a19-4d22-88d7-6689b5994606",
+    "sha256": "c1bea3d99c934dfa1474bb018b4509cd743f52e6a0fb3eb32378da7f83d56482",
+    "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8"
+  },
+  "ready_for_live": false,
+  "review_state": "ready-for-independent-control-review; live remains disabled",
+  "schema_version": 1,
+  "task_id": "build-long-controls-gpt-6-sol-high",
+  "validation": {
+    "exact_failure_set": "Every negative had only its named public or hidden test failures; positive and legal alternative passed all applicable public, hidden, and race checks.",
+    "focused_python": "python -m unittest evals.tests.test_long_horizon -q: 57 passed",
+    "status_and_cleanup": "All 22 Linux status files were LF-only and matched grade exit codes; no process-group marker or grader hazard remained."
+  },
+  "worker_name": "build-long-controls-gpt-6-sol-high"
+}

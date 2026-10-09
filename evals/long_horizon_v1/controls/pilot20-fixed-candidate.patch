@@ -1,0 +1,778 @@
+diff --git a/DEVELOPMENT.md b/DEVELOPMENT.md
+index adbf8d6..96527f0 100644
+--- a/DEVELOPMENT.md
++++ b/DEVELOPMENT.md
+@@ -82,6 +82,36 @@ The flipt binary will check in that location if a `--config` override is not pro
+ 
+ The `USER_CONFIG_DIR` is different based on your architecture, and specified [here](https://pkg.go.dev/os#UserConfigDir).
+ 
++### OCI snapshot references
++
++For OCI declarative storage, `storage.oci.repository` fixes the scheme, registry,
++repository, and default tag or digest. An empty request reference reads the
++configured default snapshot. Flipt fetches that snapshot during startup and
++polls only that configured reference using `storage.oci.poll_interval`.
++
++A nonempty request reference can be an OCI tag such as `stable` or a complete
++manifest digest such as `sha256:` followed by 64 lowercase hexadecimal digits.
++It is resolved within the configured repository using the configured transport
++and credentials. Repository paths, URLs, alternate schemes, and partial digests
++are rejected. A tag is resolved when each new fetch starts, so a later request
++can observe a moved tag. Concurrent requests for the same tag may share one
++fetch. A digest is immutable and can reuse a verified resident snapshot.
++
++The default snapshot remains resident. Up to three additional reference entries
++are kept in least recently used order. Eviction does not interrupt a `View`
++callback already using a snapshot; each callback receives one complete snapshot.
++The manifest digest identifies the complete registry manifest, including its
++annotations, even when two manifests contain identical layers. A failed fetch
++does not replace a previously published snapshot. Fetches for different
++references can proceed independently.
++
++Closing the OCI snapshot store stops polling and new acquisitions, cancels
++background fetches, and waits for their cleanup. It does not wait for callbacks
++that have already entered `View`; those callbacks retain their snapshots.
++Later `View` calls return `oci.ErrClosed`.
++Fetch closes each acquired registry stream before it returns, including when
++the request is canceled or a descriptor fails validation.
++
+ ## Changes
+ 
+ Changing certain types of files such as the proto or ui files require re-building before they will be picked up in new versions of the binary.
+diff --git a/internal/oci/file.go b/internal/oci/file.go
+index 754d302..e16e46d 100644
+--- a/internal/oci/file.go
++++ b/internal/oci/file.go
+@@ -41,7 +41,6 @@ const (
+ type Store struct {
+ 	opts   StoreOptions
+ 	logger *zap.Logger
+-	local  oras.Target
+ }
+ 
+ // NewStore constructs and configures an instance of *Store for the provided config
+@@ -52,7 +51,6 @@ func NewStore(logger *zap.Logger, dir string, opts ...containers.Option[StoreOpt
+ 			manifestVersion: oras.PackManifestVersion1_1,
+ 		},
+ 		logger: logger,
+-		local:  memory.New(),
+ 	}
+ 
+ 	containers.ApplyAll(&store.opts, opts...)
+@@ -139,9 +137,10 @@ type FetchOptions struct {
+ // FetchResponse contains any fetched files for the given tracked reference
+ // If Matched == true, then the supplied IfNoMatch digest matched and Files should be nil
+ type FetchResponse struct {
+-	Digest  digest.Digest
+-	Files   []fs.File
+-	Matched bool
++	Digest         digest.Digest // normalized content digest for IfNoMatch
++	ManifestDigest digest.Digest // digest of the resolved OCI manifest
++	Files          []fs.File
++	Matched        bool
+ }
+ 
+ // IfNoMatch configures the call to Fetch to return early if the supplied
+@@ -165,18 +164,22 @@ func (s *Store) Fetch(ctx context.Context, ref Reference, opts ...containers.Opt
+ 	if err != nil {
+ 		return nil, err
+ 	}
++	// A fetch owns its staging target. Concurrent references must never share
++	// mutable tag state, and completed fetches should release their blobs.
++	local := memory.New()
+ 
+-	desc, err := oras.Copy(ctx,
+-		store,
+-		ref.Reference.Reference,
+-		s.local,
+-		ref.Reference.Reference,
+-		oras.DefaultCopyOptions)
++	desc, err := store.Resolve(ctx, ref.Reference.Reference)
+ 	if err != nil {
+ 		return nil, err
+ 	}
++	// Copy descriptors under this call's ownership. ORAS Copy can return on
++	// cancellation before its already-started copy goroutines finish closing
++	// their streams, which would let Fetch and SnapshotStore.Close finish early.
++	if err := copyFetchedDescriptor(ctx, store, local, desc); err != nil {
++		return nil, err
++	}
+ 
+-	bytes, err := content.FetchAll(ctx, s.local, desc)
++	bytes, err := content.FetchAll(ctx, local, desc)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -200,16 +203,39 @@ func (s *Store) Fetch(ctx context.Context, ref Reference, opts ...containers.Opt
+ 
+ 		d = digest.FromBytes(bytes)
+ 		if d == options.IfNoMatch {
+-			return &FetchResponse{Matched: true, Digest: d}, nil
++			return &FetchResponse{Matched: true, Digest: d, ManifestDigest: desc.Digest}, nil
++		}
++	}
++	for _, layer := range manifest.Layers {
++		if err := copyFetchedDescriptor(ctx, store, local, layer); err != nil {
++			return nil, err
+ 		}
+ 	}
+ 
+-	files, err := s.fetchFiles(ctx, store, manifest)
++	files, err := s.fetchFiles(ctx, local, manifest)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+ 
+-	return &FetchResponse{Files: files, Digest: d}, nil
++	return &FetchResponse{Files: files, Digest: d, ManifestDigest: desc.Digest}, nil
++}
++
++// copyFetchedDescriptor owns the remote reader until Close completes, even
++// when Push or the request context fails. Push verifies descriptor content.
++func copyFetchedDescriptor(ctx context.Context, source oras.ReadOnlyTarget, local oras.Target, desc v1.Descriptor) error {
++	reader, err := source.Fetch(ctx, desc)
++	if err != nil {
++		return err
++	}
++	pushErr := local.Push(ctx, desc, reader)
++	closeErr := reader.Close()
++	if pushErr != nil && !errors.Is(pushErr, errdef.ErrAlreadyExists) {
++		return pushErr
++	}
++	if closeErr != nil {
++		return closeErr
++	}
++	return ctx.Err()
+ }
+ 
+ // fetchFiles retrieves the associated flipt feature content files from the content fetcher.
+@@ -217,6 +243,14 @@ func (s *Store) Fetch(ctx context.Context, ref Reference, opts ...containers.Opt
+ // content type extensions.
+ func (s *Store) fetchFiles(ctx context.Context, store oras.ReadOnlyTarget, manifest v1.Manifest) ([]fs.File, error) {
+ 	var files []fs.File
++	success := false
++	defer func() {
++		if !success {
++			for _, file := range files {
++				_ = file.Close()
++			}
++		}
++	}()
+ 
+ 	created, err := time.Parse(time.RFC3339, manifest.Annotations[v1.AnnotationCreated])
+ 	if err != nil {
+@@ -254,6 +288,7 @@ func (s *Store) fetchFiles(ctx context.Context, store oras.ReadOnlyTarget, manif
+ 		})
+ 	}
+ 
++	success = true
+ 	return files, nil
+ }
+ 
+diff --git a/internal/storage/fs/oci/reference_test.go b/internal/storage/fs/oci/reference_test.go
+new file mode 100644
+index 0000000..cd30f77
+--- /dev/null
++++ b/internal/storage/fs/oci/reference_test.go
+@@ -0,0 +1,197 @@
++package oci
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"strings"
++	"testing"
++	"time"
++
++	v1 "github.com/opencontainers/image-spec/specs-go/v1"
++	"github.com/stretchr/testify/require"
++	fliptoci "go.flipt.io/flipt/internal/oci"
++	"go.flipt.io/flipt/internal/storage"
++	storagefs "go.flipt.io/flipt/internal/storage/fs"
++	"go.uber.org/zap/zaptest"
++	"oras.land/oras-go/v2"
++)
++
++func openSnapshotSource(t *testing.T, dir, repo string) *SnapshotStore {
++	t.Helper()
++	store, err := fliptoci.NewStore(zaptest.NewLogger(t), dir)
++	require.NoError(t, err)
++	ref, err := fliptoci.ParseReference(fmt.Sprintf("flipt://local/%s:latest", repo))
++	require.NoError(t, err)
++	ctx, cancel := context.WithCancel(context.Background())
++	t.Cleanup(cancel)
++	source, err := NewSnapshotStore(ctx, zaptest.NewLogger(t), store, ref,
++		WithPollOptions(storagefs.WithInterval(time.Hour)))
++	require.NoError(t, err)
++	t.Cleanup(func() { require.NoError(t, source.Close()) })
++	return source
++}
++
++func hasFlag(t *testing.T, source *SnapshotStore, ref storage.Reference, key string) bool {
++	t.Helper()
++	ctx := context.Background()
++	found := false
++	require.NoError(t, source.View(ctx, ref, func(snapshot storage.ReadOnlyStore) error {
++		_, err := snapshot.GetFlag(ctx, storage.NewResource("production", key))
++		found = err == nil
++		return nil
++	}))
++	return found
++}
++
++func TestReferenceSelectionAndTagMovement(t *testing.T) {
++	ctx := context.Background()
++	target, dir, repo := testRepository(t,
++		layer("production", `{"namespace":"production","flags":[{"key":"old","name":"Old"}]}`, fliptoci.MediaTypeFliptNamespace))
++	old, err := target.Resolve(ctx, "latest")
++	require.NoError(t, err)
++	require.NoError(t, target.Tag(ctx, old, "stable"))
++	updateRepoContents(t, target,
++		layer("production", `{"namespace":"production","flags":[{"key":"new","name":"New"}]}`, fliptoci.MediaTypeFliptNamespace))
++	newManifest, err := target.Resolve(ctx, "latest")
++	require.NoError(t, err)
++	source := openSnapshotSource(t, dir, repo)
++
++	require.True(t, hasFlag(t, source, "", "new"))
++	require.False(t, hasFlag(t, source, "", "old"))
++	require.True(t, hasFlag(t, source, "stable", "old"))
++	require.True(t, hasFlag(t, source, storage.Reference(old.Digest.String()), "old"))
++	require.True(t, hasFlag(t, source, storage.Reference(newManifest.Digest.String()), "new"))
++
++	require.NoError(t, target.Tag(ctx, newManifest, "stable"))
++	require.True(t, hasFlag(t, source, "stable", "new"), "a later tag view resolves the moved tag")
++	require.False(t, hasFlag(t, source, "stable", "old"))
++	require.True(t, hasFlag(t, source, storage.Reference(old.Digest.String()), "old"), "manifest digest remains immutable")
++	require.True(t, hasFlag(t, source, "", "new"))
++}
++
++func TestReferenceRejectsRepositoryAndTransportChanges(t *testing.T) {
++	source, _ := testStore(t, WithPollOptions(storagefs.WithInterval(time.Hour)))
++	for _, ref := range []storage.Reference{
++		"https://other.example/repo:tag", "http://other.example/repo:tag",
++		"flipt://local/other:tag", "other/repo:tag", "testrepo:latest",
++		"sha256:abc", "sha512:" + storage.Reference(strings.Repeat("a", 128)),
++		"latest?transport=http", "latest@sha256:" + storage.Reference(strings.Repeat("a", 64)),
++	} {
++		t.Run(string(ref), func(t *testing.T) {
++			called := false
++			err := source.View(context.Background(), ref, func(storage.ReadOnlyStore) error {
++				called = true
++				return nil
++			})
++			require.Error(t, err)
++			require.False(t, called)
++		})
++	}
++}
++
++func TestViewAfterCloseReturnsErrClosedForEverySelector(t *testing.T) {
++	source, _ := testStore(t, WithPollOptions(storagefs.WithInterval(time.Hour)))
++	require.NoError(t, source.Close())
++
++	for name, ref := range map[string]storage.Reference{
++		"empty":            "",
++		"valid tag":        "latest",
++		"unknown tag":      "not-present",
++		"valid digest":     storage.Reference("sha256:" + strings.Repeat("0", 64)),
++		"malformed digest": "sha256:abc",
++		"invalid selector": "other/repo:tag",
++	} {
++		t.Run(name, func(t *testing.T) {
++			called := false
++			err := source.View(context.Background(), ref, func(storage.ReadOnlyStore) error {
++				called = true
++				return nil
++			})
++			require.ErrorIs(t, err, ErrClosed)
++			require.False(t, called)
++		})
++	}
++
++	ctx, cancel := context.WithCancel(context.Background())
++	cancel()
++	require.ErrorIs(t, source.View(ctx, "sha256:abc", func(storage.ReadOnlyStore) error {
++		t.Fatal("callback must not run")
++		return nil
++	}), context.Canceled)
++}
++
++func TestReferenceCacheBoundAndActiveView(t *testing.T) {
++	ctx := context.Background()
++	target, dir, repo := testRepository(t,
++		layer("production", `{"namespace":"production","flags":[{"key":"old","name":"Old"}]}`, fliptoci.MediaTypeFliptNamespace))
++	manifest, err := target.Resolve(ctx, "latest")
++	require.NoError(t, err)
++	for i := 0; i < 5; i++ {
++		require.NoError(t, target.Tag(ctx, manifest, fmt.Sprintf("tag-%d", i)))
++	}
++	source := openSnapshotSource(t, dir, repo)
++
++	entered := make(chan struct{})
++	release := make(chan struct{})
++	result := make(chan error, 1)
++	go func() {
++		result <- source.View(ctx, "tag-0", func(snapshot storage.ReadOnlyStore) error {
++			close(entered)
++			<-release
++			_, err := snapshot.GetFlag(ctx, storage.NewResource("production", "old"))
++			return err
++		})
++	}()
++	select {
++	case <-entered:
++	case err := <-result:
++		t.Fatalf("view failed before callback: %v", err)
++	case <-time.After(10 * time.Second):
++		t.Fatal("timed out waiting for active view")
++	}
++	for i := 1; i < 5; i++ {
++		require.True(t, hasFlag(t, source, storage.Reference(fmt.Sprintf("tag-%d", i)), "old"))
++	}
++	source.mu.Lock()
++	extraCount := len(source.extras)
++	_, evicted := source.extras["tag-0"]
++	defaultSnapshot := source.defaultSnapshot
++	source.mu.Unlock()
++	require.Equal(t, referenceCacheExtraCapacity, extraCount)
++	require.False(t, evicted)
++	require.NotNil(t, defaultSnapshot)
++	close(release)
++	require.NoError(t, <-result, "eviction cannot invalidate an active callback")
++	require.True(t, hasFlag(t, source, "", "old"))
++}
++
++func TestDefaultPollTracksCompleteManifestDigest(t *testing.T) {
++	ctx := context.Background()
++	target, dir, repo := testRepository(t,
++		layer("production", `{"namespace":"production","flags":[{"key":"old","name":"Old"}]}`, fliptoci.MediaTypeFliptNamespace))
++	source := openSnapshotSource(t, dir, repo)
++	old, err := target.Resolve(ctx, "latest")
++	require.NoError(t, err)
++	reader, err := target.Fetch(ctx, old)
++	require.NoError(t, err)
++	var manifest v1.Manifest
++	require.NoError(t, json.NewDecoder(reader).Decode(&manifest))
++	require.NoError(t, reader.Close())
++	newer, err := oras.PackManifest(ctx, target, oras.PackManifestVersion1_1_RC4,
++		fliptoci.MediaTypeFliptFeatures, oras.PackManifestOptions{
++			ManifestAnnotations: map[string]string{"revision": "annotation-only"},
++			Layers:              manifest.Layers,
++		})
++	require.NoError(t, err)
++	require.NotEqual(t, old.Digest, newer.Digest)
++	require.NoError(t, target.Tag(ctx, newer, "latest"))
++	changed, err := source.update(ctx)
++	require.NoError(t, err)
++	require.True(t, changed)
++	source.mu.Lock()
++	got := source.defaultManifest
++	source.mu.Unlock()
++	require.Equal(t, newer.Digest, got)
++	require.True(t, hasFlag(t, source, "", "old"))
++}
+diff --git a/internal/storage/fs/oci/store.go b/internal/storage/fs/oci/store.go
+index 7c797fd..00ad7be 100644
+--- a/internal/storage/fs/oci/store.go
++++ b/internal/storage/fs/oci/store.go
+@@ -1,7 +1,11 @@
+ package oci
+ 
+ import (
++	"container/list"
+ 	"context"
++	"errors"
++	"fmt"
++	"regexp"
+ 	"sync"
+ 
+ 	"github.com/opencontainers/go-digest"
+@@ -12,92 +16,271 @@ import (
+ 	"go.uber.org/zap"
+ )
+ 
+-var _ storagefs.SnapshotStore = (*SnapshotStore)(nil)
++const referenceCacheExtraCapacity = 3
+ 
+-// SnapshotStore is an implementation storage.SnapshotStore backed by OCI repositories.
+-// It fetches instances of OCI manifests and uses them to build snapshots from their contents.
++// ErrClosed is returned when a View is attempted after shutdown.
++var ErrClosed = errors.New("OCI snapshot store is closed")
++
++var _ storagefs.ReferencedSnapshotStore = (*SnapshotStore)(nil)
++
++var (
++	tagPattern            = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$`)
++	manifestDigestPattern = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
++)
++
++// SnapshotStore serves immutable snapshots from one configured OCI repository.
++// The configured reference is initialized and polled; other tags and manifest
++// digests are fetched on demand without changing the repository or transport.
+ type SnapshotStore struct {
+ 	*storagefs.Poller
+ 
+-	logger *zap.Logger
++	logger       *zap.Logger
++	store        *oci.Store
++	ref          oci.Reference
++	pollOpts     []containers.Option[storagefs.Poller]
++	lifetime     context.Context
++	cancel       context.CancelFunc
++	closed       chan struct{}
++	closing      bool
++	acquisitions sync.WaitGroup
+ 
+-	store *oci.Store
+-	ref   oci.Reference
++	mu sync.Mutex
+ 
+-	mu         sync.RWMutex
+-	snap       storage.ReadOnlyStore
+-	lastDigest digest.Digest
++	defaultSnapshot *storagefs.Snapshot
++	defaultManifest digest.Digest // actual OCI manifest digest
+ 
+-	pollOpts []containers.Option[storagefs.Poller]
++	extras   map[string]*cacheEntry
++	lru      *list.List // oldest entry at the front
++	inflight map[string]*fetchCall
+ }
+ 
+-// View accepts a function which takes a *StoreSnapshot.
+-// The SnapshotStore will supply a snapshot which is valid
+-// for the lifetime of the provided function call.
+-func (s *SnapshotStore) View(_ context.Context, fn func(storage.ReadOnlyStore) error) error {
+-	s.mu.RLock()
+-	defer s.mu.RUnlock()
+-	return fn(s.snap)
++type cacheEntry struct {
++	snapshot *storagefs.Snapshot
++	manifest digest.Digest
++	element  *list.Element
+ }
+ 
+-// NewSnapshotStore constructs and configures a Store.
+-// The store uses the connection and credential details provided to build
+-// *storagefs.StoreSnapshot implementations around a target OCI repository.
++type fetchCall struct {
++	done     chan struct{}
++	snapshot *storagefs.Snapshot
++	err      error
++}
++
++// NewSnapshotStore fetches the configured reference before serving requests and
++// starts polling only that reference.
+ func NewSnapshotStore(ctx context.Context, logger *zap.Logger, store *oci.Store, ref oci.Reference, opts ...containers.Option[SnapshotStore]) (_ *SnapshotStore, err error) {
+ 	s := &SnapshotStore{
+-		logger: logger,
+-		store:  store,
+-		ref:    ref,
++		logger:   logger,
++		store:    store,
++		ref:      ref,
++		extras:   make(map[string]*cacheEntry),
++		lru:      list.New(),
++		inflight: make(map[string]*fetchCall),
++		closed:   make(chan struct{}),
+ 	}
+-
++	s.lifetime, s.cancel = context.WithCancel(ctx)
+ 	containers.ApplyAll(s, opts...)
+ 
+ 	if _, err := s.update(ctx); err != nil {
++		s.cancel()
++		s.acquisitions.Wait()
+ 		return nil, err
+ 	}
+ 
+ 	s.Poller = storagefs.NewPoller(logger, ctx, s.update, s.pollOpts...)
+-
+ 	go s.Poller.Poll()
+-
+ 	return s, nil
+ }
+ 
+-// WithPollOptions configures the options used periodically invoke the update procedure
++// WithPollOptions configures the options used to periodically poll the default reference.
+ func WithPollOptions(opts ...containers.Option[storagefs.Poller]) containers.Option[SnapshotStore] {
+ 	return func(s *SnapshotStore) {
+ 		s.pollOpts = append(s.pollOpts, opts...)
+ 	}
+ }
+ 
+-func (s *SnapshotStore) String() string {
+-	return "oci"
++func (s *SnapshotStore) String() string { return "oci" }
++
++// Close stops admission, cancels background acquisitions and polling, and
++// waits for their cleanup. An already entered View callback owns its snapshot
++// and is never part of the shutdown wait.
++func (s *SnapshotStore) Close() error {
++	s.mu.Lock()
++	if !s.closing {
++		s.closing = true
++		close(s.closed)
++		s.cancel()
++	}
++	s.mu.Unlock()
++	if s.Poller != nil {
++		if err := s.Poller.Close(); err != nil {
++			return err
++		}
++	}
++	s.acquisitions.Wait()
++	return nil
+ }
+ 
+-// update attempts to fetch the latest state for the target OCi repository and tag.
+-// If the state has not change sinced the last observed image digest it skips
+-// updating the snapshot and returns false (not modified).
+-func (s *SnapshotStore) update(ctx context.Context) (bool, error) {
+-	resp, err := s.store.Fetch(ctx, s.ref, oci.IfNoMatch(s.lastDigest))
++// View supplies one complete immutable snapshot for the callback's lifetime.
++// Empty references use the initialized default. Tags are resolved at the start
++// of each new fetch; simultaneous callers for a selector share that fetch.
++// A digest can reuse a resident snapshot whose manifest was already verified.
++func (s *SnapshotStore) View(ctx context.Context, reference storage.Reference, fn func(storage.ReadOnlyStore) error) error {
++	if err := ctx.Err(); err != nil {
++		return err
++	}
++	selector := string(reference)
++	s.mu.Lock()
++	if s.closing {
++		s.mu.Unlock()
++		return ErrClosed
++	}
++	if selector == "" {
++		snapshot := s.defaultSnapshot
++		s.mu.Unlock()
++		if err := ctx.Err(); err != nil {
++			return err
++		}
++		return fn(snapshot)
++	}
++	s.mu.Unlock()
++	if !tagPattern.MatchString(selector) && !manifestDigestPattern.MatchString(selector) {
++		s.mu.Lock()
++		closing := s.closing
++		s.mu.Unlock()
++		if closing {
++			return ErrClosed
++		}
++		return fmt.Errorf("invalid OCI reference %q: expected a tag or full sha256 manifest digest", selector)
++	}
++
++	snapshot, err := s.fetchReference(ctx, selector, manifestDigestPattern.MatchString(selector))
+ 	if err != nil {
+-		return false, err
++		return err
++	}
++	if err := ctx.Err(); err != nil {
++		return err
++	}
++	s.mu.Lock()
++	closing := s.closing
++	s.mu.Unlock()
++	if closing {
++		return ErrClosed
++	}
++	return fn(snapshot)
++}
++
++func (s *SnapshotStore) fetchReference(ctx context.Context, selector string, byDigest bool) (*storagefs.Snapshot, error) {
++	if err := ctx.Err(); err != nil {
++		return nil, err
++	}
++	s.mu.Lock()
++	if s.closing {
++		s.mu.Unlock()
++		return nil, ErrClosed
++	}
++	if byDigest {
++		if snapshot := s.findManifestLocked(digest.Digest(selector)); snapshot != nil {
++			s.mu.Unlock()
++			return snapshot, nil
++		}
++	}
++	call := s.inflight[selector]
++	if call == nil {
++		call = &fetchCall{done: make(chan struct{})}
++		s.inflight[selector] = call
++		s.acquisitions.Add(1)
++		go s.acquire(selector, byDigest, call)
++	}
++	s.mu.Unlock()
++	select {
++	case <-ctx.Done():
++		return nil, ctx.Err()
++	case <-s.closed:
++		return nil, ErrClosed
++	case <-call.done:
++		if err := ctx.Err(); err != nil {
++			return nil, err
++		}
++		return call.snapshot, call.err
++	}
++}
++
++func (s *SnapshotStore) acquire(selector string, byDigest bool, call *fetchCall) {
++	defer s.acquisitions.Done()
++	// A selector changes only the reference field. The configured scheme,
++	// registry, repository, and store credentials remain authoritative.
++	ref := s.ref
++	ref.Reference.Reference = selector
++	resp, err := s.store.Fetch(s.lifetime, ref)
++	var snapshot *storagefs.Snapshot
++	if err == nil {
++		if byDigest && resp.ManifestDigest.String() != selector {
++			for _, file := range resp.Files {
++				_ = file.Close()
++			}
++			err = fmt.Errorf("OCI manifest digest mismatch: requested %s, received %s", selector, resp.ManifestDigest)
++		} else {
++			snapshot, err = storagefs.SnapshotFromFiles(s.logger, resp.Files)
++		}
++	}
++
++	s.mu.Lock()
++	if err == nil {
++		if !s.closing && selector == s.ref.Reference.Reference {
++			s.defaultSnapshot = snapshot
++			s.defaultManifest = resp.ManifestDigest
++		} else if !s.closing {
++			s.addExtraLocked(selector, resp.ManifestDigest, snapshot)
++		}
+ 	}
++	call.snapshot, call.err = snapshot, err
++	delete(s.inflight, selector)
++	close(call.done)
++	s.mu.Unlock()
++}
++
++// findManifestLocked searches only resident, successfully built snapshots.
++func (s *SnapshotStore) findManifestLocked(manifest digest.Digest) *storagefs.Snapshot {
++	if s.defaultManifest == manifest {
++		return s.defaultSnapshot
++	}
++	for _, entry := range s.extras {
++		if entry.manifest == manifest {
++			s.lru.MoveToBack(entry.element)
++			return entry.snapshot
++		}
++	}
++	return nil
++}
+ 
+-	// return not modified as the last observed digest matched
+-	// the remote digest
+-	if resp.Matched {
+-		return false, nil
++func (s *SnapshotStore) addExtraLocked(selector string, manifest digest.Digest, snapshot *storagefs.Snapshot) {
++	if entry := s.extras[selector]; entry != nil {
++		entry.snapshot, entry.manifest = snapshot, manifest
++		s.lru.MoveToBack(entry.element)
++		return
+ 	}
++	element := s.lru.PushBack(selector)
++	s.extras[selector] = &cacheEntry{snapshot: snapshot, manifest: manifest, element: element}
++	if s.lru.Len() > referenceCacheExtraCapacity {
++		oldest := s.lru.Front()
++		delete(s.extras, oldest.Value.(string))
++		s.lru.Remove(oldest)
++	}
++}
+ 
+-	snap, err := storagefs.SnapshotFromFiles(s.logger, resp.Files)
++// update polls only the configured reference and atomically replaces its snapshot.
++func (s *SnapshotStore) update(ctx context.Context) (bool, error) {
++	s.mu.Lock()
++	lastManifest := s.defaultManifest
++	s.mu.Unlock()
++	snapshot, err := s.fetchReference(ctx, s.ref.Reference.Reference, false)
+ 	if err != nil {
+ 		return false, err
+ 	}
+-
+ 	s.mu.Lock()
+-	s.lastDigest = resp.Digest
+-	s.snap = snap
++	changed := lastManifest != s.defaultManifest
++	_ = snapshot
+ 	s.mu.Unlock()
+-
+-	return true, nil
++	return changed, nil
+ }
+diff --git a/internal/storage/fs/oci/store_test.go b/internal/storage/fs/oci/store_test.go
+index 8371317..e9506ae 100644
+--- a/internal/storage/fs/oci/store_test.go
++++ b/internal/storage/fs/oci/store_test.go
+@@ -37,7 +37,7 @@ func Test_SourceSubscribe(t *testing.T) {
+ 
+ 	ctx := context.Background()
+ 
+-	require.NoError(t, store.View(ctx, func(s storage.ReadOnlyStore) error {
++	require.NoError(t, store.View(ctx, "", func(s storage.ReadOnlyStore) error {
+ 		_, err := s.GetNamespace(ctx, storage.NewNamespace("production"))
+ 		require.NoError(t, err)
+ 
+@@ -66,7 +66,7 @@ func Test_SourceSubscribe(t *testing.T) {
+ 
+ 	t.Log("received new snapshot")
+ 
+-	require.NoError(t, store.View(ctx, func(s storage.ReadOnlyStore) error {
++	require.NoError(t, store.View(ctx, "", func(s storage.ReadOnlyStore) error {
+ 		_, err := s.GetFlag(ctx, storage.NewResource("production", "foo"))
+ 		require.NoError(t, err)
+ 		return nil
+diff --git a/internal/storage/fs/snapshot.go b/internal/storage/fs/snapshot.go
+index 578fbbe..e5e57e3 100644
+--- a/internal/storage/fs/snapshot.go
++++ b/internal/storage/fs/snapshot.go
+@@ -96,6 +96,9 @@ func SnapshotFromPaths(logger *zap.Logger, ffs fs.FS, paths []string, opts ...co
+ 	for _, file := range paths {
+ 		fi, err := ffs.Open(file)
+ 		if err != nil {
++			for _, opened := range files {
++				_ = opened.Close()
++			}
+ 			return nil, err
+ 		}
+ 
+@@ -108,6 +111,13 @@ func SnapshotFromPaths(logger *zap.Logger, ffs fs.FS, paths []string, opts ...co
+ // SnapshotFromFiles constructs a StoreSnapshot from the provided slice
+ // of fs.File implementations.
+ func SnapshotFromFiles(logger *zap.Logger, files []fs.File, opts ...containers.Option[SnapshotOption]) (*Snapshot, error) {
++	// Own every supplied file, including those not reached when an earlier
++	// namespace fails validation.
++	defer func() {
++		for _, file := range files {
++			_ = file.Close()
++		}
++	}()
+ 	now := flipt.Now()
+ 	s := Snapshot{
+ 		ns: map[string]*namespace{
+@@ -121,7 +131,6 @@ func SnapshotFromFiles(logger *zap.Logger, files []fs.File, opts ...containers.O
+ 	containers.ApplyAll(&so, opts...)
+ 
+ 	for _, fi := range files {
+-		defer fi.Close()
+ 		info, err := fi.Stat()
+ 		if err != nil {
+ 			return nil, err
+diff --git a/internal/storage/fs/store/store.go b/internal/storage/fs/store/store.go
+index 5faac65..dd4edc8 100644
+--- a/internal/storage/fs/store/store.go
++++ b/internal/storage/fs/store/store.go
+@@ -144,7 +144,7 @@ func NewStore(ctx context.Context, logger *zap.Logger, cfg *config.Config) (_ st
+ 			return nil, err
+ 		}
+ 
+-		return storagefs.NewStore(storagefs.NewSingleReferenceStore(logger, snapStore)), nil
++		return storagefs.NewStore(snapStore), nil
+ 	}
+ 
+ 	return nil, fmt.Errorf("unexpected storage type: %q", cfg.Storage.Type)

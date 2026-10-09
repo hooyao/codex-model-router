@@ -56,6 +56,8 @@ def extract_app_layer(layer: Path, destination: Path) -> None:
         run("git", "config", "user.name", "Benchmark fixture", cwd=destination)
         run("git", "config", "user.email", "fixture@example.invalid", cwd=destination)
         run("git", "config", "core.autocrlf", "false", cwd=destination)
+        run("git", "config", "gc.auto", "0", cwd=destination)
+        run("git", "config", "maintenance.auto", "false", cwd=destination)
         run("git", "add", "--all", cwd=destination)
         run("git", "commit", "-q", "-m", "Pinned SWE-bench Pro image source", cwd=destination)
     except BaseException:
