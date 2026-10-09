@@ -84,7 +84,7 @@
     "wall_seconds": 4500,
     "worker_retries_per_stage": 0
   },
-  "live_enabled": false,
+  "live_enabled": true,
   "oracle_erratum": {
     "adjudication_sha256": "4a23b29c5f9bb2d337b2f511333bdc69af9f855f3356d1ab91e8f2de3d682909",
     "changed_assets": [
@@ -96,9 +96,9 @@
     "version": "r9e-20261001"
   },
   "pilot": {
-    "path": "pilot-plan-v16.json",
+    "path": "pilot-plan-v17.json",
     "schema_version": 5,
-    "sha256": "65876f5dda5d7174bf7f20c6a5fe5deedbf58910e90d6e40c2c8f7c9dcc8176e"
+    "sha256": "c57144ffc3aa1ea3173a5d9d55a703f360faa687c72cdb8b266e965344127304"
   },
   "pricing": {
     "as_of": "2026-09-24",
@@ -160,7 +160,7 @@
   "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
   "source_tree": "20121a7049c58571664b87989d1fc7bab8562884",
   "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
-  "status": "offline-paired-recovery-v16-runtime-review-pending",
+  "status": "offline-paired-recovery-v17-current-canary-bound",
   "task_id": "flipt-oci-reference-rollout-v1",
   "toolchain": {
     "linux_path": "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",

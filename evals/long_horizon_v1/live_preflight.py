@@ -124,16 +124,35 @@ def _bind_capabilities(expected_final_manifest_sha256: str | None) -> dict:
         raise ValueError("reviewed cancellation sessions missing")
     results = {}
     for arm in plan["arm_order"]:
-        source_relative, source_sha, decision_relative, decision_sha = EVIDENCE[arm]
-        source_path, decision_path = HERE / source_relative, HERE / decision_relative
-        if file_sha(source_path) != source_sha or file_sha(decision_path) != decision_sha:
-            raise ValueError(f"{arm} cancellation evidence drift")
-        source = json.loads(source_path.read_text(encoding="utf-8"))
-        decision = json.loads(decision_path.read_text(encoding="utf-8"))
-        if (source.get("status") != "UNKNOWN" or source.get("arm") != arm or
-                decision.get("status") != "verified" or
-                decision.get("source_receipt_sha256") != source_sha):
-            raise ValueError(f"{arm} cancellation adjudication incomplete")
+        current = plan.get("current_cancellation")
+        if isinstance(current, dict):
+            from evals.long_horizon_v1.cancellation_adjudication import verify_current_decision
+            descriptor = current[arm]
+            review = current["independent_review"]
+            source_path = HERE / descriptor["source"]
+            decision_path = HERE / descriptor["decision"]
+            review_path = HERE / review["path"]
+            source_sha, decision_sha = descriptor["source_sha256"], descriptor["decision_sha256"]
+            if (file_sha(source_path) != source_sha or
+                    file_sha(decision_path) != decision_sha or
+                    file_sha(review_path) != review["sha256"]):
+                raise ValueError(f"{arm} current cancellation evidence drift")
+            decision = verify_current_decision(source_path, sessions, decision_path,
+                                               review_path, review["sha256"])
+            source = json.loads(source_path.read_text(encoding="utf-8"))
+            if decision.get("arm") != arm or decision.get("source_receipt_sha256") != source_sha:
+                raise ValueError(f"{arm} current cancellation decision identity changed")
+        else:
+            source_relative, source_sha, decision_relative, decision_sha = EVIDENCE[arm]
+            source_path, decision_path = HERE / source_relative, HERE / decision_relative
+            if file_sha(source_path) != source_sha or file_sha(decision_path) != decision_sha:
+                raise ValueError(f"{arm} cancellation evidence drift")
+            source = json.loads(source_path.read_text(encoding="utf-8"))
+            decision = json.loads(decision_path.read_text(encoding="utf-8"))
+            if (source.get("status") != "UNKNOWN" or source.get("arm") != arm or
+                    decision.get("status") != "verified" or
+                    decision.get("source_receipt_sha256") != source_sha):
+                raise ValueError(f"{arm} cancellation adjudication incomplete")
         preparation = verify_prepared(prepared, arm, spec)
         policy = arm_execution(spec, arm)
         routing = (verify_arm_config(prepared / arm, spec)

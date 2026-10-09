@@ -1,5 +1,25 @@
 # Long-horizon OCI benchmark v1: paired recovery preparation
 
+## Pilot 17 final zero-turn freeze (2026-10-09)
+
+[Pilot-plan-v17.json](pilot-plan-v17.json) pins the two original current-runtime
+cancellation receipts, their separately replayed adjudications, and the
+independent review by exact hash. The current adjudicator checks raw command
+ordering, interruption and drain, parent/child lineage, full native turn
+identity, and exact saved/replayed response usage. It permits only a derived
+`closure: interrupted` field on the saved aborted child turn. The historical
+adjudication path retains its previous rules. No original canary or rollout
+was edited or rerun.
+
+The disabled preparation was preserved at
+`_scratch/pilot-17-evidence/review-prep-disabled`. After changing only the
+manifest's `live_enabled` flag, fresh R0 arms were prepared at
+`_scratch/pilot-17-prep`. Exact-final-manifest capability rebinding and both
+`run.py --preflight-only` checks passed with zero model turns. The final
+manifest, preparation, capability, adjudication, and preflight SHA-256 values
+are retained in their local receipts. This freeze authorizes independent
+readiness review; the full baseline and treatment arms have not started.
+
 ## Pilot 16 current runtime freeze (2026-10-09)
 
 [Pilot-plan-v16.json](pilot-plan-v16.json) pins the current desktop CLI

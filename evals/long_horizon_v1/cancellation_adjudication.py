@@ -37,7 +37,8 @@ def _json_sha(value: object) -> str:
 
 
 def _reconcile_usage(source: dict, current: dict, expected_turns: dict[str, str],
-                     parent_turn: str, dispatches: dict[str, int]) -> dict:
+                     parent_turn: str, dispatches: dict[str, int], *,
+                     exact_current: bool = False) -> dict:
     """Compare every old field and validate every newly replayed identity field."""
     _require(isinstance(source, dict) and isinstance(current, dict) and
              isinstance(source.get("sessions"), list) and
@@ -73,8 +74,9 @@ def _reconcile_usage(source: dict, current: dict, expected_turns: dict[str, str]
                  type(turn.get("terminal_timestamp")) is str and
                  _timestamp_ns(turn["terminal_timestamp"]) > dispatches[session_id],
                  "current turn identity, selector, usage, or terminal differs")
-        for key in ("calls", "terminal", "terminal_timestamp"):
-            compatible["turns"][0].pop(key, None)
+        if not exact_current:
+            for key in ("calls", "terminal", "terminal_timestamp"):
+                compatible["turns"][0].pop(key, None)
         for response, prior_response, compatible_response in zip(
                 responses, prior.get("responses", []), compatible["responses"]):
             digest = response.get("response_id_sha256")
@@ -88,8 +90,9 @@ def _reconcile_usage(source: dict, current: dict, expected_turns: dict[str, str]
                      response.get("effort") == fresh["effort"],
                      "current response identity, root turn, or selector differs")
             response_ids.add(digest)
-            for key in ("turn_id", "root_turn_id", "response_id_sha256"):
-                compatible_response.pop(key, None)
+            if not exact_current:
+                for key in ("turn_id", "root_turn_id", "response_id_sha256"):
+                    compatible_response.pop(key, None)
     _require(seen_sessions == set(expected_turns), "current session set is incomplete")
     _require(legacy == source, "source usage core differs from fresh replay")
     return {"source_usage_sha256": _json_sha(source),
@@ -131,15 +134,36 @@ def _terminal(rows: list[dict], turn_id: str, dispatch_ns: int) -> bool:
     return len(matches) == 1 and _timestamp_ns(matches[0].get("timestamp")) > dispatch_ns
 
 
-def _judge_treatment(receipt: dict, sessions: Path, receipt_path: Path) -> dict:
+def _current_native_attempts_match(saved: object, replayed: object) -> bool:
+    """Permit only the interrupted closure derived from raw terminal evidence."""
+    if (not isinstance(saved, list) or not isinstance(replayed, list) or
+            len(saved) != len(replayed) or len(saved) != 1):
+        return False
+    expected = json.loads(json.dumps(saved))
+    for attempt in expected:
+        turns = attempt.get("turns") if isinstance(attempt, dict) else None
+        if not isinstance(turns, list) or not turns:
+            return False
+        for turn in turns:
+            if (not isinstance(turn, dict) or turn.get("terminal") != "turn_aborted" or
+                    "closure" in turn or "completion_line" in turn):
+                return False
+            turn["closure"] = "interrupted"
+    return expected == replayed
+
+
+def _judge_treatment(receipt: dict, sessions: Path, receipt_path: Path, *,
+                     current_receipt: bool = False) -> dict:
     _require(receipt.get("kind") == "cancellation-capability" and
-             receipt.get("arm") == "treatment" and receipt.get("status") == "UNKNOWN" and
+             receipt.get("arm") == "treatment" and
+             receipt.get("status") == "UNKNOWN" and
              receipt.get("model") == "gpt-6-sol" and receipt.get("effort") == "low" and
              receipt.get("live_enabled") is False,
              "source is not an offline treatment cancellation receipt")
-    _require(receipt.get("failure") ==
-             "canary command completion or identity changed across interrupt",
-             "source did not fail on the conservative post-interrupt completion check")
+    if not current_receipt:
+        _require(receipt.get("failure") ==
+                 "canary command completion or identity changed across interrupt",
+                 "source did not fail on the conservative post-interrupt completion check")
     _require(isinstance(receipt.get("wall_seconds"), (int, float)) and
              receipt["wall_seconds"] < MAX_SECONDS, "canary wall bound was not met")
     usage = receipt.get("usage") or {}
@@ -245,11 +269,15 @@ def _judge_treatment(receipt: dict, sessions: Path, receipt_path: Path) -> dict:
     observed = account(sessions, parent_id, receipt["model"], receipt["effort"], True,
                        interruption_proof=receipt)
     current_attempts = observed["native_attempts"]
+    native_match = (_current_native_attempts_match(attempts, current_attempts)
+                    if current_receipt else
+                    isinstance(current_attempts, list) and len(current_attempts) == 1 and
+                    {key: value for key, value in current_attempts[0].items()
+                     if key != "turns"} == attempts[0])
     _require(observed["status"] == "complete" and observed["issues"] == [] and
              observed["interruption_verified"] is True and
              isinstance(current_attempts, list) and len(current_attempts) == 1 and
-             {key: value for key, value in current_attempts[0].items()
-              if key != "turns"} == attempts[0] and
+             native_match and
              observed["summary"]["model_calls"] > 0 and
              len(observed["summary"]["sessions"]) == 2 and
              all(session["calls"] > 0 and
@@ -271,7 +299,8 @@ def _judge_treatment(receipt: dict, sessions: Path, receipt_path: Path) -> dict:
              "current native child turn ledger differs")
     usage_hashes = _reconcile_usage(usage, observed["summary"],
         {parent_id: parent_turn, child_id: child_turn}, parent_turn,
-        {parent_id: parent_dispatch, child_id: child_dispatch})
+        {parent_id: parent_dispatch, child_id: child_dispatch},
+        exact_current=current_receipt)
     return {"parent_rollout": {"sha256": _sha(parent_path), "session_id": parent_id},
             "child_rollout": {"sha256": _sha(child_path), "session_id": child_id},
             "attempt_id": attempt_id, "child_turn_id": child_turn,
@@ -285,14 +314,17 @@ def _judge_treatment(receipt: dict, sessions: Path, receipt_path: Path) -> dict:
             **usage_hashes, "current_native_attempts_sha256": _json_sha(current_attempts)}
 
 
-def _judge_baseline(receipt: dict, sessions: Path, receipt_path: Path) -> dict:
+def _judge_baseline(receipt: dict, sessions: Path, receipt_path: Path, *,
+                    current_receipt: bool = False) -> dict:
     _require(receipt.get("kind") == "cancellation-capability" and
-             receipt.get("arm") == "baseline" and receipt.get("status") == "UNKNOWN" and
+             receipt.get("arm") == "baseline" and
+             receipt.get("status") == ("verified" if current_receipt else "UNKNOWN") and
              receipt.get("model") == "gpt-6-astra" and receipt.get("effort") == "xhigh" and
              receipt.get("live_enabled") is False and
              receipt.get("real_child_observed") is False and
              receipt.get("native_attempts") == [] and
-             receipt.get("failure") == "canary command order cannot be established after interrupt",
+             (receipt.get("failure") is None if current_receipt else
+              receipt.get("failure") == "canary command order cannot be established after interrupt"),
              "source is not the exact baseline parent-stop receipt")
     _require(type(receipt.get("wall_seconds")) in (int, float) and
              0 <= receipt["wall_seconds"] < MAX_SECONDS,
@@ -382,7 +414,8 @@ def _judge_baseline(receipt: dict, sessions: Path, receipt_path: Path) -> dict:
              usage.get("unknown_models") == [] and usage.get("unknown_usage") == [],
              "baseline parent usage or terminal status does not reconcile")
     usage_hashes = _reconcile_usage(usage, observed["summary"],
-        {parent_id: turn_id}, turn_id, {parent_id: dispatch_ns})
+        {parent_id: turn_id}, turn_id, {parent_id: dispatch_ns},
+        exact_current=current_receipt)
     return {"parent_rollout": {"sha256": _sha(parent_path), "session_id": parent_id},
             "marker_sha256": _sha(marker), "attempt_id": attempt_id,
             "parent_turn_id": turn_id, "second_call_id": second_id,
@@ -401,6 +434,58 @@ def _judge(receipt: dict, sessions: Path, receipt_path: Path) -> dict:
     if receipt.get("arm") == "baseline":
         return _judge_baseline(receipt, sessions, receipt_path)
     return _judge_treatment(receipt, sessions, receipt_path)
+
+
+def _judge_current(receipt: dict, sessions: Path, receipt_path: Path) -> dict:
+    if receipt.get("arm") == "baseline":
+        return _judge_baseline(receipt, sessions, receipt_path, current_receipt=True)
+    if receipt.get("arm") == "treatment":
+        return _judge_treatment(receipt, sessions, receipt_path, current_receipt=True)
+    raise AdjudicationError("current canary arm is invalid")
+
+
+def expected_current_decision(receipt_path: Path, sessions: Path,
+                              review_path: Path, review_sha256: str) -> dict:
+    """Recompute current canary proof from raw rollouts and bind blind review identity."""
+    _require(_sha(review_path) == review_sha256,
+             "current independent review hash differs")
+    review = json.loads(review_path.read_text(encoding="utf-8"))
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    arm = receipt.get("arm")
+    source_sha = _sha(receipt_path)
+    reviewed = (review.get("arms") or {}).get(arm) or {}
+    _require(review.get("kind") == "current-runtime-cancellation-independent-review" and
+             review.get("status") == "verified" and
+             review.get("source_receipts_modified") is False and
+             reviewed.get("status") == "verified" and
+             reviewed.get("source_receipt_sha256") == source_sha,
+             "current independent review does not bind source identity")
+    proof = _judge_current(receipt, sessions, receipt_path)
+    return {"schema_version": 3, "kind": "current-cancellation-adjudication",
+            "status": "verified", "arm": arm,
+            "source_receipt_sha256": source_sha,
+            "source_receipt_status": receipt.get("status"),
+            "runtime_binding_sha256": receipt.get("runtime_binding_sha256"),
+            "independent_review_sha256": review_sha256,
+            "proof": proof}
+
+
+def adjudicate_current(receipt_path: Path, sessions: Path, output: Path,
+                       review_path: Path, review_sha256: str) -> dict:
+    result = expected_current_decision(receipt_path, sessions, review_path,
+                                       review_sha256)
+    write_json_new(output, result)
+    return result
+
+
+def verify_current_decision(receipt_path: Path, sessions: Path,
+                            decision_path: Path, review_path: Path,
+                            review_sha256: str) -> dict:
+    actual = json.loads(decision_path.read_text(encoding="utf-8"))
+    expected = expected_current_decision(receipt_path, sessions, review_path,
+                                         review_sha256)
+    _require(actual == expected, "current cancellation decision differs from raw replay")
+    return expected
 
 
 def prior_adjudication_bound(decision: dict, source_sha: str, proof: dict) -> bool:
@@ -461,7 +546,19 @@ if __name__ == "__main__":
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--sessions", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--prior-adjudication", type=Path, required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--prior-adjudication", type=Path)
+    source.add_argument("--current-review", type=Path)
+    parser.add_argument("--review-sha256")
     args = parser.parse_args()
-    print(json.dumps(adjudicate(args.receipt, args.sessions, args.output,
-                                args.prior_adjudication), indent=2))
+    if args.current_review:
+        if not args.review_sha256:
+            parser.error("--current-review requires --review-sha256")
+        result = adjudicate_current(args.receipt, args.sessions, args.output,
+                                    args.current_review, args.review_sha256)
+    else:
+        if args.review_sha256:
+            parser.error("--review-sha256 requires --current-review")
+        result = adjudicate(args.receipt, args.sessions, args.output,
+                            args.prior_adjudication)
+    print(json.dumps(result, indent=2))

@@ -48,6 +48,21 @@ PILOT_ADJUDICATION = {
         "path": "_scratch/cancellation-canary/retry-20260930120001-96e403dd/adjudication-v2.json",
         "sha256": "7eba0edc2e714d98dd6506fbb0fecd92a2629158d87c9b4f57e0f5034d31519c"},
 }
+CURRENT_CANCELLATION = {
+    "independent_review": {
+        "path": "_scratch/pilot-16-evidence/current-cancellation-independent-review.json",
+        "sha256": "c5b862d8f73785a389cdc94f4aca85b6082e5a4acd6c9505d1b0091201591098"},
+    "baseline": {
+        "source": "_scratch/pilot-16-evidence/canary-baseline/cancellation.json",
+        "source_sha256": "ee8e3f2ba03bf5df3e67d93f94b36580529ba9037f62f3028608e44682c63478",
+        "decision": "_scratch/pilot-16-evidence/canary-baseline/current-adjudication-v3.json",
+        "decision_sha256": "1b763c73ca71cb057aab76d88acc4db136875dc443095425ea34cf1020757097"},
+    "treatment": {
+        "source": "_scratch/pilot-16-evidence/canary-treatment/cancellation.json",
+        "source_sha256": "7433f21867fd7046fe406b60f7088163ae289df5099aa26cc98729e0c295b7d4",
+        "decision": "_scratch/pilot-16-evidence/canary-treatment/current-adjudication-v3.json",
+        "decision_sha256": "01b39aa3fa20cbdc4b3519e319537a6853d627272a52f397d9397ae663a63719"},
+}
 
 
 def parent_selector(arm: str) -> tuple[str, str]:
@@ -89,6 +104,8 @@ def _canary_runtime_equivalent(previous: dict, current: dict, plan: dict | None)
     """Allow only the reviewed treatment v1-to-v2 policy/suffix transition."""
     if not isinstance(previous, dict):
         return False
+    if previous == current:
+        return True
     if plan is None or (plan.get("schema_version") not in (2, 3) and
                         plan.get("mode") not in ("standalone-feasibility", "paired-recovery")):
         return previous == current
@@ -237,7 +254,7 @@ def _verify_corrected_controls(controls: dict, spec: dict) -> None:
 def pilot_plan(spec: dict) -> dict:
     """Verify the frozen one-pair plan and its offline evidence without a model turn."""
     descriptor = spec.get("pilot")
-    if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v16.json":
+    if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v17.json":
         return _pilot_plan_recovery(spec)
     if isinstance(descriptor, dict) and _standalone_plan_version(descriptor.get("path")) is not None:
         return _pilot_plan_standalone(spec)
@@ -468,21 +485,21 @@ def _verify_standalone_sources(plan: dict) -> None:
 def _pilot_plan_recovery(spec: dict) -> dict:
     """Check the fresh two-arm recovery freeze without using historical runs."""
     descriptor = spec["pilot"]
-    path = HERE / "pilot-plan-v16.json"
+    path = HERE / "pilot-plan-v17.json"
     if descriptor != {"path": path.name, "schema_version": 5,
                       "sha256": file_sha(path)}:
         raise ValueError("recovery plan descriptor drift")
     plan = json.loads(path.read_text(encoding="utf-8"))
     arms = ("baseline", "treatment")
-    prefix = "_scratch/pilot-16"
+    prefix = "_scratch/pilot-17"
     if (set(plan) != {"schema_version", "mode", "pilot_id", "claim", "arm_order",
                       "matched_pairs", "packet_scope_mode", "preparation_root",
                       "evidence_root", "capabilities", "run_outputs", "live_rebind",
                       "limits_per_arm", "acceptance", "feedback", "end_to_end",
                       "fixture", "runtime", "runner_normalized_sha256",
-                      "execution_sources_sha256", "stop_rule"} or
+                      "execution_sources_sha256", "current_cancellation", "stop_rule"} or
             plan.get("schema_version") != 5 or plan.get("mode") != "paired-recovery" or
-            plan.get("pilot_id") != "flipt-oci-long-horizon-pilot-16" or
+            plan.get("pilot_id") != "flipt-oci-long-horizon-pilot-17" or
             plan.get("claim") != "fresh-two-arm-diagnostic" or
             plan.get("arm_order") != list(arms) or plan.get("matched_pairs") != 1 or
             plan.get("packet_scope_mode") != DIAGNOSTIC or
@@ -515,7 +532,13 @@ def _pilot_plan_recovery(spec: dict) -> dict:
             plan.get("end_to_end") != {"start": "runner-start-before-app-server-launch",
                 "finish": "after-hidden-race-backend-and-arm-blind-review",
                 "receipts": {arm: prefix + f"-evidence/{arm}-end-to-end.json"
-                             for arm in arms}, "same_boundary_both_arms": True}):
+                             for arm in arms}, "same_boundary_both_arms": True} or
+            plan.get("current_cancellation") != CURRENT_CANCELLATION or
+            any(file_sha(HERE / item[key]) != item[key + "_sha256"]
+                for arm in arms for item in [CURRENT_CANCELLATION[arm]]
+                for key in ("source", "decision")) or
+            file_sha(HERE / CURRENT_CANCELLATION["independent_review"]["path"]) !=
+                CURRENT_CANCELLATION["independent_review"]["sha256"]):
         raise ValueError("recovery plan schema or arm symmetry drift")
     expected_fixture = {"source_sha256": spec["source_sha256"],
         "seed_patch_sha256": spec["seed_patch_sha256"],
@@ -887,6 +910,75 @@ def dry_run(prepared: Path, output: Path, arm: str, outcomes: list[bool]) -> dic
     return result
 
 
+def _current_live_preflight(proof: dict, plan: dict, arm: str,
+                            policy: dict, cli_binding: dict,
+                            preparation: dict, routing_binding: dict | None,
+                            runtime_probe: dict) -> dict:
+    """Recheck current canary bytes and raw rollouts before any paid turn."""
+    from evals.long_horizon_v1.cancellation_adjudication import verify_current_decision
+    descriptor = plan["current_cancellation"][arm]
+    review = plan["current_cancellation"]["independent_review"]
+    source_path, decision_path = HERE / descriptor["source"], HERE / descriptor["decision"]
+    review_path = HERE / review["path"]
+    sessions = Path.home() / ".codex" / "sessions"
+    if (file_sha(source_path) != descriptor["source_sha256"] or
+            file_sha(decision_path) != descriptor["decision_sha256"] or
+            file_sha(review_path) != review["sha256"] or not sessions.is_dir()):
+        raise ValueError("current canary source, decision, or review drift")
+    decision = verify_current_decision(source_path, sessions, decision_path,
+                                       review_path, review["sha256"])
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    canary = proof.get("capability") if isinstance(proof.get("capability"), dict) else {}
+    cancellation = canary.get("cancellation") if isinstance(canary.get("cancellation"), dict) else {}
+    source_runtime = source.get("runtime_binding")
+    if (proof.get("status") != "verified" or
+            proof.get("manifest_sha256") != file_sha(HERE / "manifest.json") or
+            proof.get("cli_sha256") != cli_binding["cli_sha256"] or
+            proof.get("code_mode_host_sha256") != cli_binding["code_mode_host_sha256"] or
+            proof.get("routing_config_canonical_sha256") !=
+                (routing_binding["canonical_sha256"] if routing_binding else None) or
+            proof.get("cli_options") != policy["cli_options"] or
+            proof.get("arm_execution_policy_sha256") != policy["policy_sha256"] or
+            proof.get("prompt_suffix_sha256") != policy["prompt_suffix_sha256"] or
+            proof.get("preparation_sha256") != preparation["preparation_sha256"] or
+            proof.get("model") != policy["model"] or proof.get("effort") != policy["effort"] or
+            proof.get("native_spawn_available") is not (arm == "treatment") or
+            proof.get("router_hooks_verified") is not (arm == "treatment") or
+            any(proof.get(key) is not True for key in
+                ("multi_turn_same_thread", "child_usage_complete",
+                 "cancellation_verified", "selector_verified")) or
+            canary.get("status") != "verified" or canary.get("arm") != arm or
+            canary.get("model") != policy["model"] or canary.get("effort") != policy["effort"] or
+            canary.get("canary_id") != source.get("parent_thread_id") or
+            canary.get("runtime_binding_sha256") != _canonical_sha(runtime_probe) or
+            canary.get("cancellation_receipt_path") != str(source_path.resolve()) or
+            canary.get("cancellation_receipt_sha256") != descriptor["source_sha256"] or
+            canary.get("cancellation_adjudication_path") != str(decision_path.resolve()) or
+            canary.get("cancellation_adjudication_sha256") != descriptor["decision_sha256"] or
+            canary.get("cancellation_sessions_path") != str(sessions.resolve()) or
+            source.get("arm") != arm or source.get("model") != policy["model"] or
+            source.get("effort") != policy["effort"] or
+            source.get("runtime_binding_sha256") != _canonical_sha(source_runtime) or
+            not _canary_runtime_equivalent(source_runtime, runtime_probe, plan) or
+            decision.get("runtime_binding_sha256") != _canonical_sha(source_runtime) or
+            decision.get("source_receipt_status") != source.get("status") or
+            cancellation.get("status") != "verified" or
+            cancellation.get("real_child_observed") is not (arm == "treatment") or
+            any(cancellation.get(key) is not True for key in
+                ("interrupt_ack", "turn_completed", "usage_drained",
+                 "descendants_drained")) or
+            runtime_probe.get("model_turns") != 0 or
+            runtime_probe.get("router_hook_count") != (5 if arm == "treatment" else 0) or
+            runtime_probe.get("model_catalog", {}).get(policy["model"]) != policy["effort"] or
+            (arm == "treatment" and
+             (runtime_probe.get("model_catalog", {}).get("gpt-6-astra") != "xhigh" or
+              cancellation.get("child_model") != "gpt-6-astra" or
+              cancellation.get("child_effort") != "xhigh"))):
+        raise ValueError("current runtime capability proof incomplete or selector drift")
+    return {**proof, "zero_model_runtime_binding": runtime_probe,
+            "preparation": preparation}
+
+
 def live_preflight(capability: Path | None, cli: Path | None, arm: str,
                    prepared: Path | None = None, *, allow_disabled: bool = False,
                    benchmark_mode: str | None = None) -> dict:
@@ -920,6 +1012,9 @@ def live_preflight(capability: Path | None, cli: Path | None, arm: str,
     proof = json.loads(capability.read_text(encoding="utf-8"))
     if not isinstance(proof, dict):
         raise ValueError("persistent runtime capability proof invalid")
+    if plan and isinstance(plan.get("current_cancellation"), dict):
+        return _current_live_preflight(proof, plan, arm, policy, cli_binding,
+                                       preparation, routing_binding, runtime_probe)
     if plan and plan.get("mode") == "paired-recovery" and proof.get("manifest_sha256") != file_sha(HERE / "manifest.json"):
         raise ValueError("paired recovery capability manifest drift")
     canary = proof.get("capability") if isinstance(proof.get("capability"), dict) else {}
