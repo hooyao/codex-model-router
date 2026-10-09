@@ -322,9 +322,7 @@ def _quality(path: Path, run: dict) -> dict:
 def collect(pair: Path, output: Path) -> dict:
     spec = manifest()
     descriptor = spec.get("pilot") if isinstance(spec.get("pilot"), dict) else {}
-    if (descriptor.get("schema_version") == 4 or
-            re.fullmatch(r"pilot-plan-v(1[2-9]|[2-9][0-9]+)\.json",
-                         str(descriptor.get("path", "")))):
+    if descriptor.get("schema_version") == 4:
         raise ValueError("standalone plan cannot enter paired collector")
     treatment_path = pair / "treatment" / "run.json"
     treatment_receipt = json.loads(treatment_path.read_text(encoding="utf-8"))

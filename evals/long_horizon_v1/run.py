@@ -90,9 +90,9 @@ def _canary_runtime_equivalent(previous: dict, current: dict, plan: dict | None)
     if not isinstance(previous, dict):
         return False
     if plan is None or (plan.get("schema_version") not in (2, 3) and
-                        plan.get("mode") != "standalone-feasibility"):
+                        plan.get("mode") not in ("standalone-feasibility", "paired-recovery")):
         return previous == current
-    if plan.get("mode") == "standalone-feasibility":
+    if plan.get("mode") in ("standalone-feasibility", "paired-recovery"):
         # The cancellation canary predates the reviewed treatment v2 policy.
         # Bind that narrow transition without importing a performance comparator.
         historical = {"sha256": "4e0e535fb8f67ea68aa09781c799dd7acab30946e3eae5043174834c332af008",
@@ -237,6 +237,8 @@ def _verify_corrected_controls(controls: dict, spec: dict) -> None:
 def pilot_plan(spec: dict) -> dict:
     """Verify the frozen one-pair plan and its offline evidence without a model turn."""
     descriptor = spec.get("pilot")
+    if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v14.json":
+        return _pilot_plan_recovery(spec)
     if isinstance(descriptor, dict) and _standalone_plan_version(descriptor.get("path")) is not None:
         return _pilot_plan_standalone(spec)
     if isinstance(descriptor, dict) and descriptor.get("path") in (
@@ -461,6 +463,81 @@ def _verify_standalone_sources(plan: dict) -> None:
         raise ValueError("standalone runner source drift")
     if plan.get("execution_sources_sha256") != _standalone_source_hashes():
         raise ValueError("standalone execution source drift")
+
+
+def _pilot_plan_recovery(spec: dict) -> dict:
+    """Check the fresh two-arm recovery freeze without using historical runs."""
+    descriptor = spec["pilot"]
+    path = HERE / "pilot-plan-v14.json"
+    if descriptor != {"path": path.name, "schema_version": 5,
+                      "sha256": file_sha(path)}:
+        raise ValueError("recovery plan descriptor drift")
+    plan = json.loads(path.read_text(encoding="utf-8"))
+    arms = ("baseline", "treatment")
+    prefix = "_scratch/pilot-14"
+    if (set(plan) != {"schema_version", "mode", "pilot_id", "claim", "arm_order",
+                      "matched_pairs", "packet_scope_mode", "preparation_root",
+                      "evidence_root", "capabilities", "run_outputs", "live_rebind",
+                      "limits_per_arm", "acceptance", "feedback", "end_to_end",
+                      "fixture", "runtime", "runner_normalized_sha256",
+                      "execution_sources_sha256", "stop_rule"} or
+            plan.get("schema_version") != 5 or plan.get("mode") != "paired-recovery" or
+            plan.get("pilot_id") != "flipt-oci-long-horizon-pilot-14" or
+            plan.get("claim") != "fresh-two-arm-diagnostic" or
+            plan.get("arm_order") != list(arms) or plan.get("matched_pairs") != 1 or
+            plan.get("packet_scope_mode") != DIAGNOSTIC or
+            plan.get("preparation_root") != prefix + "-prep" or
+            plan.get("evidence_root") != prefix + "-evidence" or
+            plan.get("capabilities") != {arm: prefix + f"-evidence/{arm}-capability.json"
+                                           for arm in arms} or
+            plan.get("run_outputs") != {arm: prefix + f"-evidence/{arm}-live"
+                                        for arm in arms} or
+            plan.get("live_rebind") != {"mode": "no-model-rebind-v1",
+                "expected_final_manifest_sha256_required": True,
+                "turn_start_forbidden": True} or
+            plan.get("limits_per_arm") != {"planning_envelope_usd": PLANNING_USD,
+                "dispatch_stop_usd": STOP_USD, "wall_seconds": MAX_SECONDS,
+                "cleanup_reserve_seconds": CLEANUP_RESERVE_SECONDS,
+                "automatic_retries": 0, "public_repairs_per_round": 1} or
+            plan.get("feedback") != {"gate": "G2", "visible_to_both_arms": True,
+                "failed_case_ids_and_bounded_output": True, "repair_checkpoints": 1,
+                "hidden_oracle_disclosed": False} or
+            plan.get("acceptance") != {"fresh_seed_for_both_arms": True,
+                "same_public_reveals_and_feedback": True,
+                "complete_three_round_event_chain": True,
+                "complete_parent_and_child_usage": True,
+                "hidden_behavior_and_race": True,
+                "pinned_backend_regressions": True,
+                "arm_blind_patch_bound_semantic_retention_review": True,
+                "end_to_end_wall_includes_post_run_quality": True,
+                "performance_advantage_claim_allowed": False} or
+            plan.get("end_to_end") != {"start": "runner-start-before-app-server-launch",
+                "finish": "after-hidden-race-backend-and-arm-blind-review",
+                "receipts": {arm: prefix + f"-evidence/{arm}-end-to-end.json"
+                             for arm in arms}, "same_boundary_both_arms": True}):
+        raise ValueError("recovery plan schema or arm symmetry drift")
+    expected_fixture = {"source_sha256": spec["source_sha256"],
+        "seed_patch_sha256": spec["seed_patch_sha256"],
+        "start_tree": spec["start_tree"],
+        "arm_execution_sha256": spec["arm_execution"]["sha256"],
+        "prompt_suffix_sha256": spec["arm_execution"]["prompt_suffix_sha256"],
+        "routing_config_canonical_sha256": spec["routing_config"]["canonical_sha256"],
+        "assets_sha256": spec["assets"], "grader_sha256": file_sha(HERE / "grade.py"),
+        "end_to_end_sha256": file_sha(HERE / "end_to_end.py"),
+        "fork_policy_sha256": file_sha(HERE / "fork_policy.py")}
+    expected_runtime = {key: spec["runtime"][key] for key in (
+        "cli_sha256", "code_mode_host_sha256", "plugin_manifest_sha256",
+        "plugin_hooks_sha256", "router_hook_sha256", "routing_validator_sha256")}
+    if plan.get("fixture") != expected_fixture or plan.get("runtime") != expected_runtime:
+        raise ValueError("recovery fixture or runtime drift")
+    _verify_standalone_sources(plan)
+    if any(spec.get("limits", {}).get(key) != value for key, value in (
+            ("planning_envelope_usd", PLANNING_USD), ("dispatch_stop_usd", STOP_USD),
+            ("wall_seconds", MAX_SECONDS),
+            ("cleanup_reserve_seconds", CLEANUP_RESERVE_SECONDS),
+            ("worker_retries_per_stage", 0), ("public_repairs_per_round", 1))):
+        raise ValueError("recovery manifest limits drift")
+    return plan
 
 
 def _pilot_plan_standalone(spec: dict) -> dict:
@@ -832,7 +909,7 @@ def live_preflight(capability: Path | None, cli: Path | None, arm: str,
     if plan and (prepared.resolve() != (HERE / plan["preparation_root"]).resolve() or
                  capability.resolve() != (HERE / plan["capabilities"][arm]).resolve()):
         raise ValueError("pilot preparation or capability path drift")
-    if plan and file_sha(capability) != PILOT_CAPABILITY_SHA256[arm]:
+    if plan and plan.get("mode") != "paired-recovery" and file_sha(capability) != PILOT_CAPABILITY_SHA256[arm]:
         raise ValueError("frozen pilot capability hash mismatch")
     policy = arm_execution(spec, arm)
     cli_binding = verify_cli(cli, spec)
@@ -842,6 +919,8 @@ def live_preflight(capability: Path | None, cli: Path | None, arm: str,
     proof = json.loads(capability.read_text(encoding="utf-8"))
     if not isinstance(proof, dict):
         raise ValueError("persistent runtime capability proof invalid")
+    if plan and plan.get("mode") == "paired-recovery" and proof.get("manifest_sha256") != file_sha(HERE / "manifest.json"):
+        raise ValueError("paired recovery capability manifest drift")
     canary = proof.get("capability") if isinstance(proof.get("capability"), dict) else {}
     cancellation = canary.get("cancellation") if isinstance(canary.get("cancellation"), dict) else {}
     evidence_path_value = canary.get("cancellation_receipt_path")
@@ -1026,7 +1105,7 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
         if output.resolve() != (HERE / plan["run_outputs"][arm]).resolve():
             raise ValueError("pilot output path drift")
         if arm == "treatment":
-            if plan.get("mode") == "standalone-feasibility":
+            if plan.get("mode") in ("standalone-feasibility", "paired-recovery"):
                 pass
             elif plan.get("schema_version") in (2, 3):
                 verify_diagnostic_reference(spec, plan)
@@ -1035,7 +1114,7 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
     proof = live_preflight(capability, cli, arm, prepared,
                            benchmark_mode=benchmark_mode)
     if plan and arm == "treatment":
-        if plan.get("mode") == "standalone-feasibility":
+        if plan.get("mode") in ("standalone-feasibility", "paired-recovery"):
             pass
         elif plan.get("schema_version") in (2, 3):
             verify_diagnostic_reference(spec, plan)

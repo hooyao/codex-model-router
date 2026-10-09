@@ -184,7 +184,7 @@ class LongHorizonProtocolTests(unittest.TestCase):
         self.assertEqual(self.submit(machine, 1)["action"], "continue")
         self.assertTrue((self.workspace / ".benchmark" / "round2.md").exists())
         g2_overlay = json.loads(public_overlay(self.workspace, 2).read_text(encoding="utf-8"))
-        self.assertEqual(len(g2_overlay["Replace"]), 4)
+        self.assertEqual(len(g2_overlay["Replace"]), 6)
         self.assertEqual(self.submit(machine, 2)["action"], "final")
         self.assertFalse((self.workspace / ".benchmark" / "oracle").exists())
         self.assertFalse(any("benchmark_oracle" in str(path)
@@ -372,6 +372,51 @@ class LongHorizonProtocolTests(unittest.TestCase):
         self.assertIn("TestBenchmarkG0ReferenceSelection", action["message"])
         self.assertIn("compiler detail", action["message"])
         self.assertLess(len(action["message"]), 2500)
+
+    def test_final_public_recovery_feedback_is_equal_and_bounded_for_both_arms(self) -> None:
+        messages = []
+        for arm in ("baseline", "treatment"):
+            with tempfile.TemporaryDirectory() as directory:
+                workspace = Path(directory) / "arm"
+                shutil.copytree(self.workspace, workspace)
+                machine = StageMachine(workspace, arm, "parent",
+                    lambda patch, round_id, repair: {
+                        "round": round_id, "candidate_patch_sha256": sha(patch),
+                        "behavior_pass": round_id < 2,
+                        "checks": [{"exit_code": 1, "stdout_tail":
+                            "--- FAIL: TestBenchmarkG2CloseJoinsAcquisitionCleanup\n",
+                            "stderr_tail": ""}]}, base_tree=self.seed_tree)
+                for round_id in (0, 1):
+                    submit_checkpoint(workspace, round_id, "checked", selected=("diff",),
+                                      base_tree=self.seed_tree)
+                    self.assertEqual(machine.submit("parent", workspace / ".benchmark" /
+                                                    "checkpoint.json")["action"], "continue")
+                submit_checkpoint(workspace, 2, "checked", selected=("diff",),
+                                  base_tree=self.seed_tree)
+                first = machine.submit("parent", workspace / ".benchmark" /
+                                       "checkpoint.json")
+                self.assertEqual(first["action"], "repair")
+                self.assertIn("write a short repair plan", first["message"])
+                self.assertIn("TestBenchmarkG2CloseJoinsAcquisitionCleanup", first["message"])
+                messages.append(first["message"])
+                second = machine.submit("parent", workspace / ".benchmark" /
+                                        "checkpoint.json")
+                self.assertEqual(second["action"], "stop")
+                self.assertEqual([event["kind"] for event in machine.events].count(
+                                 "repair-allowed"), 1)
+        self.assertEqual(messages[0], messages[1])
+
+    def test_paired_recovery_plan_binds_fresh_two_arm_fixture(self) -> None:
+        spec = manifest()
+        plan = pilot_plan(spec)
+        self.assertEqual(plan["mode"], "paired-recovery")
+        self.assertEqual(plan["arm_order"], ["baseline", "treatment"])
+        self.assertEqual(plan["limits_per_arm"]["automatic_retries"], 0)
+        self.assertEqual(plan["feedback"]["repair_checkpoints"], 1)
+        self.assertFalse(plan["feedback"]["hidden_oracle_disclosed"])
+        self.assertEqual(plan["fixture"]["assets_sha256"], spec["assets"])
+        from evals.long_horizon_v1.prepare import _arms_for_plan
+        self.assertEqual(_arms_for_plan(spec), ("baseline", "treatment"))
 
     def test_mutation_controls_use_hidden_oracle_at_g2(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

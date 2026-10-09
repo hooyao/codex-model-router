@@ -75,7 +75,8 @@ def command_for(check: str, workspace: Path, round_id: int) -> list[str]:
         overlay = public_overlay(workspace, round_id)
         return ["go", "test", "-vet=off", "-overlay",
                 overlay.relative_to(workspace).as_posix(),
-                "-count=1", "-timeout=90s", "./internal/storage/fs/oci"]
+                "-count=1", "-timeout=90s", "./internal/storage/fs",
+                "./internal/storage/fs/oci"]
     if check == "packages":
         return ["go", "test", "-count=1", "-timeout=90s", *PACKAGE_PATHS]
     raise ValueError(f"unsupported check: {check}")

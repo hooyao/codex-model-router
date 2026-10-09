@@ -69,8 +69,16 @@ def _requires_no_model_rebind(spec: dict) -> bool:
 def _verify_standalone_rebind(spec: dict, plan: dict, rebinding: bool) -> None:
     pilot = spec.get("pilot", {})
     version = _standalone_plan_version(pilot.get("path"))
-    if (version is not None or
-            pilot.get("schema_version") == 4 or
+    if plan.get("mode") == "paired-recovery":
+        if (not rebinding or pilot.get("schema_version") != 5 or
+                plan.get("schema_version") != 5 or
+                plan.get("arm_order") != ["baseline", "treatment"] or
+                plan.get("matched_pairs") != 1 or
+                plan.get("live_rebind") != {"mode": "no-model-rebind-v1",
+                    "expected_final_manifest_sha256_required": True,
+                    "turn_start_forbidden": True}):
+            raise ValueError("paired recovery requires exact no-model rebind")
+    elif (pilot.get("schema_version") == 4 or
             plan.get("mode") == "standalone-feasibility"):
         if not rebinding:
             raise ValueError("standalone feasibility requires no-model rebind and exact final manifest hash")
@@ -147,6 +155,7 @@ def _bind_capabilities(expected_final_manifest_sha256: str | None) -> dict:
         if arm == "treatment":
             cancellation.update({"child_model": "gpt-6-astra", "child_effort": "xhigh"})
         proof = {"status": "verified", "cli_sha256": cli_binding["cli_sha256"],
+            "manifest_sha256": file_sha(HERE / "manifest.json"),
             "code_mode_host_sha256": cli_binding["code_mode_host_sha256"],
             "routing_config_canonical_sha256":
                 routing["canonical_sha256"] if routing else None,

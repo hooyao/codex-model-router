@@ -10,3 +10,11 @@ The cumulative acceptance requirements are:
 4. A failed Fetch closes every stream it acquired. After ownership transfer, snapshot construction closes all supplied streams on success and on Stat/read/validation failures, including streams not yet parsed. Cleanup preserves the originating error and allows a later successful attempt. Non-OCI parser and backend behavior remains compatible.
 
 Run the newly materialized public reproducer, retain the result, and submit final checkpoint round 2 with the integrated patch, regression tests, maintainer documentation, and check receipts.
+
+The public reproducer includes a three-stream Stat failure and a loopback
+registry that holds acquisition cleanup across Close. Both cases exercise the
+requirements above through public APIs. The final public gate returns failing
+case identifiers and bounded Go output. If it fails, diagnose the failure,
+record a concise repair plan, rerun the affected checks, and submit the one
+allowed repaired round-2 checkpoint. The same cost and wall limits continue
+through that repair; a second failure ends the arm.

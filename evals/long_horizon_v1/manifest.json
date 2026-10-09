@@ -20,11 +20,13 @@
     "public/g0/internal/storage/fs/oci/benchmark_g0_test.go": "7d59f2c577144c7ed4d93e518f570b08113c82e936ba8a9055ebdbf01d7eb2c9",
     "public/g1/internal/storage/fs/oci/benchmark_g1_progress_test.go": "71f01c6e0f272a084e388154c9c70d4c63e553e44b6420e473d0116783259f2a",
     "public/g1/internal/storage/fs/oci/benchmark_g1_test.go": "52b0652fa8047ee446fb929a31389c979aa577c0172e77aec68e326942d4e963",
+    "public/g2/internal/storage/fs/benchmark_g2_recovery_test.go": "56b839356ea893a5ddea5a9ebaa6cbcaf0ce05088f86a1af2740cfa94b84cdda",
+    "public/g2/internal/storage/fs/oci/benchmark_g2_recovery_test.go": "0e7ecfee67b3e48963131107e6c925ccee2eb15528cee9429c93ea1dd2d5d6ab",
     "public/g2/internal/storage/fs/oci/benchmark_g2_test.go": "b8936b489c3bacc4106b22ed764211c52569c8a18b92795d8a7ade49e4c94706",
     "round0.md": "a3b9961e12f2b8c18d9375c9778afa5297bc70d4eb304cdc9c14c45926309ffd",
     "round1.md": "e6c7ccc37f24ededa3ab34697eca8fa3c605841a27d8690b3a4c9a0e06e766be",
-    "round2.md": "a7a1b0f19521f3555877805244dad122efec5b6cab303372c441a63bd22b104c",
-    "submit_checkpoint.py": "b38f0256ab6587afb14b48c6fee074fdd5ef658f78d2e25beeab33a1327df136"
+    "round2.md": "20bcea3239209dd76711f3fa73326e919145fc20ae2ff9e8d8214d91714522bb",
+    "submit_checkpoint.py": "db02f4737dc1c145f39dd40856f145c75c4f6c74c96e2048c50cc8e11b466cae"
   },
   "controls": {
     "broken-close": {
@@ -94,9 +96,9 @@
     "version": "r9e-20261001"
   },
   "pilot": {
-    "path": "pilot-plan-v13.json",
-    "schema_version": 4,
-    "sha256": "0c61bb837f0afc5293f37585587e1acfe56738aca210798a58c510566479f422"
+    "path": "pilot-plan-v14.json",
+    "schema_version": 5,
+    "sha256": "8ca9db855ef0abbcec60a6b13f38cbea86d14764e562f5ff57326c77badd69c8"
   },
   "pricing": {
     "as_of": "2026-09-24",
@@ -158,7 +160,7 @@
   "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
   "source_tree": "20121a7049c58571664b87989d1fc7bab8562884",
   "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
-  "status": "offline-shutdown-join-r12e",
+  "status": "offline-paired-recovery-v14-review-pending",
   "task_id": "flipt-oci-reference-rollout-v1",
   "toolchain": {
     "linux_path": "/mnt/q/MyProjects/codex-model-router/evals/live/paired-swepro-flipt-20260923/tools/usr/lib/go-1.22/bin/go",

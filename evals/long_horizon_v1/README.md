@@ -1,4 +1,43 @@
-# Long-horizon OCI benchmark v1: R12e offline Close oracle
+# Long-horizon OCI benchmark v1: paired recovery preparation
+
+## Pilot 14 review freeze (2026-10-09)
+
+The new [pilot-14 plan](pilot-plan-v14.json) freezes two fresh arms from the
+same pinned seed, baseline Astra/xhigh and treatment Sol/low with the installed
+router. It retains the $15 observed estimated-cost dispatch stop, $18
+informational planning envelope, 4,500-second wall limit with 25 seconds for
+cleanup, zero automatic retries, and one public repair in a round. The
+preparation at `_scratch/pilot-14-prep` contains clean seed copies with only
+round 0 revealed. The current manifest is live-disabled; no model turn has
+been started for pilot 14.
+
+The shared round-2 public gate now tests ownership of a later supplied stream
+after an earlier Stat failure and whether Close joins an in-progress acquisition
+cleanup. The two public tests use their own fixtures; the evaluator-only oracle
+remains under `assets/oracle/`. Both arms receive the same failing case IDs,
+bounded Go output, request to diagnose and plan the repair, and one final
+round-2 checkpoint opportunity. The shared wall and observed-cost accounting
+continue through that turn. The unchanged pilot-13 candidate fails both new
+public cases; the positive control passes them. Pilot 13 and its original
+hidden grade remain historical evidence and have not been relabeled.
+
+The previous manifest bytes are saved as
+[manifest-r12e-20261001.json](manifest-r12e-20261001.json). The current
+[manifest](manifest.json) and pilot-14 plan bind the new public assets and
+execution sources. The old control matrix is historical and does not certify
+this new public gate. The preparation binds the disabled manifest and is for
+independent review. A later live-enable changes that hash, so the reviewed
+preparation must be preserved as evidence and a new clean preparation at the
+plan path made before zero-turn capability rebinding and preflight. Do not use
+the old pilot-13 preparation or capability for a pilot-14 run.
+
+The treatment's native fork evidence still yields effective packet scope
+`UNKNOWN`; strict selective mode fails before dispatch in
+`fork_policy.preflight_packet_scope`. The current paired collector marks a
+diagnostic-scope result `diagnostic-feasibility-pending-independent-review`
+with no cost ratio. Independent review must decide what quality and total-cost
+comparison can be reported without a technical context-isolation claim. This
+plan permits no performance advantage claim from one pair.
 
 ## Repository checkout and evidence scope
 

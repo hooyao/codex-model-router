@@ -16,7 +16,7 @@ class ProtocolError(ValueError):
 
 CHECK_COMMANDS = {
     "diff": "git diff --check",
-    "public": "go test -vet=off -overlay .benchmark/public-overlay.json -count=1 -timeout=90s ./internal/storage/fs/oci",
+    "public": "go test -vet=off -overlay .benchmark/public-overlay.json -count=1 -timeout=90s ./internal/storage/fs ./internal/storage/fs/oci",
     "packages": "go test -count=1 -timeout=90s ./internal/oci/... ./internal/storage/fs/oci ./internal/storage/fs/store",
 }
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
@@ -175,6 +175,14 @@ class StageMachine:
                                  "failed_case_ids": cases,
                                  "stdout_tail": stdout, "stderr_tail": stderr})
         message = f"Round {self.round} {reason}. Repair allowance: final attempt."
+        if reason == "public-gate-failed" and self.round == 2:
+            message += ("\nBefore changing code, diagnose the failing public cases and "
+                        "write a short repair plan covering resource ownership, "
+                        "concurrency, affected files, and the checks to rerun. "
+                        "Reassess whether a bounded expert reasoning stage is warranted "
+                        "under your arm's execution policy. Preserve the existing "
+                        "checkpoint history, then submit one repaired round-2 checkpoint. "
+                        "The same observed cost and wall limits continue through repair.")
         if reason.startswith("checkpoint."):
             message += (f"\nRegenerate this round's checkpoint with "
                         f"`python .benchmark/submit_checkpoint.py --round {self.round} "
