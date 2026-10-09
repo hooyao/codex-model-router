@@ -162,10 +162,13 @@ def _arm(path: Path, expected: str) -> dict:
             standalone = data.get("benchmark_mode") == "standalone-feasibility"
             recovery = (manifest().get("pilot", {}).get("schema_version") == 5 and
                         manifest()["pilot"].get("path") == "pilot-plan-v17.json")
+            fixed = (manifest().get("pilot", {}).get("schema_version") == 6 and
+                     manifest()["pilot"].get("path") == "pilot-plan-v18.json")
             if (not isinstance(fork_evidence, dict) or
                     fork_evidence.get("packet_scope") != scope or
                     data.get("claim_class") != ("standalone-treatment-feasibility" if standalone
                         else "matched-empirical-scope-unknown" if recovery and mode == DIAGNOSTIC
+                        else "fixed-historical-baseline-scope-unknown" if fixed and mode == DIAGNOSTIC
                         else "non-matched-non-interleaved-diagnostic" if mode == DIAGNOSTIC
                         else "strict-selective") or
                     standalone and mode != DIAGNOSTIC or
@@ -329,6 +332,10 @@ def collect(pair: Path, output: Path) -> dict:
         raise ValueError("standalone plan cannot enter paired collector")
     if descriptor.get("schema_version") == 5 and descriptor.get("path") == "pilot-plan-v17.json":
         return collect_recovery(pair, output)
+    if descriptor.get("schema_version") == 6 and descriptor.get("path") == "pilot-plan-v18.json":
+        return collect_fixed_baseline(pair, output)
+    if descriptor.get("schema_version") == 6 and descriptor.get("path") == "pilot-plan-v18.json":
+        return collect_fixed_baseline(pair, output)
     treatment_path = pair / "treatment" / "run.json"
     treatment_receipt = json.loads(treatment_path.read_text(encoding="utf-8"))
     if (not isinstance(treatment_receipt, dict) or
@@ -456,6 +463,76 @@ def collect_recovery(pair: Path, output: Path) -> dict:
                           "Effective child plaintext scope is unverified."}
     fresh_directory(output)
     write_json_new(output / "pair.json", result)
+    return result
+
+
+def collect_fixed_baseline(pair: Path, output: Path) -> dict:
+    """Compare one fully verified new treatment with the admitted v17 baseline."""
+    from evals.long_horizon_v1.fixed_baseline import (
+        verify_fixed_baseline, verify_hard_stages)
+    from evals.long_horizon_v1.recovery_quality import verify_recovery_arm_quality
+    from evals.long_horizon_v1.run import pilot_plan
+    spec = manifest()
+    plan = pilot_plan(spec)
+    baseline = verify_fixed_baseline(spec, plan)
+    prepared = HERE / plan["preparation_root"]
+    preparation = json.loads((prepared / "preparation.json").read_text(encoding="utf-8"))
+    preparation_sha = file_sha(prepared / "preparation.json")
+    if (preparation.get("fixture_manifest_sha256") != file_sha(HERE / "manifest.json") or
+            list(preparation.get("arms", {})) != ["treatment"] or
+            preparation["arms"]["treatment"].get("start_tree") != spec["start_tree"]):
+        raise ValueError("fresh v18 treatment preparation missing or mismatched")
+    run_path = HERE / plan["run_outputs"]["treatment"] / "run.json"
+    if file_sha(pair / "treatment" / "run.json") != file_sha(run_path):
+        raise ValueError("v18 supplied treatment run differs from plan output")
+    treatment = _arm(run_path, "treatment")
+    usage = treatment.get("usage") if isinstance(treatment.get("usage"), dict) else {}
+    if (treatment.get("claim_class") != "fixed-historical-baseline-scope-unknown" or
+            treatment.get("runtime_binding", {}).get("preparation_sha256") != preparation_sha or
+            treatment.get("benchmark_mode") is not None or
+            treatment.get("stop_reason") != "accepted-final" or
+            treatment.get("cost_status") != "complete" or
+            treatment.get("usage_issues") != [] or
+            treatment.get("interruption_proof") is not None or
+            treatment.get("packet_scope_mode") != DIAGNOSTIC or
+            (treatment.get("fork_policy") or {}).get("packet_scope") != "UNKNOWN" or
+            type(usage.get("estimated_usd")) not in (int, float) or
+            type(usage.get("estimated_usd_upper_bound")) not in (int, float) or
+            not 0 <= usage["estimated_usd"] <= usage["estimated_usd_upper_bound"] or
+            usage.get("unknown_models") or usage.get("unknown_usage") or
+            treatment.get("shared_initial_prompt_sha256") != baseline["shared_initial_prompt_sha256"] or
+            [event["assets"] for event in treatment["stage"]["events"]
+             if event.get("kind") == "reveal"] != baseline["reveal_assets"]):
+        raise ValueError("fixed baseline comparison lacks complete equivalent treatment")
+    # The existing quality checker is unchanged; only its mode guard is adapted
+    # for this treatment-only plan. It still rechecks every hidden/race/backend,
+    # semantic and end-to-end receipt against the accepted patch.
+    quality = verify_recovery_arm_quality(prepared, {**plan, "mode": "paired-recovery"},
+                                          treatment, "treatment", require_wall=True)
+    hard = verify_hard_stages(spec, plan, treatment, prepared / "treatment")
+    result = {"schema_version": 1, "mode": "fixed-historical-baseline-recovery",
+        "task_id": TASK_ID, "pilot_id": plan["pilot_id"],
+        "status": "fixed-historical-baseline-quality-pass-scope-unknown",
+        "manifest_sha256": file_sha(HERE / "manifest.json"),
+        "pilot_plan_sha256": file_sha(HERE / spec["pilot"]["path"]),
+        "preparation_sha256": preparation_sha,
+        "baseline_admission_sha256": baseline["admission_sha256"],
+        "baseline_run_sha256": baseline["run_sha256"],
+        "treatment_run_sha256": file_sha(run_path),
+        "quality_evidence_sha256": quality["end_to_end_sha256"],
+        "hard_kernel": hard,
+        "estimated_usd": {"baseline": baseline["estimated_usd"],
+                          "treatment": usage["estimated_usd"]},
+        "treatment_to_baseline_cost_ratio": usage["estimated_usd"] / baseline["estimated_usd"],
+        "end_to_end_wall_seconds": {"baseline": baseline["end_to_end_wall_seconds"],
+                                    "treatment": quality["end_to_end_wall_seconds"]},
+        "quality_parity": True, "packet_scope": "UNKNOWN",
+        "fresh_matched_pair": False, "technical_context_isolation_claim": False,
+        "stable_latency_claim": False, "general_savings_claim": False,
+        "interpretation": "Exploratory policy tuning against a fixed admitted v17 historical baseline; "
+                          "one pair cannot establish stable speed or general savings."}
+    fresh_directory(output)
+    write_json_new(output / "fixed-comparison.json", result)
     return result
 
 

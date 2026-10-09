@@ -148,6 +148,14 @@ def _arms_for_plan(spec: dict) -> tuple[str, ...]:
                 plan.get("matched_pairs") != 1):
             raise ValueError("recovery preparation arm scope drift")
         return ("baseline", "treatment")
+    if name == "pilot-plan-v18.json":
+        if descriptor.get("schema_version") != 6 or descriptor.get("sha256") != file_sha(HERE / name):
+            raise ValueError("fixed baseline preparation plan hash drift")
+        plan = json.loads((HERE / name).read_text(encoding="utf-8"))
+        if (plan.get("schema_version") != 6 or plan.get("mode") != "fixed-baseline-recovery" or
+                plan.get("arm_order") != ["treatment"] or plan.get("matched_pairs") != 0):
+            raise ValueError("fixed baseline treatment preparation scope drift")
+        return ("treatment",)
     version = re.fullmatch(r"pilot-plan-v(1[2-9]|[2-9][0-9]+)\.json", name or "") if isinstance(name, str) else None
     if version is None or descriptor.get("schema_version") != 4:
         raise ValueError("unrecognized preparation plan")

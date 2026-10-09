@@ -406,17 +406,18 @@ class LongHorizonProtocolTests(unittest.TestCase):
                                  "repair-allowed"), 1)
         self.assertEqual(messages[0], messages[1])
 
-    def test_paired_recovery_plan_binds_fresh_two_arm_fixture(self) -> None:
+    def test_recovery_plan_binds_fresh_fixture(self) -> None:
         spec = manifest()
         plan = pilot_plan(spec)
-        self.assertEqual(plan["mode"], "paired-recovery")
-        self.assertEqual(plan["arm_order"], ["baseline", "treatment"])
+        expected = (["treatment"] if plan["mode"] == "fixed-baseline-recovery"
+                    else ["baseline", "treatment"])
+        self.assertEqual(plan["arm_order"], expected)
         self.assertEqual(plan["limits_per_arm"]["automatic_retries"], 0)
         self.assertEqual(plan["feedback"]["repair_checkpoints"], 1)
         self.assertFalse(plan["feedback"]["hidden_oracle_disclosed"])
         self.assertEqual(plan["fixture"]["assets_sha256"], spec["assets"])
         from evals.long_horizon_v1.prepare import _arms_for_plan
-        self.assertEqual(_arms_for_plan(spec), ("baseline", "treatment"))
+        self.assertEqual(_arms_for_plan(spec), tuple(expected))
 
     def test_mutation_controls_use_hidden_oracle_at_g2(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1519,7 +1520,9 @@ class LongHorizonProtocolTests(unittest.TestCase):
         self.assertEqual(baseline.split("\n\n", 1)[0], shared)
         self.assertEqual(treatment.split("\n\n", 1)[0], shared)
         self.assertIn("Do not start child agents", baseline)
-        self.assertIn("I authorize you to delegate", treatment)
+        self.assertIn(("Delegate bounded hard reasoning" if
+                       spec.get("pilot", {}).get("schema_version") == 6 else
+                       "I authorize you to delegate"), treatment)
         self.assertNotIn("fixed child count", baseline)
         self.assertFalse(baseline_has_child("parent", [{"id": "parent"}]))
         self.assertTrue(baseline_has_child("parent", [{"id": "parent"}, {"id": "child"}]))

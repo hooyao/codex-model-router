@@ -1,5 +1,33 @@
 # Long-horizon OCI benchmark v1: paired recovery preparation
 
+## Pilot 18 fixed historical baseline preparation (2026-10-09)
+
+[Pilot-plan-v18.json](pilot-plan-v18.json) prepares one fresh Sol/low treatment
+from the same pinned seed and public R0 task. The original v17 Astra/xhigh
+baseline remains a fixed historical comparator, never relabeled as a v18 run.
+Its exact live manifest, independently reconstructed full-quality admission,
+run, accepted patch, hidden/race grade, backend grade, blind semantic review,
+and end-to-end receipt are bound by hash. The prechange admission and
+verification receipts are preserved under `_scratch/pilot-17-evidence/`.
+
+The v18 treatment suffix uses a generic conditional rule: after a public
+report reveals interacting shared-state/publication or cancellation/ownership
+invariants, the controller must obtain an independent Astra/xhigh invariant
+analysis, plan, and review before that checkpoint. It may reuse a worker through
+bounded follow-up turns. The policy supplies no future report details or old
+candidate hints. Post-run verification joins each hard-episode receipt to a
+completed native Astra turn before the applicable checkpoint.
+
+The fixed-baseline verifier requires identical public assets, seed, runtime,
+toolchain, pricing, limits, and baseline policy. Transport, accounting,
+protocol, grader, quality, and wall-boundary source hashes must be identical
+to v17; the narrow runner/preparation/preflight/collector metadata diff is
+saved for independent review at `_scratch/pilot-18-evidence/metadata-delta.patch`.
+This is exploratory policy tuning against a fixed baseline, not a fresh
+matched pair. Any later ratio requires complete v18 treatment quality and
+usage, the fixed-baseline admission, and the hard-episode evidence. One result
+cannot establish stable speed, general savings, or technical context isolation.
+
 ## Pilot 17 final zero-turn freeze (2026-10-09)
 
 [Pilot-plan-v17.json](pilot-plan-v17.json) pins the two original current-runtime

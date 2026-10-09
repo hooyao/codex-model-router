@@ -69,11 +69,12 @@ def _requires_no_model_rebind(spec: dict) -> bool:
 def _verify_standalone_rebind(spec: dict, plan: dict, rebinding: bool) -> None:
     pilot = spec.get("pilot", {})
     version = _standalone_plan_version(pilot.get("path"))
-    if plan.get("mode") == "paired-recovery":
-        if (not rebinding or pilot.get("schema_version") != 5 or
-                plan.get("schema_version") != 5 or
-                plan.get("arm_order") != ["baseline", "treatment"] or
-                plan.get("matched_pairs") != 1 or
+    if plan.get("mode") in ("paired-recovery", "fixed-baseline-recovery"):
+        fixed = plan.get("mode") == "fixed-baseline-recovery"
+        if (not rebinding or pilot.get("schema_version") != (6 if fixed else 5) or
+                plan.get("schema_version") != (6 if fixed else 5) or
+                plan.get("arm_order") != (["treatment"] if fixed else ["baseline", "treatment"]) or
+                plan.get("matched_pairs") != (0 if fixed else 1) or
                 plan.get("live_rebind") != {"mode": "no-model-rebind-v1",
                     "expected_final_manifest_sha256_required": True,
                     "turn_start_forbidden": True}):

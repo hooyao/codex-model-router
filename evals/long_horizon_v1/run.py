@@ -106,6 +106,19 @@ def _canary_runtime_equivalent(previous: dict, current: dict, plan: dict | None)
         return False
     if previous == current:
         return True
+    if plan is not None and plan.get("mode") == "fixed-baseline-recovery":
+        old_plan = json.loads((HERE / "pilot-plan-v17.json").read_text(encoding="utf-8"))
+        old_fixture, fixture = old_plan["fixture"], plan["fixture"]
+        if (previous.get("policy_sha256") != old_fixture["arm_execution_sha256"] or
+                previous.get("prompt_suffix_sha256") !=
+                    old_fixture["prompt_suffix_sha256"]["treatment"] or
+                current.get("policy_sha256") != fixture["arm_execution_sha256"] or
+                current.get("prompt_suffix_sha256") !=
+                    fixture["prompt_suffix_sha256"]["treatment"]):
+            return False
+        ignored = {"policy_sha256", "prompt_suffix_sha256"}
+        return ({key: value for key, value in previous.items() if key not in ignored} ==
+                {key: value for key, value in current.items() if key not in ignored})
     if plan is None or (plan.get("schema_version") not in (2, 3) and
                         plan.get("mode") not in ("standalone-feasibility", "paired-recovery")):
         return previous == current
@@ -254,6 +267,8 @@ def _verify_corrected_controls(controls: dict, spec: dict) -> None:
 def pilot_plan(spec: dict) -> dict:
     """Verify the frozen one-pair plan and its offline evidence without a model turn."""
     descriptor = spec.get("pilot")
+    if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v18.json":
+        return _pilot_plan_fixed(spec)
     if isinstance(descriptor, dict) and descriptor.get("path") == "pilot-plan-v17.json":
         return _pilot_plan_recovery(spec)
     if isinstance(descriptor, dict) and _standalone_plan_version(descriptor.get("path")) is not None:
@@ -480,6 +495,75 @@ def _verify_standalone_sources(plan: dict) -> None:
         raise ValueError("standalone runner source drift")
     if plan.get("execution_sources_sha256") != _standalone_source_hashes():
         raise ValueError("standalone execution source drift")
+
+
+def _pilot_plan_fixed(spec: dict) -> dict:
+    """Pin one fresh treatment against an explicitly admitted v17 baseline."""
+    from evals.long_horizon_v1.fixed_baseline import verify_fixed_baseline
+    descriptor = spec["pilot"]
+    path = HERE / "pilot-plan-v18.json"
+    if descriptor != {"path": path.name, "schema_version": 6,
+                      "sha256": file_sha(path)}:
+        raise ValueError("fixed baseline plan descriptor drift")
+    plan = json.loads(path.read_text(encoding="utf-8"))
+    prefix = "_scratch/pilot-18"
+    if (set(plan) != {"schema_version", "mode", "pilot_id", "claim", "arm_order",
+                      "matched_pairs", "packet_scope_mode", "preparation_root",
+                      "evidence_root", "capabilities", "run_outputs", "live_rebind",
+                      "limits_per_arm", "acceptance", "feedback", "end_to_end",
+                      "fixture", "runtime", "runner_normalized_sha256",
+                      "execution_sources_sha256", "current_cancellation",
+                      "fixed_baseline", "fixed_baseline_verifier_sha256", "stop_rule"} or
+            plan.get("schema_version") != 6 or
+            plan.get("mode") != "fixed-baseline-recovery" or
+            plan.get("pilot_id") != "flipt-oci-long-horizon-pilot-18" or
+            plan.get("claim") != "fixed-historical-baseline-policy-tuning" or
+            plan.get("arm_order") != ["treatment"] or plan.get("matched_pairs") != 0 or
+            plan.get("packet_scope_mode") != DIAGNOSTIC or
+            plan.get("preparation_root") != prefix + "-prep" or
+            plan.get("evidence_root") != prefix + "-evidence" or
+            plan.get("capabilities") != {"treatment": prefix + "-evidence/treatment-capability.json"} or
+            plan.get("run_outputs") != {"treatment": prefix + "-evidence/treatment-live"} or
+            plan.get("live_rebind") != {"mode": "no-model-rebind-v1",
+                "expected_final_manifest_sha256_required": True,
+                "turn_start_forbidden": True} or
+            plan.get("limits_per_arm") != {"planning_envelope_usd": PLANNING_USD,
+                "dispatch_stop_usd": STOP_USD, "wall_seconds": MAX_SECONDS,
+                "cleanup_reserve_seconds": CLEANUP_RESERVE_SECONDS,
+                "automatic_retries": 0, "public_repairs_per_round": 1} or
+            plan.get("feedback") != {"gate": "G2", "visible_to_both_arms": True,
+                "failed_case_ids_and_bounded_output": True, "repair_checkpoints": 1,
+                "hidden_oracle_disclosed": False} or
+            plan.get("current_cancellation") != CURRENT_CANCELLATION or
+            plan.get("fixed_baseline_verifier_sha256") != file_sha(HERE / "fixed_baseline.py") or
+            plan.get("acceptance") != {"fresh_treatment_seed": True,
+                "fixed_historical_baseline_only": True,
+                "complete_three_round_event_chain": True,
+                "complete_parent_and_child_usage": True,
+                "hidden_behavior_and_race": True,
+                "pinned_backend_regressions": True,
+                "arm_blind_patch_bound_semantic_retention_review": True,
+                "end_to_end_wall_includes_post_run_quality": True,
+                "independent_astra_hard_kernel_after_reveal": True,
+                "stable_latency_or_general_savings_claim_allowed": False}):
+        raise ValueError("fixed baseline plan schema or limits drift")
+    fixture = {"source_sha256": spec["source_sha256"],
+        "seed_patch_sha256": spec["seed_patch_sha256"],
+        "start_tree": spec["start_tree"],
+        "arm_execution_sha256": spec["arm_execution"]["sha256"],
+        "prompt_suffix_sha256": spec["arm_execution"]["prompt_suffix_sha256"],
+        "routing_config_canonical_sha256": spec["routing_config"]["canonical_sha256"],
+        "assets_sha256": spec["assets"], "grader_sha256": file_sha(HERE / "grade.py"),
+        "end_to_end_sha256": file_sha(HERE / "end_to_end.py"),
+        "fork_policy_sha256": file_sha(HERE / "fork_policy.py")}
+    runtime = {key: spec["runtime"][key] for key in (
+        "cli_sha256", "code_mode_host_sha256", "plugin_manifest_sha256",
+        "plugin_hooks_sha256", "router_hook_sha256", "routing_validator_sha256")}
+    if plan.get("fixture") != fixture or plan.get("runtime") != runtime:
+        raise ValueError("fixed baseline task or runtime fixture drift")
+    _verify_standalone_sources(plan)
+    verify_fixed_baseline(spec, plan)
+    return plan
 
 
 def _pilot_plan_recovery(spec: dict) -> dict:
@@ -989,6 +1073,8 @@ def live_preflight(capability: Path | None, cli: Path | None, arm: str,
     if plan and plan.get("mode") == "standalone-feasibility":
         if benchmark_mode != "standalone-feasibility" or arm != "treatment":
             raise ValueError("standalone treatment requires explicit --mode standalone-feasibility")
+    elif plan and plan.get("mode") == "fixed-baseline-recovery" and arm != "treatment":
+        raise ValueError("fixed baseline plan runs only the fresh treatment")
     elif benchmark_mode is not None:
         raise ValueError("standalone mode requires a standalone plan")
     if arm == "treatment" and plan is not None:
@@ -1002,7 +1088,7 @@ def live_preflight(capability: Path | None, cli: Path | None, arm: str,
     if plan and (prepared.resolve() != (HERE / plan["preparation_root"]).resolve() or
                  capability.resolve() != (HERE / plan["capabilities"][arm]).resolve()):
         raise ValueError("pilot preparation or capability path drift")
-    if plan and plan.get("mode") != "paired-recovery" and file_sha(capability) != PILOT_CAPABILITY_SHA256[arm]:
+    if plan and plan.get("mode") not in ("paired-recovery", "fixed-baseline-recovery") and file_sha(capability) != PILOT_CAPABILITY_SHA256[arm]:
         raise ValueError("frozen pilot capability hash mismatch")
     policy = arm_execution(spec, arm)
     cli_binding = verify_cli(cli, spec)
@@ -1196,6 +1282,8 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
         if plan.get("mode") == "standalone-feasibility":
             if benchmark_mode != "standalone-feasibility" or arm != "treatment":
                 raise ValueError("standalone treatment requires explicit --mode standalone-feasibility")
+        elif plan.get("mode") == "fixed-baseline-recovery" and arm != "treatment":
+            raise ValueError("fixed baseline plan runs only the fresh treatment")
         elif benchmark_mode is not None:
             raise ValueError("standalone mode requires a standalone plan")
         if output.resolve() != (HERE / plan["run_outputs"][arm]).resolve():
@@ -1203,6 +1291,9 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
         if arm == "treatment":
             if plan.get("mode") in ("standalone-feasibility", "paired-recovery"):
                 pass
+            elif plan.get("mode") == "fixed-baseline-recovery":
+                from evals.long_horizon_v1.fixed_baseline import verify_fixed_baseline
+                verify_fixed_baseline(spec, plan)
             elif plan.get("schema_version") in (2, 3):
                 verify_diagnostic_reference(spec, plan)
             else:
@@ -1212,6 +1303,9 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
     if plan and arm == "treatment":
         if plan.get("mode") in ("standalone-feasibility", "paired-recovery"):
             pass
+        elif plan.get("mode") == "fixed-baseline-recovery":
+            from evals.long_horizon_v1.fixed_baseline import verify_fixed_baseline
+            verify_fixed_baseline(spec, plan)
         elif plan.get("schema_version") in (2, 3):
             verify_diagnostic_reference(spec, plan)
         else:
@@ -1549,7 +1643,10 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
               "benchmark_mode": benchmark_mode,
               "claim_class": "standalone-treatment-feasibility" if
                   benchmark_mode == "standalone-feasibility" else "matched-empirical-scope-unknown" if
-                  plan and plan.get("mode") == "paired-recovery" else "non-matched-non-interleaved-diagnostic" if
+                  plan and plan.get("mode") == "paired-recovery" else
+                  "fixed-historical-baseline-scope-unknown" if
+                  plan and plan.get("mode") == "fixed-baseline-recovery" else
+                  "non-matched-non-interleaved-diagnostic" if
                   plan and plan.get("packet_scope_mode") == DIAGNOSTIC else "strict-selective",
               "child_rollout_paths": ({state["id"]: str(path) for path, state in
                   meter.paths.items() if state["id"] != thread_id} if meter is not None else {}),
