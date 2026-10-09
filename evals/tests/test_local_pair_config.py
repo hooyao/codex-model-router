@@ -12,6 +12,9 @@ from evals.long_horizon_v1.run import pilot_plan
 
 
 class LocalPairConfigTests(unittest.TestCase):
+    def setUp(self):
+        (HERE / "_scratch").mkdir(parents=True, exist_ok=True)
+
     def test_fresh_paths_leave_canonical_plan_unchanged(self):
         with patch.dict(os.environ):
             os.environ.pop("LONG_HORIZON_LOCAL_RUN_CONFIG", None)
