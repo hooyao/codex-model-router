@@ -105,7 +105,7 @@
     "prepare.py": "db03cd915f3978d3f6f876a61c3227f75b23e75a9e26ec8d27cd81dace5a6124",
     "protocol.py": "1b63457dc4e3045491951f69ef0f09bae88152d3baa11ae6e6e5f3a35e5565b9",
     "quality_adapter.py": "8eb8f91a938bb592e29e872de2dd9a1640df49ebeaff9993901ac19fa893bb4a",
-    "quality_bridge.py": "0c954674b20bb6bcc94359585e99cd1c6eea334963b34bfd265c967f85062620",
+    "quality_bridge.py": "746d21187b64cda84b6d7897bdd453e74bbb4ceabeb38960c2f9dd519b9e95da",
     "recovery_quality.py": "3135cd4645b71c5370bca709492af2e36de82759f268cfa933cad199cb2eb4d0",
     "runtime_binding.py": "7e818ccb34787a84c0f30407e07329732ec36214f5116dd72378e90ee866398f",
     "standalone_quality.py": "4b4c209f00227b4f15c0cc5bc69d42f76d329f1edcf9d5ab586f50938dff8973",

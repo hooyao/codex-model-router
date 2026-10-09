@@ -35,20 +35,20 @@ There was no paid rerun. The smoke product content and file set were unchanged,
 the unknown token was copied into scratch, and the pinned Go test exited 0.
 
 The final plan SHA-256 is
-`13ea88e3f0dc01f6a93a3d21e18bd361eb3682cb25d9ce96bfd672abe8218ece`;
+`bd9fac3568d95a0c41827d18c4a9c1e48a6b56f3e2fd4682db3eb729f8541782`;
 the live manifest SHA-256 is
-`45691b2d5347ce8ff44a31762d5b3877249a901fc45dd8e252eaeeff25a21fa6`.
+`7296cf2049e18f112ffa44406e49755164bb41b1300963ba37882cc3b113aae1`.
 The derived smoke receipt SHA-256 is
 `0823c64f5d7a45fc3deef9fefb7ad9c9d9dfa97cedebfffb257aa7dd4a88c8c0`.
 Fresh R0 preparation SHA-256 is
-`2db46dbe7818fb2262c8a394fde1eb813ca583f74b7a1c5c63d16ca657afa601`.
+`1eef6307f3c07a37ec50713d41a1ca0c4ee6f651a83c3d80632c86e48920390c`.
 Baseline/treatment capability SHA-256 values are respectively
-`0e46fef97cb12955b3a75298671075325a49a8c6014cf50cda0b1daed27af2b1`
-and `8b4c06b0c6761078e12c06cbd02c4424b6d20d731405f3adcc876eb8de3296da`.
+`aabd07638a7589f8a21f5fcac933ea21ec09e49066b950e7d843625d6aa6ca9a`
+and `b57e8eb3de8400fea97e9e28b38ae99a0a9524ad32424ebd68d195f14a583973`.
 Both final preflights passed with zero model turns. Their receipt SHA-256
 values are respectively
-`95eef321519cc84347224d131895021d21f23e701cab96bcdf05bc0b13cbdee1`
-and `0920e0ae2ec541121f9549d5811d8b41cb48d9ba8c396b758c50738cfcbfd17b`.
+`d3abf22f91c9e4dd2d4d2279e4b851cd736f046121c7c72436a5e07f166e62cc`
+and `72aba6cd52e27733225c4103c102dc246acfa93146d12447ad134f0926bb6583`.
 
 The common protocol retains the $15 observed combined solver/evaluator
 dispatch stop, $18 informational envelope, 4500-second original arm clock,

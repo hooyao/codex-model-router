@@ -99,7 +99,7 @@
   "pilot": {
     "path": "pilot-plan-v20.json",
     "schema_version": 8,
-    "sha256": "13ea88e3f0dc01f6a93a3d21e18bd361eb3682cb25d9ce96bfd672abe8218ece"
+    "sha256": "bd9fac3568d95a0c41827d18c4a9c1e48a6b56f3e2fd4682db3eb729f8541782"
   },
   "pricing": {
     "as_of": "2026-09-24",

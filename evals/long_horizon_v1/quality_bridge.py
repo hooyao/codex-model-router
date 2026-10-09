@@ -409,7 +409,6 @@ def verify_common_arm_quality(prepared: Path, plan: dict, run: dict,
               "evaluator_estimated_usd": quality["evaluator_estimated_usd"]}
     if arm == "treatment":
         from .fixed_baseline import verify_hard_stages
-        from .common import manifest
         result["public_hard_stages"] = verify_hard_stages(
             manifest(), plan, run, prepared / "treatment")
         if revision == 1:

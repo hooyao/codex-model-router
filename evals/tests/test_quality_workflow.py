@@ -10,11 +10,11 @@ import time
 import unittest
 from unittest.mock import patch
 
-from evals.long_horizon_v1.common import file_sha, sha
+from evals.long_horizon_v1.common import TASK_ID, file_sha, sha
 from evals.long_horizon_v1.grade import REVIEW_REQUIREMENTS
 from evals.long_horizon_v1.protocol import StageMachine
 from evals.long_horizon_v1.quality_bridge import QualityBridge, InfrastructureIncomplete
-from evals.long_horizon_v1.quality_bridge import correction_astra_turns
+from evals.long_horizon_v1.quality_bridge import correction_astra_turns, verify_common_arm_quality
 from evals.long_horizon_v1.run import live_run
 from evals.long_horizon_v1.quality_adapter import (
     _functional_diagnostics, EvaluatorIncomplete, product_snapshot,
@@ -496,6 +496,80 @@ class QualityWorkflowTests(unittest.TestCase):
         (product / "extra.txt").write_text("new", encoding="utf-8")
         added = product_snapshot(product)
         self.assertNotEqual(added["fileset_sha256"], original["fileset_sha256"])
+
+    def test_baseline_full_quality_chain_checks_wall_receipt(self) -> None:
+        prepared = self.root / "prepared"
+        save(prepared / "preparation.json", {"fresh": True})
+        root = self.root / "baseline-live"
+        quality_root = root / "quality"
+        save(quality_root / "r0-semantic-review.json", {"verdict": "pass"})
+        save(self.root / "manifest.json", {"pilot": {"path": "pilot-plan-v20.json"}})
+        plan = {"mode": "common-quality-recovery", "pilot_id": "pilot-20",
+            "run_outputs": {"baseline": "baseline-live"},
+            "end_to_end": {"receipts": {"baseline": "baseline-wall.json"}}}
+        save(self.root / "pilot-plan-v20.json", plan)
+        patch_hash = "a" * 64
+        events, previous = [], "0" * 64
+        for kind, round_id in (("reveal", 1), ("reveal", 2),
+                               ("accepted-final", 2), ("final-quality", 2)):
+            event = {"seq": len(events), "previous_sha256": previous,
+                "arm": "baseline", "thread_id": "baseline-parent",
+                "kind": kind, "round": round_id}
+            if kind == "final-quality":
+                event.update(revision=0, patch_sha256=patch_hash)
+            event["sha256"] = sha(json.dumps(event, sort_keys=True,
+                separators=(",", ":")).encode())
+            events.append(event)
+            previous = event["sha256"]
+        started = 1_000_000_000_000
+        run = {"stop_reason": "accepted-final", "quality_status": "PASS",
+            "workflow_cost_status": "complete", "cost_status": "complete",
+            "usage_issues": [], "runtime_binding": {
+                "preparation_sha256": file_sha(prepared / "preparation.json")},
+            "stage": {"complete": True, "round": 2,
+                "manifest_sha256": file_sha(self.root / "manifest.json"),
+                "thread_id": "baseline-parent", "events": events,
+                "chain_sha256": previous},
+            "parent_thread_id": "baseline-parent",
+            "quality_bridge": {"root": str(quality_root.resolve()),
+                "request_sha256": {"0": "request"},
+                "response_sha256": {"0": "response"},
+                "evaluator_cost_status": "complete", "evaluator_estimated_usd": 0.2},
+            "started_utc_ns": started, "wall_seconds": 10.0,
+            "usage": {"estimated_usd": 0.1, "estimated_usd_upper_bound": 0.1},
+            "workflow_estimated_usd": 0.1 + 0.2,
+            "workflow_estimated_usd_upper_bound": 0.1 + 0.2}
+        save(root / "run.json", run)
+        files = {"hidden_race_grade": "hidden", "backend_grade": "backend",
+                 "semantic_review": file_sha(quality_root / "r0-semantic-review.json")}
+        save(self.root / "baseline-wall.json", {"schema_version": 1,
+            "kind": "arm-end-to-end-boundary", "pilot_id": plan["pilot_id"],
+            "task_id": TASK_ID, "arm": "baseline",
+            "manifest_sha256": file_sha(self.root / "manifest.json"),
+            "pilot_plan_sha256": file_sha(self.root / "pilot-plan-v20.json"),
+            "preparation_sha256": file_sha(prepared / "preparation.json"),
+            "run_sha256": file_sha(root / "run.json"),
+            "quality_files_sha256": files, "started_utc_ns": started,
+            "run_wall_seconds": 10.0, "quality_finished_utc_ns": started + 12_000_000_000,
+            "end_to_end_wall_seconds": 12.0})
+        checked_quality = {"revision": 0,
+            "response": {"candidate_patch_sha256": patch_hash, **{
+                "hidden_grade_sha256": files["hidden_race_grade"],
+                "backend_grade_sha256": files["backend_grade"],
+                "semantic_review_sha256": files["semantic_review"]}},
+            "evaluator_estimated_usd": 0.2, "evaluator_cost_upper": 0.2}
+        with patch("evals.long_horizon_v1.quality_bridge.HERE", self.root), \
+             patch("evals.long_horizon_v1.quality_bridge.manifest",
+                   return_value={"pilot": {"path": "pilot-plan-v20.json"}}), \
+             patch.object(QualityBridge, "recheck", return_value=checked_quality), \
+             patch("evals.long_horizon_v1.standalone_quality._grade",
+                   side_effect=lambda *_args, hidden, **_kwargs:
+                       "hidden" if hidden else "backend"):
+            result = verify_common_arm_quality(prepared, plan, run, "baseline",
+                                                self.root / "sessions", require_wall=True)
+        self.assertEqual(result["end_to_end_wall_seconds"], 12.0)
+        self.assertEqual(result["end_to_end_sha256"],
+                         file_sha(self.root / "baseline-wall.json"))
 
 
 if __name__ == "__main__":
