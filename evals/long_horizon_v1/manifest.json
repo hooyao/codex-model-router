@@ -99,7 +99,7 @@
   "pilot": {
     "path": "pilot-plan-v20.json",
     "schema_version": 8,
-    "sha256": "a50067e5c556fb8b1ee513542a8f959c6457ca0f724178b66ceb4d6ad64c2a40"
+    "sha256": "a4fe24a1cfc0c3b8edee0b38fbef3b7da9fd76c9a3251274349671d2023edb89"
   },
   "pricing": {
     "as_of": "2026-09-24",
@@ -134,13 +134,13 @@
     "schema_version": 3
   },
   "runtime": {
-    "cli": "C:\\Users\\yahu2\\AppData\\Local\\OpenAI\\Codex\\bin\\9691020b546a15b2\\codex.exe",
-    "cli_sha256": "3553cd6e7df5a093d8cb8301cd8088a57e0971aba71ddbe0e67f7f44a15cdf68",
-    "cli_version": "codex-cli 0.162.0-alpha.2",
-    "code_mode_host_sha256": "28ec719ee36049c60707102e3c7fec95edbe1fea5927ad4061efc2cd5b2dd888",
+    "cli": "C:\\Users\\yahu2\\AppData\\Local\\OpenAI\\Codex\\bin\\896a0166b774037a\\codex.exe",
+    "cli_sha256": "f6dbf48cb70f62649c645f26c87dc9bf84cc36986202dfad8e12fb5b8ca70312",
+    "cli_version": "codex-cli 0.163.0-alpha.10.2",
+    "code_mode_host_sha256": "3b6a9179a4da17fa5fc6948219cd61486dc3b534c683838076d8c61bd311c68e",
     "plugin_hooks_sha256": "9cf09fb63c6e3c208f83796ebb51f2425b70a7f528dde3fc77efdfff1a0aa7f2",
-    "plugin_manifest_sha256": "c0e41f5c13bf01144f9b6e63112fffca896b465a6ab8d3b8a431106ebf389fff",
-    "plugin_root": "C:\\Users\\yahu2\\.codex\\plugins\\cache\\personal\\codex-model-router\\1.2.3",
+    "plugin_manifest_sha256": "af9d520b3de628fd610678d1dee0e940f9fd63d67ca4a8bf174766480174cc5d",
+    "plugin_root": "C:\\Users\\yahu2\\.codex\\plugins\\cache\\personal\\codex-model-router\\1.2.2+codex.20260930060539",
     "router_hook_sha256": "5896da6b06ff6462ef7bd9c81a71c7a6a758f00c77435311e5fab4688cf8cc15",
     "routing_validator_sha256": "ab91853ef8673b079f6ef8e1033ea918b61c16bb0ff9aae7ecbd32dd7ab3deb4"
   },

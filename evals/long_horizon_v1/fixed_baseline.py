@@ -132,12 +132,29 @@ def verify_hard_stages(spec: dict, plan: dict, run: dict, workspace: Path) -> di
         path = workspace / ".benchmark" / "hard-kernel" / f"round{round_id}.json"
         receipt = _json(path)
         worker_id, worker_turn = receipt.get("worker_id"), receipt.get("worker_turn_id")
+        common = plan.get("mode") == "common-quality-recovery"
         matches = [(entry, turn) for entry in native if isinstance(entry, dict)
                    for turn in entry.get("turns", []) if isinstance(turn, dict) and
-                   entry.get("child_id") == worker_id and turn.get("turn_id") == worker_turn and
+                   (isinstance(worker_id, str) and bool(worker_id) and
+                    worker_id in (entry.get("child_id"), entry.get("agent_path")) if common else
+                    entry.get("child_id") == worker_id and turn.get("turn_id") == worker_turn) and
                    turn.get("parent_turn_id") == attempt.get("turn_id") and
                    turn.get("model") == "gpt-6-astra" and turn.get("effort") == "xhigh" and
                    turn.get("terminal") in ("task_complete", "task_completed")]
+        if common:
+            # Native tools expose worker paths, not opaque runtime UUIDs. Bind
+            # the actual paid turn to this accepted parent round; model-written
+            # turn labels are descriptive metadata, never runtime evidence.
+            matches = [(entry, turn) for entry, turn in matches if
+                turn.get("closure") == "completed" and
+                turn.get("root_turn_id") == attempt.get("turn_id") and
+                any(response.get("session_id") == entry.get("child_id") and
+                    response.get("turn_id") == turn.get("turn_id") and
+                    response.get("root_turn_id") == attempt.get("turn_id") and
+                    response.get("model") == "gpt-6-astra" and
+                    response.get("effort") == "xhigh" and
+                    response.get("estimated_usd_lower_bound", 0) > 0
+                    for response in run.get("per_turn_responses", []))]
         if len(matches) != 1:
             raise ValueError(f"R{round_id} independent Astra turn missing")
         stamp = matches[0][1].get("terminal_timestamp")
@@ -145,9 +162,11 @@ def verify_hard_stages(spec: dict, plan: dict, run: dict, workspace: Path) -> di
             terminal_ns = int(datetime.fromisoformat(stamp.replace("Z", "+00:00")).timestamp() * 1e9)
         except (AttributeError, ValueError, TypeError):
             raise ValueError(f"R{round_id} Astra terminal time missing") from None
+        reveals = [event.get("time_ns") for event in events if
+                   event.get("kind") == "reveal" and event.get("round") == round_id]
         if (receipt.get("schema_version") != 1 or receipt.get("round") != round_id or
                 receipt.get("model") != "gpt-6-astra" or receipt.get("effort") != "xhigh" or
-                receipt.get("parent_turn_id") != attempt.get("turn_id") or
+                (not common and receipt.get("parent_turn_id") != attempt.get("turn_id")) or
                 receipt.get("implementation_owner") != "controller" or
                 receipt.get("revealed_report_sha256") != spec["assets"][f"round{round_id}.md"] or
                 not isinstance(receipt.get("invariants"), list) or
@@ -157,8 +176,11 @@ def verify_hard_stages(spec: dict, plan: dict, run: dict, workspace: Path) -> di
                     for key in ("repair_plan", "review", "self_check")) or
                 not isinstance(receipt.get("public_checks"), list) or
                 not receipt["public_checks"] or
-                type(submit_ns) is not int or terminal_ns >= submit_ns):
+                type(submit_ns) is not int or terminal_ns >= submit_ns or
+                (common and (len(reveals) != 1 or type(reveals[0]) is not int or
+                             terminal_ns < reveals[0]))):
             raise ValueError(f"R{round_id} hard-kernel receipt incomplete or late")
         bound[str(round_id)] = {"receipt_sha256": file_sha(path),
-                                "worker_id": worker_id, "worker_turn_id": worker_turn}
+                                "worker_id": matches[0][0]["child_id"],
+                                "worker_turn_id": matches[0][1]["turn_id"]}
     return bound

@@ -14,7 +14,8 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from evals.long_horizon_v1.accounting import account
-from evals.long_horizon_v1.common import ASSET_ROOT, HERE, checked_run, file_sha, manifest, write_json_new
+from evals.long_horizon_v1.common import (ASSET_ROOT, HERE, checked_run, file_sha,
+    local_pair_config, manifest, write_json_new)
 from evals.long_horizon_v1.assets.checkpoint_hash import capture_patch
 from evals.long_horizon_v1.grade import REVIEW_REQUIREMENTS, record_grader_hazard, stop_wsl_grader
 from evals.long_horizon_v1.runtime_binding import arm_execution, verify_cli
@@ -25,6 +26,14 @@ from evals.scripts.run_paired_arm import SessionMeter
 
 class EvaluatorIncomplete(RuntimeError):
     """The evaluator could not assess product behavior; booleans are unverified."""
+
+
+def _request_dispatch_stop(request: dict) -> float:
+    local = local_pair_config()
+    stop = local["dispatch_stop_usd"] if local is not None else 15.0
+    if request.get("dispatch_stop_usd", 15.0) != stop:
+        raise ValueError("quality request dispatch stop differs from local run config")
+    return stop
 
 
 def require_complete_assessment(report: object) -> tuple[dict, list]:
@@ -45,11 +54,13 @@ def _atomic_new(path: Path, value: dict) -> None:
 class EvaluatorBudgetGuard:
     """Check clock on every frame and scan native usage at a bounded cadence."""
     def __init__(self, meter: SessionMeter, deadline: float, cancel_path: Path,
-                 solver_cost_upper: float, known_evaluator_cost_upper: float):
+                 solver_cost_upper: float, known_evaluator_cost_upper: float,
+                 dispatch_stop_usd: float = 15.0):
         self.meter = meter
         self.deadline = deadline
         self.cancel_path = cancel_path
         self.known_cost_upper = solver_cost_upper + known_evaluator_cost_upper
+        self.dispatch_stop_usd = dispatch_stop_usd
         self.last_refresh = 0.0
 
     def __call__(self, *, force: bool = False) -> None:
@@ -61,7 +72,7 @@ class EvaluatorBudgetGuard:
             self.last_refresh = now
         if (time.monotonic() >= self.deadline or self.meter.unknown_models or
                 self.meter.unknown_usage or
-                self.known_cost_upper + self.meter.cost_upper >= 15.0):
+                self.known_cost_upper + self.meter.cost_upper >= self.dispatch_stop_usd):
             raise TransportError("evaluator original deadline, cost, or cancellation stop")
 
 
@@ -275,6 +286,7 @@ def _run_once(request_path: Path, prepared: Path, cli: Path,
     spec = manifest()
     verify_cli(cli, spec)
     request = json.loads(request_path.read_text(encoding="utf-8"))
+    dispatch_stop_usd = _request_dispatch_stop(request)
     root = request_path.parent
     revision = request.get("revision")
     candidate = Path(request.get("candidate_patch_path", ""))
@@ -330,7 +342,7 @@ def _run_once(request_path: Path, prepared: Path, cli: Path,
             meter = SessionMeter(session_root, evaluator_id, "gpt-6-astra", "xhigh")
         guard = EvaluatorBudgetGuard(meter, deadline, root / f"cancel-r{revision}.json",
             request["solver_cost_upper_at_request"],
-            request["known_evaluator_cost_upper"])
+            request["known_evaluator_cost_upper"], dispatch_stop_usd)
         if transport is not None:
             turn = transport.turn(_review_prompt(product), guard)
             guard(force=True)

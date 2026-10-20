@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -70,14 +71,21 @@ def local_pair_config() -> dict | None:
     if not path.is_absolute() or not path.resolve().is_relative_to(scratch):
         raise ValueError("local pair config must be an absolute path under fixture scratch")
     data = json.loads(path.read_text(encoding="utf-8"))
-    if (not isinstance(data, dict) or set(data) != {"schema_version", "pair_id",
-            "live_enabled", "preparation_root", "evidence_root"} or
+    required = {"schema_version", "pair_id", "live_enabled",
+                "preparation_root", "evidence_root"}
+    if (not isinstance(data, dict) or not required.issubset(data) or
+            set(data) - required - {"dispatch_stop_usd"} or
             data.get("schema_version") != 1 or data.get("live_enabled") is not True or
             not isinstance(data.get("pair_id"), str) or
             re.fullmatch(r"fresh-[a-z0-9-]{1,48}", data["pair_id"]) is None or
             data.get("preparation_root") != f"_scratch/{data['pair_id']}-prep" or
             data.get("evidence_root") != f"_scratch/{data['pair_id']}-evidence"):
         raise ValueError("local pair config schema or fresh paths invalid")
+    stop = data.get("dispatch_stop_usd", 15.0)
+    if (type(stop) not in (int, float) or not math.isfinite(stop) or
+            not 0 < stop <= 30.0):
+        raise ValueError("local pair observed dispatch stop must be finite USD within (0, 30]")
+    data["dispatch_stop_usd"] = float(stop)
     return data
 
 

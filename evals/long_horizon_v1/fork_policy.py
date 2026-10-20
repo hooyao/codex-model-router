@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 import hashlib
+from itertools import islice
 import json
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,8 @@ POLICY = "bounded-fork-v2"
 ERROR = "context-policy-failure"
 STRICT = "strict-selective"
 DIAGNOSTIC = "diagnostic-feasibility"
+MAX_PLAN_RECORDS = 128
+MAX_PLAN_SOURCE_BYTES = 1_048_576
 
 
 def _sha(value: str) -> str:
@@ -78,6 +81,35 @@ def preflight_packet_scope(mode: str) -> None:
         raise ValueError(f"{ERROR}: packet scope mode missing or invalid")
     if mode == STRICT:
         raise ValueError(f"{ERROR}: strict mode lacks trusted effective-plaintext attestation")
+
+
+def _saved_plan_source(plans: Path, commitment: dict | None) -> tuple[dict | None, int | None]:
+    """Find one local source by its committed contents; the CLI permits any basename."""
+    if (not isinstance(commitment, dict) or plans.is_symlink() or
+            plans.parent.is_symlink()):
+        return None, None
+    digest = commitment.get("planned_arguments_sha256", commitment.get("arguments_sha256"))
+    matches = []
+    records = list(islice(plans.glob("*.json"), MAX_PLAN_RECORDS + 1))
+    if len(records) > MAX_PLAN_RECORDS:
+        return None, None
+    for path in sorted(records):
+        if path.is_symlink() or not path.is_file() or path.resolve().parent != plans.resolve():
+            continue
+        try:
+            with path.open("rb") as stream:
+                raw = stream.read(MAX_PLAN_SOURCE_BYTES + 1)
+            if len(raw) > MAX_PLAN_SOURCE_BYTES:
+                continue
+            source = json.loads(raw)
+            if (isinstance(source, dict) and set(source) == {"arguments", "packet"} and
+                    isinstance(source["arguments"], dict) and
+                    _canonical_sha(source["arguments"]) == digest and
+                    _canonical_json(source["packet"]) == _canonical_json(commitment.get("packet"))):
+                matches.append((source, path.stat().st_mtime_ns))
+        except (OSError, ValueError, TypeError):
+            continue
+    return matches[0] if len(matches) == 1 else (None, None)
 
 
 def _child_initial_input(path: Path, child_id: str, parent_id: str,
@@ -272,13 +304,8 @@ def validate_observed_spawns(parent_rollout: Path, parent_id: str,
             except (OSError, ValueError):
                 plan = None
                 plan_mtime_ns = None
-            source_path = plans / f"{name}.plan.json" if path else None
-            try:
-                source = json.loads(source_path.read_text(encoding="utf-8")) if source_path else None
-                planned_args = source["arguments"]
-                source_time = source_path.stat().st_mtime_ns
-            except (OSError, ValueError, KeyError, TypeError):
-                source, planned_args, source_time = None, None, None
+            source, source_time = _saved_plan_source(plans, plan)
+            planned_args = source["arguments"] if source is not None else None
             source_ok = (isinstance(source, dict) and
                 set(source) == {"arguments", "packet"} and
                 isinstance(planned_args, dict) and

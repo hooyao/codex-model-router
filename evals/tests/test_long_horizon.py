@@ -5,6 +5,7 @@ from contextlib import ExitStack
 from datetime import datetime, timedelta, timezone
 import copy
 import json
+from itertools import count
 import os
 from pathlib import Path
 import queue
@@ -1937,6 +1938,95 @@ class LongHorizonProtocolTests(unittest.TestCase):
         self.assertEqual(len({row["response_id_sha256"] for row in
                               observed["responses"]}), 112)
 
+    def test_runtime_error_in_task_complete_is_failed_even_with_priced_usage(self) -> None:
+        root, parent_id, child_id, parent, child = self._observed_multiturn_rollouts()
+        error = {"message": "stream disconnected before completion: the upstream model backend failed mid-stream",
+                 "codex_error_info": "other"}
+        for event in child:
+            if event["type"] == "event_msg" and event["payload"].get("type") == "task_complete":
+                event["payload"].update(error=error, last_agent_message=None)
+        self._write_multiturn(root, parent, child)
+        observed = account(root, parent_id, "gpt-6-sol", "low", True)
+        self.assertEqual(observed["status"], "UNKNOWN")
+        self.assertEqual(observed["failed_child_attempts"], 2)
+        self.assertEqual(observed["summary"]["model_calls"], 112)
+        turns = next(row for row in observed["summary"]["sessions"]
+                     if row["id"] == child_id)["turns"]
+        self.assertEqual([row["terminal"] for row in turns], ["task_failed"] * 2)
+        self.assertTrue(all(row["terminal_event"] == "task_complete" and
+                            row["terminal_error"] == error for row in turns))
+        self.assertEqual([row["closure"] for row in observed["native_attempts"][0]["turns"]],
+                         ["failed", "failed"])
+        meter = CanarySessionMeter(root, parent_id, "gpt-6-sol", "low", True)
+        meter.refresh()
+        with self.assertRaisesRegex(TransportError, "child .* backend failed mid-stream"):
+            ActiveTelemetryGuard("treatment").check(
+                meter, parent_id, "gpt-6-sol", "low", 0, 0, now=1)
+
+    def test_runtime_error_without_usage_retains_unknown_cost_and_immediate_reason(self) -> None:
+        root, parent_id, child_id, parent, child = self._observed_multiturn_rollouts()
+        child = [row for row in child if row["type"] != "token_usage_record" and not (
+            row["type"] == "event_msg" and row["payload"].get("type") == "token_count")]
+        for event in child:
+            if event["type"] == "event_msg" and event["payload"].get("type") == "task_complete":
+                event["payload"].update(error={"message": "upstream model backend failed mid-stream",
+                                               "codex_error_info": "other"})
+        self._write_multiturn(root, parent, child)
+        meter = CanarySessionMeter(root, parent_id, "gpt-6-sol", "low", True)
+        meter.refresh()
+        with self.assertRaisesRegex(TransportError, "child .* backend failed mid-stream"):
+            ActiveTelemetryGuard("treatment").check(
+                meter, parent_id, "gpt-6-sol", "low", 0, 0, now=1)
+        observed = account(root, parent_id, "gpt-6-sol", "low", True)
+        self.assertEqual(observed["status"], "UNKNOWN")
+        self.assertEqual(observed["failed_child_attempts"], 2)
+        self.assertTrue(any("has no priced response" in issue for issue in observed["issues"]))
+        self.assertTrue(any("lacks final usage totals" in issue for issue in observed["issues"]))
+        self.assertFalse(any("turn differs from native ledger" in issue for issue in observed["issues"]))
+        self.assertFalse(any(row["session_id"] == child_id for row in observed["responses"]))
+
+    def test_observed_two_error_child_rollout_stops_with_native_failure_reason(self) -> None:
+        fixture = json.loads((Path(__file__).parent / "fixtures" /
+            "native-child-upstream-failure-sanitized.json").read_text(encoding="utf-8"))
+        events = fixture["events"]
+        parent_id, child_id = (events[0]["payload"][key] for key in
+                               ("parent_thread_id", "id"))
+        root = self.workspace / "two-error-child"
+        root.mkdir()
+        (root / "rollout-child.jsonl").write_text(
+            "".join(json.dumps(row) + "\n" for row in events), encoding="utf-8")
+        meter = CanarySessionMeter(root, parent_id, "gpt-6-sol", "low")
+        meter.refresh()
+        state = next(iter(meter.paths.values()))
+        self.assertEqual(state["id"], child_id)
+        self.assertEqual(state["terminal"], "task_failed")
+        self.assertEqual([row["terminal"] for row in state["turns"]], ["task_failed"] * 2)
+        self.assertEqual(meter.calls, 0)
+        self.assertEqual(state["responses"], [])
+        self.assertIsNone(state["last_total_usage"])
+        self.assertEqual(meter.unknown_usage, [])
+        with self.assertRaisesRegex(TransportError,
+                "child .*stream disconnected before completion: the upstream model backend failed mid-stream"):
+            ActiveTelemetryGuard("treatment").check(
+                meter, parent_id, "gpt-6-sol", "low", 0, 0, now=1)
+        observed = account(root, parent_id, "gpt-6-sol", "low", False)
+        self.assertEqual(observed["status"], "UNKNOWN")
+        self.assertEqual(observed["failed_child_attempts"], 2)
+        self.assertEqual(len([issue for issue in observed["issues"] if "failed mid-stream" in issue]), 2)
+
+    def test_parent_runtime_terminal_error_is_not_success(self) -> None:
+        root, parent_id, _child_id, parent, child = self._observed_multiturn_rollouts()
+        parent[-1]["payload"]["error"] = {"message": "upstream model backend failed mid-stream"}
+        self._write_multiturn(root, parent, child)
+        meter = CanarySessionMeter(root, parent_id, "gpt-6-sol", "low", True)
+        meter.refresh()
+        with self.assertRaisesRegex(TransportError, "parent .* backend failed mid-stream"):
+            ActiveTelemetryGuard("treatment").check(
+                meter, parent_id, "gpt-6-sol", "low", 0, 0, now=1)
+        observed = account(root, parent_id, "gpt-6-sol", "low", True)
+        self.assertEqual(observed["status"], "UNKNOWN")
+        self.assertIn("parent session lacks successful terminal result", observed["issues"])
+
     def test_observed_two_turn_missing_or_ambiguous_evidence_fails_closed(self) -> None:
         root, parent_id, _child_id, parent, original = self._observed_multiturn_rollouts()
         for change in ("missing-terminal", "missing-usage", "missing-raw",
@@ -2034,6 +2124,8 @@ class LongHorizonProtocolTests(unittest.TestCase):
                         turn_id="parent-turn")
 
     def test_current_turn_drain_records_child_first_interrupt_proof(self) -> None:
+        self.enterContext(mock_patch("evals.long_horizon_v1.transport.time.time_ns",
+            side_effect=count(time.time_ns(), 1000).__next__))
         transport = object.__new__(AppServerTransport)
         transport.thread_id, transport.active_turn_id = "parent", "parent-turn"
         transport.active_turn_complete = False
@@ -2128,6 +2220,8 @@ class LongHorizonProtocolTests(unittest.TestCase):
                                    child_ack: bool = True,
                                    deadline: float = 106.0) -> tuple[dict, list, list]:
         """Pilot-11 ordering: parent ack precedes child discovery by 1.7 seconds."""
+        self.enterContext(mock_patch("evals.long_horizon_v1.transport.time.time_ns",
+            side_effect=count(time.time_ns(), 1000).__next__))
         transport = object.__new__(AppServerTransport)
         transport.thread_id, transport.active_turn_id = "parent", "parent-turn"
         transport.active_turn_complete = False
@@ -3030,6 +3124,8 @@ class LongHorizonProtocolTests(unittest.TestCase):
                                           "treatment", self.workspace, attempt_id)
 
     def test_canary_completion_races_send_no_interrupt(self) -> None:
+        self.enterContext(mock_patch("evals.long_horizon_v1.transport.time.time_ns",
+            side_effect=count(time.time_ns(), 1000).__next__))
         attempt_id = "race-attempt"
         path = self.workspace / "parent.jsonl"
         marker_path = self.workspace / (RUNNING_FILE + attempt_id)
@@ -3912,6 +4008,8 @@ class LongHorizonProtocolTests(unittest.TestCase):
 
     def _runner_multiple_child_cancellation(self, child_two: str) -> tuple[dict, list, list]:
         """Exercise live_run's callback with the real bounded drain, offline."""
+        self.enterContext(mock_patch("evals.long_horizon_v1.transport.time.time_ns",
+            side_effect=count(time.time_ns(), 1000).__next__))
         (self.workspace / "treatment").mkdir(exist_ok=True)
         spec = {**manifest(), "pilot": {"path": "offline-synthetic-plan.json"}}
         output = self.workspace / ("runner-children-" + child_two)

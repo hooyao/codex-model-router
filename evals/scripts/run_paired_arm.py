@@ -79,6 +79,19 @@ def budget_limit_reached(meter: "SessionMeter", budget_usd: float,
     return meter.cost_upper >= budget_usd - stop_margin_usd
 
 
+def terminal_fields(payload: dict) -> dict:
+    """A runtime task_complete may carry an error instead of a successful result."""
+    fields = {"terminal": payload["type"]}
+    error = payload.get("error")
+    if error is not None:
+        details = {key: error[key][:500] for key in ("message", "codex_error_info")
+                   if isinstance(error, dict) and isinstance(error.get(key), str)}
+        details.setdefault("message", "runtime terminal error")
+        fields.update(terminal="task_failed", terminal_event=payload["type"],
+                      terminal_error=details)
+    return fields
+
+
 class SessionMeter:
     def __init__(self, root: Path, parent_id: str, parent_model: str,
                  parent_effort: str | None = None, require_native_activity: bool = False):
@@ -207,9 +220,9 @@ class SessionMeter:
                                 self.unknown_usage.append(
                                     f"{state['id']}: terminal differs from current turn")
                             else:
-                                current["terminal"] = payload["type"]
+                                current.update(terminal_fields(payload))
                                 current["terminal_timestamp"] = event.get("timestamp")
-                                state["terminal"] = payload["type"]
+                                state["terminal"] = current["terminal"]
                         if kind == "token_usage_record":
                             current = state["turns"][-1] if state["turns"] else None
                             response_id = payload.get("response_id")
@@ -381,6 +394,10 @@ class SessionMeter:
         if self.unknown_models or self.unknown_usage:
             issues.append("unpriced model response or token class")
         for state in self.paths.values():
+            for turn in state["turns"]:
+                if turn.get("terminal_error"):
+                    issues.append(f"session {state['id']} turn {turn['turn_id']} failed: " +
+                                  turn["terminal_error"]["message"])
             if state["pending_usage_record"] is not None:
                 issues.append(f"session {state['id']} has unpaired raw usage record")
             if state["observed_task_started"] and any(
@@ -648,7 +665,7 @@ def _native_child_turns(path: Path, child: dict, parent_id: str,
                             "context_line" not in current or pending_trigger is not None):
                         issues.append("native child turn terminal missing or conflicting")
                     else:
-                        current.update({"terminal_line": line_no, "terminal": payload["type"],
+                        current.update({"terminal_line": line_no, **terminal_fields(payload),
                                         "terminal_reason": payload.get("reason"),
                                         "terminal_timestamp": event.get("timestamp")})
     except OSError:
@@ -927,6 +944,8 @@ def native_lineage(parent_path: Path, paths: dict[Path, dict], parent_id: str,
                                  "terminal": actual["terminal"],
                                  "terminal_reason": actual.get("terminal_reason"),
                                  "terminal_timestamp": actual.get("terminal_timestamp")})
+                    turn.update({key: actual[key] for key in
+                                 ("terminal_error", "terminal_event") if key in actual})
                 expected_inputs = [turn] + turn["interactions"]
                 if (((closed_snapshot or "completion_line" in turn) and
                      len(actual["inputs"]) != len(expected_inputs)) or
@@ -944,7 +963,11 @@ def native_lineage(parent_path: Path, paths: dict[Path, dict], parent_id: str,
                 if "completion_line" in turn and turn["completion_id"] != (
                         "subagent-completed-" + actual["turn_id"]):
                     issues.append("native completion ID differs from child turn")
-                if actual.get("terminal") == "turn_aborted":
+                if actual.get("terminal_error"):
+                    turn["closure"] = "failed"
+                    issues.append(f"native child {child['id']} turn {actual['turn_id']} failed: " +
+                                  actual["terminal_error"]["message"])
+                elif actual.get("terminal") == "turn_aborted":
                     if "completion_line" in turn:
                         issues.append("native interrupted turn has normal completion activity")
                     elif closed_snapshot:

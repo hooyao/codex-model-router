@@ -180,10 +180,10 @@
   },
   "runner_normalized_sha256": "7e429062da7691e9d37b17ba7b14885e9526797ccfa926bd0d450e9517d3b1be",
   "runtime": {
-    "cli_sha256": "3553cd6e7df5a093d8cb8301cd8088a57e0971aba71ddbe0e67f7f44a15cdf68",
-    "code_mode_host_sha256": "28ec719ee36049c60707102e3c7fec95edbe1fea5927ad4061efc2cd5b2dd888",
+    "cli_sha256": "f6dbf48cb70f62649c645f26c87dc9bf84cc36986202dfad8e12fb5b8ca70312",
+    "code_mode_host_sha256": "3b6a9179a4da17fa5fc6948219cd61486dc3b534c683838076d8c61bd311c68e",
     "plugin_hooks_sha256": "9cf09fb63c6e3c208f83796ebb51f2425b70a7f528dde3fc77efdfff1a0aa7f2",
-    "plugin_manifest_sha256": "c0e41f5c13bf01144f9b6e63112fffca896b465a6ab8d3b8a431106ebf389fff",
+    "plugin_manifest_sha256": "af9d520b3de628fd610678d1dee0e940f9fd63d67ca4a8bf174766480174cc5d",
     "router_hook_sha256": "5896da6b06ff6462ef7bd9c81a71c7a6a758f00c77435311e5fab4688cf8cc15",
     "routing_validator_sha256": "ab91853ef8673b079f6ef8e1033ea918b61c16bb0ff9aae7ecbd32dd7ab3deb4"
   },

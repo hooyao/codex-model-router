@@ -85,7 +85,16 @@ def finalize_arm(prepared: Path, arm: str, plan: dict) -> dict:
             "backend_grade": _grade(evidence / "treatment-backend-grade",
                                     patch_sha, manifest_sha, hidden=False),
             "semantic_review": file_sha(review_path)}
-    finished = time.time_ns()
+    if plan.get("mode") == "common-quality-recovery":
+        # Finalization may be replayed after a metadata repair. Use the retained
+        # quality completion event so repair and recheck time cannot inflate it.
+        finished = run["stage"]["events"][-1].get("time_ns")
+        if type(finished) is not int or finished <= started:
+            raise ValueError("recorded final quality completion timestamp missing")
+        clock = "same-host UTC recorded final-quality event; scheduling delay before completion is included"
+    else:
+        finished = time.time_ns()
+        clock = "same-host system UTC wall clock; scheduling delay is included"
     elapsed = (finished - started) / 1e9
     if finished < started or elapsed < run_wall - 1:
         raise ValueError("system wall clock cannot support end-to-end boundary")
@@ -101,7 +110,7 @@ def finalize_arm(prepared: Path, arm: str, plan: dict) -> dict:
         "post_run_quality_wall_seconds": round(max(0.0, elapsed - run_wall), 3),
         "quality_files_sha256": quality_files,
         "boundary": "runner start before App Server launch through completed hidden/race, backend, and independent semantic review",
-        "clock": "same-host system UTC wall clock; scheduling delay is included"}
+        "clock": clock}
     write_json_new(HERE / plan["end_to_end"]["receipts"][arm], result)
     return result
 

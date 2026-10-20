@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 from datetime import datetime
 import os
 from pathlib import Path
@@ -12,7 +13,7 @@ import time
 from typing import Callable
 
 from .accounting import account
-from .common import HERE, TASK_ID, file_sha, manifest, sha, write_json_new
+from .common import HERE, TASK_ID, file_sha, local_pair_config, manifest, sha, write_json_new
 from .grade import REVIEW_REQUIREMENTS
 from evals.scripts.run_paired_arm import SessionMeter
 
@@ -74,7 +75,11 @@ class QualityBridge:
                  preparation_sha256: str, workflow_id: str,
                  parent_thread_id: str, session_root: Path,
                  operational_deadline: float, original_deadline_utc_ns: int,
-                 create: bool = True):
+                 create: bool = True, dispatch_stop_usd: float = 15.0):
+        if (type(dispatch_stop_usd) not in (int, float) or
+                not math.isfinite(dispatch_stop_usd) or
+                not 0 < dispatch_stop_usd <= 30.0):
+            raise ValueError("quality dispatch stop must be finite USD within (0, 30]")
         self.root = root
         if create:
             self.root.mkdir(parents=True, exist_ok=False)
@@ -87,6 +92,7 @@ class QualityBridge:
         self.session_root = session_root.resolve()
         self.operational_deadline = operational_deadline
         self.original_deadline_utc_ns = original_deadline_utc_ns
+        self.dispatch_stop_usd = float(dispatch_stop_usd)
         self.requests: dict[int, dict] = {}
         self.responses: dict[int, dict] = {}
         self.failures: dict[int, dict] = {}
@@ -110,6 +116,7 @@ class QualityBridge:
             "candidate_patch_path": str(candidate_patch_path.resolve()),
             "solver_cost_upper_at_request": solver_cost_upper,
             "known_evaluator_cost_upper": self.evaluator_cost_upper,
+            "dispatch_stop_usd": self.dispatch_stop_usd,
             "manifest_sha256": self.manifest_sha256,
             "preparation_sha256": self.preparation_sha256,
             "original_deadline_utc_ns": self.original_deadline_utc_ns}
@@ -301,6 +308,7 @@ class QualityBridge:
                     request.get("manifest_sha256") != self.manifest_sha256 or
                     request.get("preparation_sha256") != self.preparation_sha256 or
                     request.get("original_deadline_utc_ns") != self.original_deadline_utc_ns or
+                    request.get("dispatch_stop_usd", 15.0) != self.dispatch_stop_usd or
                     request.get("revision") != revision or
                     not _digest(request.get("candidate_patch_sha256")) or
                     file_sha(Path(request.get("candidate_patch_path", ""))) !=
@@ -377,12 +385,15 @@ def verify_common_arm_quality(prepared: Path, plan: dict, run: dict,
             len([event for event in events if event.get("kind") == "quality-feedback"]) > 1):
         raise ValueError("common quality public or correction chain incomplete")
     root = Path(bridge["root"])
+    local = local_pair_config()
+    stop = (plan["limits_per_arm"]["dispatch_stop_usd"] if local is not None else
+            plan.get("limits_per_arm", {}).get("dispatch_stop_usd", 15.0))
     checker = QualityBridge(root, manifest_sha256=manifest_sha,
         preparation_sha256=preparation_sha, workflow_id=plan["pilot_id"] + ":" + parent,
         parent_thread_id=parent, session_root=session_root,
         operational_deadline=time.monotonic() + 1,
         original_deadline_utc_ns=run["started_utc_ns"] + 4500 * 1_000_000_000,
-        create=False)
+        create=False, dispatch_stop_usd=stop)
     quality = checker.recheck(bridge.get("request_sha256"), bridge.get("response_sha256"))
     revision = quality["revision"]
     patch_sha = quality["response"]["candidate_patch_sha256"]

@@ -5,16 +5,56 @@ import hashlib
 import json
 from pathlib import Path
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
 from evals.long_horizon_v1.grade import REVIEW_REQUIREMENTS
+from evals.long_horizon_v1.quality_bridge import QualityBridge
 from evals.long_horizon_v1.quality_adapter import (
-    EvaluatorBudgetGuard, _completed_native_review, _review_prompt)
+    EvaluatorBudgetGuard, _completed_native_review, _request_dispatch_stop,
+    _review_prompt)
 from evals.long_horizon_v1.transport import TransportError
 
 
 class QualityAdapterRecoveryTests(unittest.TestCase):
+    def test_local_thirty_dollar_request_and_evaluator_guard(self) -> None:
+        class Meter:
+            cost_upper = 9.5
+            unknown_models = set()
+            unknown_usage = []
+            def refresh(self): pass
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate = root / "candidate.patch"
+            candidate.write_bytes(b"candidate")
+            bridge = QualityBridge(root / "quality", manifest_sha256="a" * 64,
+                preparation_sha256="b" * 64, workflow_id="local-pair",
+                parent_thread_id="parent", session_root=root,
+                operational_deadline=time.monotonic() + 60,
+                original_deadline_utc_ns=time.time_ns() + 60_000_000_000,
+                dispatch_stop_usd=30.0)
+            request = bridge.request(0, hashlib.sha256(candidate.read_bytes()).hexdigest(),
+                                     candidate, 20.0)
+            self.assertEqual(request["dispatch_stop_usd"], 30.0)
+            with patch("evals.long_horizon_v1.quality_adapter.local_pair_config",
+                       return_value={"dispatch_stop_usd": 30.0}):
+                self.assertEqual(_request_dispatch_stop(request), 30.0)
+                with self.assertRaisesRegex(ValueError, "differs from local run config"):
+                    _request_dispatch_stop({"dispatch_stop_usd": 15.0})
+            with patch("evals.long_horizon_v1.quality_adapter.local_pair_config",
+                       return_value=None):
+                with self.assertRaisesRegex(ValueError, "differs from local run config"):
+                    _request_dispatch_stop(request)
+            meter = Meter()
+            guard = EvaluatorBudgetGuard(meter, time.monotonic() + 60,
+                root / "cancel", 20.0, 0.0, 30.0)
+            guard(force=True)
+            meter.cost_upper = 10.0
+            with self.assertRaises(TransportError):
+                guard(force=True)
+
     def test_budget_guard_batches_frames_and_forces_terminal_refresh(self) -> None:
         class Meter:
             def __init__(self):

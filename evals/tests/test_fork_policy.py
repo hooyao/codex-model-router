@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 from datetime import datetime, timedelta, timezone
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -115,6 +116,50 @@ class ForkPolicyTests(unittest.TestCase):
                 self.write()
                 _, issues = observed_spawns(self.rollout, self.parent_id)
                 self.assertTrue(any("fork_turns=" in issue for issue in issues))
+
+    def test_saved_plan_source_is_content_bound_without_required_basename(self) -> None:
+        self.write()
+        receipt = self.plan()
+        name = receipt["task_name"]
+        source = self.plans / f"{name}.plan.json"
+        source.rename(self.plans / "plan.json")
+        calls, issues = validate_observed_spawns(
+            self.rollout, self.parent_id, closed_snapshot=True, plans=self.plans)
+        self.assertEqual(issues, [])
+        self.assertEqual(calls[0]["packet_scope"], "VERIFIED")
+
+    def test_saved_plan_source_rejects_mismatch_ambiguity_and_late_source(self) -> None:
+        self.write()
+        receipt = self.plan()
+        source = self.plans / f"{receipt['task_name']}.plan.json"
+        original = source.read_text(encoding="utf-8")
+        source.rename(self.plans / "plan.json")
+        generic = self.plans / "plan.json"
+        for variant in ("mismatch", "ambiguous", "late"):
+            with self.subTest(variant=variant):
+                source.unlink(missing_ok=True)
+                generic.write_text(original, encoding="utf-8")
+                if variant == "mismatch":
+                    data = json.loads(original)
+                    data["arguments"]["message"] += " altered"
+                    generic.write_text(json.dumps(data), encoding="utf-8")
+                elif variant == "ambiguous":
+                    source.write_text(original, encoding="utf-8")
+                else:
+                    future = datetime.now(timezone.utc) + timedelta(minutes=5)
+                    os.utime(generic, (future.timestamp(), future.timestamp()))
+                _, issues = validate_observed_spawns(
+                    self.rollout, self.parent_id, closed_snapshot=True, plans=self.plans)
+                self.assertTrue(any("planned argument commitment" in issue for issue in issues), issues)
+                source.unlink(missing_ok=True)
+
+    def test_saved_plan_source_scan_is_limited_to_bounded_local_records(self) -> None:
+        self.write()
+        self.plan()
+        for index in range(127):
+            (self.plans / f"unrelated-{index}.json").write_text("{}", encoding="utf-8")
+        _, issues = validate_observed_spawns(self.rollout, self.parent_id, plans=self.plans)
+        self.assertTrue(any("planned argument commitment" in issue for issue in issues))
 
     def test_receipt_observable_arguments_must_bind_saved_source(self) -> None:
         receipt = self.plan()

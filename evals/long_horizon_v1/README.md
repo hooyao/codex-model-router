@@ -1,6 +1,24 @@
-# Long-horizon OCI benchmark v1: paired recovery preparation
+# Long-horizon OCI benchmark v1
 
-## Pilot 20 observed outcome (2026-10-09)
+## Completed current-runtime comparison (2026-10-20)
+
+The [comparison report](results/2026-10-20-comparison.md) records full quality
+PASS for baseline d and fresh treatment e: all ten semantic requirements plus
+hidden behavior, race, and backend checks. Complete estimated cost, including
+independent evaluation, was $10.6858765 versus $5.9174195. The treatment used a
+Sol/low controller and two completed Astra/xhigh episodes across R1 and R2.
+Both starts used the same original seed, corrected public R2 case, actor
+policy, verified CLI 0.163.0-alpha.10.2 profile, and quality checks.
+
+The common retained quality-completion boundary was 2537.232 seconds versus
+1641.044 seconds. This single baseline-first sample does not establish a stable
+latency advantage or general savings. The experiment's fixed prices produce
+estimates, not billed USD. Prior failed c/d treatments retain UNKNOWN whole
+cost; total spend across all attempts remains UNKNOWN. Private raw sessions
+remain local; the report and [sanitized metrics](results/2026-10-20-comparison.json)
+include their artifact hash references.
+
+## Historical pilot 20 outcome (2026-10-09)
 
 The two paid v20 arms and their original receipts are complete. The baseline
 stopped at its cost safety threshold before independent quality review. Its
@@ -50,10 +68,31 @@ pointing to an untracked JSON file under `_scratch`. The file must set
 `_scratch/<pair_id>-prep` and `_scratch/<pair_id>-evidence` roots. The harness
 validates the unchanged v20 task and limits before using those fresh paths;
 without the variable, the historical plan and disabled manifest still apply.
+An optional finite positive `dispatch_stop_usd` up to 30 sets the fresh pair's
+per-arm observed solver-plus-evaluator stop and informational envelope. It is
+bound into each quality request and reported in the run receipt; omitting it
+keeps the historical $15 stop and $18 informational envelope.
 The independent semantic reviewer can use the pinned Go binary for narrow
 reproductions, while the adapter separately runs the full hidden, race, and
 backend suites. This avoids downloading a toolchain or duplicating broad Go
 tests inside the paid semantic turn.
+
+Native `task_complete` and `task_completed` events can contain a non-null
+`error`. The meter classifies those turns as `task_failed`, retains the
+original event name and bounded error details, and marks their native closure
+as failed. The active guard reports that failure immediately. A failed child
+with no reported response usage still has `UNKNOWN` cost; null `token_count`
+snapshots do not establish zero spend. The offline two-turn upstream failure
+regression uses `evals/tests/fixtures/native-child-upstream-failure-sanitized.json`.
+Successful turn usage and the missing-usage grace limits are unchanged.
+
+The dispatch observer accepts any saved plan basename allowed by the helper.
+It finds one source by its committed argument contents and packet in the local
+dispatch-plan directory, with bounded reads and pre-spawn timestamps. Missing,
+ambiguous, mismatched, and late sources still fail. Round verification joins
+the native priced worker turn to the accepted parent round; descriptive labels
+written by an agent do not substitute for runtime UUIDs. End-to-end replay uses
+the retained final-quality event, excluding later metadata repair time.
 
 The public R2 recovery case now also checks cancellation with several acquired
 layer streams and another layer pending. It requires direct Fetch and store

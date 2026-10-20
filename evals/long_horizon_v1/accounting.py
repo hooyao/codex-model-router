@@ -86,6 +86,9 @@ def account(session_root: Path, parent_id: str, model: str, effort: str,
                 for observed, native in zip(turns, ledger):
                     closure = (native.get("closure") == "completed" and
                                "completion_line" in native or
+                               native.get("closure") == "failed" and
+                               native.get("terminal") == "task_failed" and
+                               bool(native.get("terminal_error")) or
                                native.get("closure") == "interrupted" and
                                native.get("terminal") == "turn_aborted" and
                                "completion_line" not in native)

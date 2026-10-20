@@ -38,6 +38,19 @@ TELEMETRY_STARTUP_GRACE_SECONDS = 20.0
 TELEMETRY_USAGE_GRACE_SECONDS = 30.0
 TELEMETRY_LINEAGE_GRACE_SECONDS = 10.0
 METER_REFRESH_INTERVAL_SECONDS = 1.0
+
+
+def observed_dispatch_stop(plan: dict | None) -> float:
+    local = local_pair_config()
+    if local is not None:
+        stop = plan["limits_per_arm"]["dispatch_stop_usd"]
+        if stop != local["dispatch_stop_usd"]:
+            raise ValueError("local pair observed stop differs from validated plan")
+        return stop
+    stop = plan.get("limits_per_arm", {}).get("dispatch_stop_usd", STOP_USD) if plan else STOP_USD
+    if stop != STOP_USD:
+        raise ValueError("unconfigured observed stop differs from historical default")
+    return stop
 PILOT_CAPABILITY_SHA256 = {
     "treatment": "e2454ff03ea31ba57848288df72d6f119c3a9913cf3defd6ddfe2e52a1952d17",
 }
@@ -102,9 +115,24 @@ def _canonical_sha(value: dict) -> str:
 
 
 def _canary_runtime_equivalent(previous: dict, current: dict, plan: dict | None) -> bool:
-    """Allow only the reviewed treatment v1-to-v2 policy/suffix transition."""
+    """Compare checked dispatch contracts and the reviewed policy transition."""
     if not isinstance(previous, dict):
         return False
+    if local_pair_config() is not None and plan is not None and plan.get(
+            "mode") == "common-quality-recovery":
+        # A fresh matched pair may use the installed CLI. Its generated schema
+        # can grow while the checked RPC methods, interrupt parameters, native
+        # dispatch contract, and installed hook closure remain compatible.
+        before, after = previous.get("protocol_contract"), current.get("protocol_contract")
+        keys = {"client_request_sha256", "dispatch_contract_sha256",
+                "installed_hook_closure_sha256", "interrupt_method"}
+        if (isinstance(before, dict) and isinstance(after, dict) and
+                set(before) == set(after) == keys and
+                all(re.fullmatch(r"[0-9a-f]{64}", value.get("client_request_sha256", ""))
+                    for value in (before, after)) and
+                {key: value for key, value in before.items() if key != "client_request_sha256"} ==
+                {key: value for key, value in after.items() if key != "client_request_sha256"}):
+            previous = {**previous, "protocol_contract": after}
     if previous == current:
         return True
     if plan is not None and plan.get("mode") in (
@@ -278,10 +306,17 @@ def pilot_plan(spec: dict) -> dict:
             return plan
         evidence = local["evidence_root"]
         arms = ("baseline", "treatment")
+        stop = local["dispatch_stop_usd"]
+        planning = max(PLANNING_USD, stop)
         return {**plan,
             "pilot_id": f"{plan['pilot_id']}:{local['pair_id']}",
             "preparation_root": local["preparation_root"],
             "evidence_root": evidence,
+            "limits_per_arm": {**plan["limits_per_arm"],
+                "dispatch_stop_usd": stop, "planning_envelope_usd": planning},
+            "stop_rule": (f"Local paired run: ${stop:g} observed combined solver/evaluator "
+                f"dispatch stop, ${planning:g} informational envelope, {MAX_SECONDS}-second "
+                "arm clock, one quality correction, and zero automatic whole-run retries."),
             "capabilities": {arm: f"{evidence}/{arm}-capability.json" for arm in arms},
             "run_outputs": {arm: f"{evidence}/{arm}-live" for arm in arms},
             "end_to_end": {**plan["end_to_end"],
@@ -1009,6 +1044,12 @@ class ActiveTelemetryGuard:
         if turn_started_at is None:
             return
         now = time.monotonic() if now is None else now
+        for state in meter.paths.values():
+            for turn in state["turns"]:
+                if turn.get("terminal_error"):
+                    owner = "parent" if state["id"] == parent_id else "child"
+                    raise TransportError(f"{owner} {state['id']} turn {turn['turn_id']} failed: " +
+                                         turn["terminal_error"]["message"])
         if meter.unknown_models or meter.unknown_usage:
             raise TransportError("active turn has unpriced model or usage")
         parents = [state for state in meter.paths.values() if state["id"] == parent_id]
@@ -1481,6 +1522,7 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
     spec = manifest()
     policy = arm_execution(spec, arm)
     model, effort = policy["model"], policy["effort"]
+    stop_usd = observed_dispatch_stop(plan)
     start = time.monotonic()
     started_utc_ns = time.time_ns()
     deadline = start + MAX_SECONDS
@@ -1530,7 +1572,7 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
                 raise TransportError(stop_reason)
             external = (evaluator_upper if evaluator_upper is not None else
                         quality_bridge.evaluator_cost_upper if quality_bridge else 0.0)
-            if meter.cost_upper + external >= STOP_USD:
+            if meter.cost_upper + external >= stop_usd:
                 stop_reason = "cost-safety-threshold"
                 raise TransportError(stop_reason)
             if (refreshed and transport is not None and
@@ -1555,7 +1597,8 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
                 workflow_id=plan["pilot_id"] + ":" + thread_id,
                 parent_thread_id=thread_id, session_root=session_root,
                 operational_deadline=operational_deadline,
-                original_deadline_utc_ns=started_utc_ns + int(MAX_SECONDS * 1e9))
+                original_deadline_utc_ns=started_utc_ns + int(MAX_SECONDS * 1e9),
+                dispatch_stop_usd=stop_usd)
         gate_number = 0
         def gate(patch: bytes, round_id: int, repair: int) -> dict:
             nonlocal gate_number
@@ -1862,6 +1905,7 @@ def live_run(prepared: Path, output: Path, arm: str, cli: Path,
               "session_root": str(session_root.resolve()),
               "stop_reason": stop_reason or "run-ended-without-terminal-result",
               "wall_seconds": round(time.monotonic() - start, 3),
+              "effective_dispatch_stop_usd": stop_usd,
               "usage": usage, "usage_issues": issues,
               "cancellation": cancellation,
               "interruption_proof": (interruption_proof if observed and
