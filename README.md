@@ -66,6 +66,21 @@ platform-generated worker-card title cannot be changed by this plugin. A
 native underscore-only `task_name` uses a deterministic hyphen-to-underscore
 transport adaptation while the human-facing Task ID stays canonical.
 
+## Measured OCI comparison
+
+The [2026-10-20 OCI comparison](evals/long_horizon_v1/results/2026-10-20-comparison.md)
+completed full quality checks with an Astra/xhigh baseline and a Sol/low
+controller that used Astra/xhigh for two hard episodes. Complete estimated
+solver-plus-evaluator cost was $10.6858765 and $5.9174195 respectively, 44.6%
+lower for this task. Both passed all ten semantic requirements and the hidden,
+race, and backend checks. Input tokens increased; the result is a cost
+observation under the experiment's fixed price card.
+
+This single baseline-first comparison does not establish stable latency or
+general savings. Prior failed attempts retain UNKNOWN whole cost, so total
+spend across all attempts remains UNKNOWN. The report includes token counts,
+the common completion boundary, artifact hashes, and reproduction commands.
+
 ## Repository Layout
 
 ```text

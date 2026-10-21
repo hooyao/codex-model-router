@@ -1,0 +1,125 @@
+{
+  "acceptance": {
+    "arm_blind_patch_bound_semantic_retention_review": true,
+    "complete_parent_and_child_usage": true,
+    "complete_three_round_event_chain": true,
+    "empirical_quality_total_cost_comparison_allowed": true,
+    "end_to_end_wall_includes_post_run_quality": true,
+    "fresh_seed_for_both_arms": true,
+    "hidden_behavior_and_race": true,
+    "performance_advantage_claim_allowed": false,
+    "pinned_backend_regressions": true,
+    "same_public_reveals_and_feedback": true
+  },
+  "arm_order": [
+    "baseline",
+    "treatment"
+  ],
+  "capabilities": {
+    "baseline": "_scratch/pilot-15-evidence/baseline-capability.json",
+    "treatment": "_scratch/pilot-15-evidence/treatment-capability.json"
+  },
+  "claim": "fresh-two-arm-diagnostic",
+  "end_to_end": {
+    "finish": "after-hidden-race-backend-and-arm-blind-review",
+    "receipts": {
+      "baseline": "_scratch/pilot-15-evidence/baseline-end-to-end.json",
+      "treatment": "_scratch/pilot-15-evidence/treatment-end-to-end.json"
+    },
+    "same_boundary_both_arms": true,
+    "start": "runner-start-before-app-server-launch"
+  },
+  "evidence_root": "_scratch/pilot-15-evidence",
+  "execution_sources_sha256": {
+    "accounting.py": "7ec94a425fc20bdc26a79c0c596ee0dae7fb69e6d64e7d00a1bab051659ae296",
+    "cancellation_adjudication.py": "cad6e1d4731c8e295278ca003c98f36f1b0d6f6dd0d3657f7f52ad0fe1afab29",
+    "collect.py": "261a5f7e3c1d13a900d90275162d14e64a077c78a73a8c14397ed3e0a49afbd6",
+    "common.py": "b2f6ce8acafa5874c69f9a8035b512c8f0b1f5961bc5f6eaeb10fbdcb146b7ab",
+    "controls.py": "008eaadcd63cc2ba4d43b7a88c00e184bfb60827f7903877059ebe9091d711e0",
+    "end_to_end.py": "a191c4551de63b772169e48083e4b28e5370b9ab2fe2ff09b72d6ed067cea28d",
+    "evals/scripts/run_paired_arm.py": "3f1da63739bdb27a2c3ce26c72b024ae1db72f26304907f22549d9c840daaadd",
+    "fork_policy.py": "e0371037d301c334426b4486f05fb21c4fdda7be30613f7e7be07a8793a7186c",
+    "grade.py": "f4364b317518466f10850d92c0bc78e7d9e7174c53884e0c3cb8e3b26821d71c",
+    "live_preflight.py": "234b84fb8f11a690fb6811fe5a0350c8c22f31962b1d8e721ad3f5b12fa5f001",
+    "prepare.py": "75cbde050148755ad3ebe90946331cf893539389a40cf45c502b265077129a73",
+    "protocol.py": "4ae072750d2502f4db4fcea91b293a327a01d3467c55f42fa2d60b66b879aed8",
+    "recovery_quality.py": "3135cd4645b71c5370bca709492af2e36de82759f268cfa933cad199cb2eb4d0",
+    "runtime_binding.py": "7e818ccb34787a84c0f30407e07329732ec36214f5116dd72378e90ee866398f",
+    "standalone_quality.py": "4b4c209f00227b4f15c0cc5bc69d42f76d329f1edcf9d5ab586f50938dff8973",
+    "transport.py": "7ce313980db5c081e9129aa843a714dce7365b584c5468693f5368df4fff06ba"
+  },
+  "feedback": {
+    "failed_case_ids_and_bounded_output": true,
+    "gate": "G2",
+    "hidden_oracle_disclosed": false,
+    "repair_checkpoints": 1,
+    "visible_to_both_arms": true
+  },
+  "fixture": {
+    "arm_execution_sha256": "1f368c2565747f7e7dc99bd53ff2eef3984ff41a2f0554c92bd640e1566b2956",
+    "assets_sha256": {
+      "checkpoint_hash.py": "54347a487ea3057cb9a58f7dba8268f0494f3b1be3eb32909cf5e29471f2dec1",
+      "environment.md": "bb588603ab4f26f88766b880815e6d1c9af42ceaf684723a494870c0ddcccf0b",
+      "oracle/internal/oci/benchmark_oracle_test.go": "65002ecd2469ff0197dd067ac0879f26499304dc84e39529c3061e25904c7965",
+      "oracle/internal/storage/fs/benchmark_oracle_test.go": "61048feecbf4f09fa19566faaa7514346786c0ddd2020ba63cb1d33e5f815d53",
+      "oracle/internal/storage/fs/oci/benchmark_oracle_schedule_test.go": "08117edf37252c8671850dd823c678bc5a9fb7928a68e2255e3f71606a6870cc",
+      "oracle/internal/storage/fs/oci/benchmark_oracle_shutdown_join_test.go": "a3360231dd1e70dd51c1b7a29371e2798b87ce31c22e5bc2804a66a8e4c20e71",
+      "oracle/internal/storage/fs/oci/benchmark_oracle_test.go": "f19d9e6e4caffdb70298edceada05286282d95a0b7abaf42365a47d999cd655e",
+      "oracle/internal/storage/fs/store/benchmark_oracle_test.go": "0f2ecb08ba2b03367f44291596a8e4f9e6417f21d923862759d05f1e52c54383",
+      "public/g0/internal/storage/fs/oci/benchmark_g0_test.go": "7d59f2c577144c7ed4d93e518f570b08113c82e936ba8a9055ebdbf01d7eb2c9",
+      "public/g1/internal/storage/fs/oci/benchmark_g1_progress_test.go": "71f01c6e0f272a084e388154c9c70d4c63e553e44b6420e473d0116783259f2a",
+      "public/g1/internal/storage/fs/oci/benchmark_g1_test.go": "52b0652fa8047ee446fb929a31389c979aa577c0172e77aec68e326942d4e963",
+      "public/g2/internal/storage/fs/benchmark_g2_recovery_test.go": "56b839356ea893a5ddea5a9ebaa6cbcaf0ce05088f86a1af2740cfa94b84cdda",
+      "public/g2/internal/storage/fs/oci/benchmark_g2_recovery_test.go": "0e7ecfee67b3e48963131107e6c925ccee2eb15528cee9429c93ea1dd2d5d6ab",
+      "public/g2/internal/storage/fs/oci/benchmark_g2_test.go": "b8936b489c3bacc4106b22ed764211c52569c8a18b92795d8a7ade49e4c94706",
+      "round0.md": "a3b9961e12f2b8c18d9375c9778afa5297bc70d4eb304cdc9c14c45926309ffd",
+      "round1.md": "e6c7ccc37f24ededa3ab34697eca8fa3c605841a27d8690b3a4c9a0e06e766be",
+      "round2.md": "20bcea3239209dd76711f3fa73326e919145fc20ae2ff9e8d8214d91714522bb",
+      "submit_checkpoint.py": "db02f4737dc1c145f39dd40856f145c75c4f6c74c96e2048c50cc8e11b466cae"
+    },
+    "end_to_end_sha256": "a191c4551de63b772169e48083e4b28e5370b9ab2fe2ff09b72d6ed067cea28d",
+    "fork_policy_sha256": "e0371037d301c334426b4486f05fb21c4fdda7be30613f7e7be07a8793a7186c",
+    "grader_sha256": "f4364b317518466f10850d92c0bc78e7d9e7174c53884e0c3cb8e3b26821d71c",
+    "prompt_suffix_sha256": {
+      "baseline": "5ece6200be87f54301fdc8eeffee9269bd86b4def20705c11063543d05ae4764",
+      "treatment": "2efb00985a77449b9528cb9478164340984f1ac7feafe8645a50f476e412e921"
+    },
+    "routing_config_canonical_sha256": "81827c8776172fe5b0bb7164f8713e59992e658ac86ca7a156321c32e2522ace",
+    "seed_patch_sha256": "3d824219a77b11d8b6f6ec506403daad092594d07c9a697a3c2280a2c935c74b",
+    "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
+    "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8"
+  },
+  "limits_per_arm": {
+    "automatic_retries": 0,
+    "cleanup_reserve_seconds": 25.0,
+    "dispatch_stop_usd": 15.0,
+    "planning_envelope_usd": 18.0,
+    "public_repairs_per_round": 1,
+    "wall_seconds": 4500
+  },
+  "live_rebind": {
+    "expected_final_manifest_sha256_required": true,
+    "mode": "no-model-rebind-v1",
+    "turn_start_forbidden": true
+  },
+  "matched_pairs": 1,
+  "mode": "paired-recovery",
+  "packet_scope_mode": "diagnostic-feasibility",
+  "pilot_id": "flipt-oci-long-horizon-pilot-15",
+  "preparation_root": "_scratch/pilot-15-prep",
+  "run_outputs": {
+    "baseline": "_scratch/pilot-15-evidence/baseline-live",
+    "treatment": "_scratch/pilot-15-evidence/treatment-live"
+  },
+  "runner_normalized_sha256": "fb3c6a08fe75de72a7696aa4007748f26bc4313ecd503d62c554d4321e3e493a",
+  "runtime": {
+    "cli_sha256": "8f0554ede25bbc5450921897c468b2e84635aa513c5017457997af0954581f49",
+    "code_mode_host_sha256": "4970a4ce8a7c6091a87dfea34cae03b3b95dd70f26f89f392e11de7fd8ea759e",
+    "plugin_hooks_sha256": "9cf09fb63c6e3c208f83796ebb51f2425b70a7f528dde3fc77efdfff1a0aa7f2",
+    "plugin_manifest_sha256": "af9d520b3de628fd610678d1dee0e940f9fd63d67ca4a8bf174766480174cc5d",
+    "router_hook_sha256": "5896da6b06ff6462ef7bd9c81a71c7a6a758f00c77435311e5fab4688cf8cc15",
+    "routing_validator_sha256": "ab91853ef8673b079f6ef8e1033ea918b61c16bb0ff9aae7ecbd32dd7ab3deb4"
+  },
+  "schema_version": 5,
+  "stop_rule": "Fresh seed in each arm; identical G0-G2 public gates and one G2 repair per arm. Stop dispatch at $15 observed estimated USD or 4500 seconds including cleanup; $18 is informational. No automatic retries. Complete parent and child usage plus independent hidden/race/backend/semantic and end-to-end quality validation precede a descriptive matched quality and total-cost comparison. Packet scope UNKNOWN prohibits technical context-isolation claims; one pair establishes no stable latency or general savings advantage."
+}

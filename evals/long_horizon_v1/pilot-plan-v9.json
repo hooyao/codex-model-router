@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "pilot_id": "flipt-oci-long-horizon-pilot-09",
+  "arm_order": [
+    "baseline",
+    "treatment"
+  ],
+  "matched_pairs": 1,
+  "preparation_root": "_scratch/pilot-09-prep",
+  "evidence_root": "_scratch/pilot-09-evidence",
+  "limits_per_arm": {
+    "planning_envelope_usd": 18.0,
+    "dispatch_stop_usd": 15.0,
+    "wall_seconds": 4500,
+    "cleanup_reserve_seconds": 25.0,
+    "automatic_retries": 0,
+    "public_repairs_per_round": 1
+  },
+  "fixture": {
+    "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
+    "seed_patch_sha256": "3d824219a77b11d8b6f6ec506403daad092594d07c9a697a3c2280a2c935c74b",
+    "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
+    "arm_execution_sha256": "4e0e535fb8f67ea68aa09781c799dd7acab30946e3eae5043174834c332af008",
+    "baseline_suffix_sha256": "5ece6200be87f54301fdc8eeffee9269bd86b4def20705c11063543d05ae4764",
+    "treatment_suffix_sha256": "0a3cbaf15e717e7e689a496e54f81181fa1c66072259c41e07a8993688524763",
+    "routing_config_canonical_sha256": "81827c8776172fe5b0bb7164f8713e59992e658ac86ca7a156321c32e2522ace",
+    "submit_checkpoint_sha256": "b38f0256ab6587afb14b48c6fee074fdd5ef658f78d2e25beeab33a1327df136",
+    "checkpoint_hash_sha256": "54347a487ea3057cb9a58f7dba8268f0494f3b1be3eb32909cf5e29471f2dec1",
+    "environment_sha256": "bb588603ab4f26f88766b880815e6d1c9af42ceaf684723a494870c0ddcccf0b",
+    "grader_sha256": "b5a2626adc89bb2bb6c823e60afd8d4735662a00bbada22c63c2fefa2bd72cf2",
+    "quality_admission_sha256": "e7232f390b03683d705110ebaa29db1958b0651eef21a54012fb26c81486ecdd",
+    "end_to_end_sha256": "f055f16a022a17cb2b20d02d1753ff23bcc771030813dd9a15904ba3972475eb",
+    "oracle_assets_sha256": {
+      "oracle/internal/oci/benchmark_oracle_test.go": "65002ecd2469ff0197dd067ac0879f26499304dc84e39529c3061e25904c7965",
+      "oracle/internal/storage/fs/oci/benchmark_oracle_schedule_test.go": "08117edf37252c8671850dd823c678bc5a9fb7928a68e2255e3f71606a6870cc"
+    }
+  },
+  "controls": {
+    "matrix_path": "controls/control-matrix-r9e-20261001.json",
+    "matrix_sha256": "a3b6c13417bf4dbccddbcb3016183fc819b977ce7c8266948107f5cf41ed717b",
+    "receipt_path": "controls/oracle-erratum-r9e-receipt.json",
+    "receipt_sha256": "d309d35f49c7dc235c6c006867fc04d13254fed62477bf9c601afd92a138ebfd",
+    "expected_controls": 12,
+    "expected_grades": 20,
+    "expected_linux_status_checks": 22,
+    "expected_additional_status_checks": 5
+  },
+  "capabilities": {
+    "baseline": "_scratch/pilot-09-evidence/baseline-capability.json",
+    "treatment": "_scratch/pilot-09-evidence/treatment-capability.json"
+  },
+  "run_outputs": {
+    "baseline": "_scratch/pilot-09-evidence/baseline-live",
+    "treatment": "_scratch/pilot-09-evidence/treatment-live"
+  },
+  "acceptance": {
+    "same_start_and_reveals": true,
+    "complete_three_round_event_chain": true,
+    "hidden_behavior_and_race": true,
+    "pinned_backend_regressions": true,
+    "arm_blind_patch_bound_semantic_retention_review": true,
+    "complete_parent_and_child_usage": true,
+    "quality_parity_and_total_usd_primary": true,
+    "single_pair_performance_claim_allowed": false,
+    "end_to_end_wall_includes_post_run_quality": true,
+    "historical_baseline_excluded_from_comparison": true
+  },
+  "stop_rule": "Run a new matched baseline before treatment under current lineage, accounting, and v2 cancellation adjudication sources. Stop on baseline failure or unknown quality. Do not reuse pilot-07 baseline timing or cost after source changes. No automatic retry.",
+  "quality_admission": "_scratch/pilot-09-evidence/baseline-quality-admission.json",
+  "runtime": {
+    "cli_sha256": "8f0554ede25bbc5450921897c468b2e84635aa513c5017457997af0954581f49",
+    "code_mode_host_sha256": "4970a4ce8a7c6091a87dfea34cae03b3b95dd70f26f89f392e11de7fd8ea759e",
+    "plugin_manifest_sha256": "af9d520b3de628fd610678d1dee0e940f9fd63d67ca4a8bf174766480174cc5d",
+    "plugin_hooks_sha256": "9cf09fb63c6e3c208f83796ebb51f2425b70a7f528dde3fc77efdfff1a0aa7f2",
+    "router_hook_sha256": "5896da6b06ff6462ef7bd9c81a71c7a6a758f00c77435311e5fab4688cf8cc15",
+    "routing_validator_sha256": "ab91853ef8673b079f6ef8e1033ea918b61c16bb0ff9aae7ecbd32dd7ab3deb4"
+  },
+  "cancellation_adjudications": {
+    "baseline": {
+      "path": "_scratch/cancellation-canary/baseline-parent-stop-20260930-1/adjudication-v2.json",
+      "sha256": "41764a66cde0bd8a8983b512a686ac6829fb8d3b4985fba7a1603fa8da7863d1"
+    },
+    "treatment": {
+      "path": "_scratch/cancellation-canary/retry-20260930120001-96e403dd/adjudication-v2.json",
+      "sha256": "7eba0edc2e714d98dd6506fbb0fecd92a2629158d87c9b4f57e0f5034d31519c"
+    }
+  },
+  "metering": {
+    "strategy": "event-or-one-second-cadence-v1",
+    "refresh_interval_seconds": 1.0,
+    "runner_normalized_sha256": "f4d22dce8205c846d888d220cb0d6c0982fc0cab56591dbf6a2e04f554b56ebb",
+    "transport_sha256": "54415a7746523e190b98888f97bc0eb7af44fad47d9140731871d1c910c9c53f",
+    "replay_path": "_scratch/meter-replay/replay-result.json",
+    "replay_sha256": "374c431aa6faedba80dbe60c253c8dca7050e3adc7b5f77a748b6e5ec4d2debd",
+    "historical_baseline_sha256": "ded8654bf4d48724b5e908185220656c6497a89be2c37725206e692b2c554aa8"
+  },
+  "budget_calibration": {
+    "reviewed_raw_responses": 111,
+    "observed_dispatch_stop_usd": 15.0,
+    "empirical_planning_envelope_usd": 18.0,
+    "planning_envelope_is_billed_ceiling": false,
+    "pilot_04_baseline_sha256": "40e9d8da63e20dfc8eaabed1a8bb37dc0e916629fc9430355930d3161957b3f9",
+    "pilot_03_baseline_sha256": "ded8654bf4d48724b5e908185220656c6497a89be2c37725206e692b2c554aa8",
+    "if_baseline_fails": "simplify-fixture-before-another-cap-change"
+  },
+  "end_to_end": {
+    "start": "runner-start-before-app-server-launch",
+    "finish": "after-hidden-race-backend-and-arm-blind-review",
+    "same_boundary_both_arms": true,
+    "includes_post_run_quality_wall": true,
+    "receipts": {
+      "baseline": "_scratch/pilot-09-evidence/baseline-end-to-end.json",
+      "treatment": "_scratch/pilot-09-evidence/treatment-end-to-end.json"
+    }
+  },
+  "oracle_erratum": {
+    "manifest_descriptor": {
+      "adjudication_sha256": "4a23b29c5f9bb2d337b2f511333bdc69af9f855f3356d1ab91e8f2de3d682909",
+      "changed_assets": [
+        "oracle/internal/oci/benchmark_oracle_test.go",
+        "oracle/internal/storage/fs/oci/benchmark_oracle_schedule_test.go"
+      ],
+      "historical_hidden_grade_sha256": "8f992d3b1621eb90bc8d99a2a9e682f81898c058f9abaed8041c4cc875d55661",
+      "prior_manifest_sha256": "05c04ed1e3e54b1b11e8e9ed27f663ea4cba44140651e6e558de6b5a7b914daa",
+      "version": "r9e-20261001"
+    },
+    "adjudication_path": "controls/oracle-erratum-r9e-evidence/adjudication/checks.json",
+    "adjudication_sha256": "4a23b29c5f9bb2d337b2f511333bdc69af9f855f3356d1ab91e8f2de3d682909"
+  },
+  "historical_diagnostic": {
+    "run_sha256": "33bbb4424e03737a15dc7dee06e00941984fe5b9d6b11677076037d2bc039288",
+    "hidden_grade_sha256": "8f992d3b1621eb90bc8d99a2a9e682f81898c058f9abaed8041c4cc875d55661",
+    "diagnostic_only": true,
+    "matched_baseline_for_pilot_07": false
+  },
+  "lineage_accounting": {
+    "source_sha256": {
+      "session_meter": "3f1da63739bdb27a2c3ce26c72b024ae1db72f26304907f22549d9c840daaadd",
+      "accounting": "4479d0b0985856ecd0c0f9a55ec940cb548cdb70c067e3879868eae5c8e20483",
+      "collector": "38a02e49c4cb382e2807c8383d00c98f43b2c63cbade41bf7c66ff93cae84935",
+      "transport": "54415a7746523e190b98888f97bc0eb7af44fad47d9140731871d1c910c9c53f",
+      "cancellation_adjudication": "cad6e1d4731c8e295278ca003c98f36f1b0d6f6dd0d3657f7f52ad0fe1afab29",
+      "capability_builder": "f337a230e6fde42555ad0c890a7c606808e48b6a59dfcd5e5abb4b193ef9c64d"
+    },
+    "pilot_replay_path": "_scratch/multiturn-accounting/pilot-07-offline-replay.json",
+    "pilot_replay_sha256": "cede3df6de30eae996f28e42ef73a7e04ddb2b632ce7130ae8673d34efe4e565",
+    "canary_replay_path": "_scratch/multiturn-accounting/retained-canary-offline-replay.json",
+    "canary_replay_sha256": "7d05d7cd3e1c83069cc012da5a4d758b7b1cc2d9db3f2f708ecf0c9305262547",
+    "pilot_07_baseline_sha256": "836eeea2251f2ab35ba36e2f4648725a886ac762535f30e2eb572a979b57f4da",
+    "pilot_07_admission_sha256": "593e5266bb02c3e0083d11b8684ae75fdd961d4837ae54cfeb0eba7ca854b1ce",
+    "pilot_07_treatment_sha256": "46d3e2e52bf4139418afbfd9d797deb48cc5271eb8de193b43b54f753476c83d",
+    "pilot_07_baseline_reused_for_comparison": false
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "baseline": {
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "cli_options": [
+      "--strict-config",
+      "--disable",
+      "plugins",
+      "--disable",
+      "hooks",
+      "--disable",
+      "multi_agent",
+      "-c",
+      "features.multi_agent_v2={enabled=false,expose_spawn_agent_model_overrides=false}"
+    ],
+    "router_enabled": false,
+    "native_delegation_enabled": false,
+    "prompt_suffix": "baseline-execution-v1.md"
+  },
+  "treatment": {
+    "model": "gpt-6-sol",
+    "effort": "low",
+    "cli_options": [
+      "--strict-config",
+      "--enable",
+      "plugins",
+      "--enable",
+      "hooks",
+      "--enable",
+      "multi_agent",
+      "-c",
+      "features.multi_agent_v2={enabled=true,expose_spawn_agent_model_overrides=true}",
+      "-c",
+      "features.multi_agent_v2.max_concurrent_threads_per_session=2",
+      "-c",
+      "hooks.state={\"codex-model-router@personal:hooks/hooks.json:pre_tool_use:0:0\"={enabled=true,trusted_hash=\"sha256:4fadcc93db5f6b143fbecdfb0a5c5953f0822c3a04fca88a16376d7fe6f40b05\"},\"codex-model-router@personal:hooks/hooks.json:post_tool_use:0:0\"={enabled=true,trusted_hash=\"sha256:0bd6433353822ddb51cf5c07e44a3cc66e93f1ace78a602d9676835384e2435e\"}}"
+    ],
+    "router_enabled": true,
+    "native_delegation_enabled": true,
+    "prompt_suffix": "treatment-execution-v2.md"
+  }
+}

@@ -1,0 +1,348 @@
+{
+  "provenance": {
+    "source_parent_sha256": "bc0593d88da17e975844333e89cedafab0db95f62c157827a4d51394be476442",
+    "source_child_sha256": "7510692e355d971f9bc5489d4dba27cd6a4be4c30efe2cb8547b47b911e973cc",
+    "source_lines": {
+      "parent": [
+        68,
+        70,
+        71,
+        142,
+        144,
+        145,
+        222,
+        237,
+        239,
+        240,
+        255
+      ],
+      "child": [
+        1,
+        2,
+        8,
+        10,
+        11,
+        250,
+        251,
+        463,
+        464,
+        465,
+        466,
+        467,
+        497
+      ]
+    },
+    "note": "Pinned v0.158 native shape. All IDs and routed content are test-only replacements; no raw prompt or encrypted content is retained."
+  },
+  "parent_id": "parent-session",
+  "child_id": "child-session",
+  "agent_path": "/root/worker",
+  "native": [
+    {
+      "type": "session_meta",
+      "payload": {
+        "id": "parent-session"
+      }
+    },
+    {
+      "type": "turn_context",
+      "payload": {
+        "turn_id": "parent-turn-1"
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "function_call",
+        "name": "spawn_agent",
+        "namespace": "collaboration",
+        "call_id": "spawn-1",
+        "arguments": "{\"task_name\":\"worker\",\"model\":\"gpt-6-sol\",\"reasoning_effort\":\"high\",\"fork_turns\":\"none\",\"message\":\"fixture-only-encrypted-spawn\"}",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "parent-turn-1"
+        }
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "item_completed",
+        "thread_id": "parent-session",
+        "turn_id": "parent-turn-1",
+        "item": {
+          "type": "SubAgentActivity",
+          "kind": "started",
+          "id": "spawn-1",
+          "agent_thread_id": "child-session",
+          "agent_path": "/root/worker"
+        }
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "function_call_output",
+        "call_id": "spawn-1",
+        "output": "{\"task_name\":\"/root/worker\"}",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "parent-turn-1"
+        }
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "function_call",
+        "name": "send_message",
+        "namespace": "collaboration",
+        "call_id": "send-1",
+        "arguments": "{\"target\":\"worker\",\"message\":\"fixture-only-encrypted-send\"}",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "parent-turn-1"
+        }
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "item_completed",
+        "thread_id": "parent-session",
+        "turn_id": "parent-turn-1",
+        "item": {
+          "type": "SubAgentActivity",
+          "kind": "interacted",
+          "id": "send-1",
+          "agent_thread_id": "child-session",
+          "agent_path": "/root/worker"
+        }
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "function_call_output",
+        "call_id": "send-1",
+        "output": "",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "parent-turn-1"
+        }
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "item_completed",
+        "thread_id": "parent-session",
+        "turn_id": "parent-turn-1",
+        "item": {
+          "type": "SubAgentActivity",
+          "kind": "completed",
+          "id": "subagent-completed-child-turn-1",
+          "agent_thread_id": "child-session",
+          "agent_path": "/root/worker"
+        }
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "function_call",
+        "name": "followup_task",
+        "namespace": "collaboration",
+        "call_id": "follow-1",
+        "arguments": "{\"target\":\"worker\",\"message\":\"fixture-only-encrypted-followup\"}",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "parent-turn-1"
+        }
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "item_completed",
+        "thread_id": "parent-session",
+        "turn_id": "parent-turn-1",
+        "item": {
+          "type": "SubAgentActivity",
+          "kind": "interacted",
+          "id": "follow-1",
+          "agent_thread_id": "child-session",
+          "agent_path": "/root/worker"
+        }
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "function_call_output",
+        "call_id": "follow-1",
+        "output": "",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "parent-turn-1"
+        }
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "item_completed",
+        "thread_id": "parent-session",
+        "turn_id": "parent-turn-1",
+        "item": {
+          "type": "SubAgentActivity",
+          "kind": "completed",
+          "id": "subagent-completed-child-turn-2",
+          "agent_thread_id": "child-session",
+          "agent_path": "/root/worker"
+        }
+      }
+    }
+  ],
+  "child": [
+    {
+      "type": "session_meta",
+      "payload": {
+        "id": "child-session",
+        "parent_thread_id": "parent-session",
+        "agent_path": "/root/worker",
+        "source": {
+          "subagent": {
+            "thread_spawn": {
+              "parent_thread_id": "parent-session",
+              "agent_path": "/root/worker"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "task_started",
+        "turn_id": "child-turn-1",
+        "root_turn_id": "parent-turn-1"
+      }
+    },
+    {
+      "type": "turn_context",
+      "payload": {
+        "turn_id": "child-turn-1",
+        "root_turn_id": "parent-turn-1",
+        "model": "gpt-6-sol",
+        "effort": "high"
+      }
+    },
+    {
+      "type": "inter_agent_communication_metadata",
+      "payload": {
+        "trigger_turn": true
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "agent_message",
+        "author": "/root",
+        "recipient": "/root/worker",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "fixture-only-routed-input"
+          },
+          {
+            "type": "encrypted_content",
+            "encrypted_content": "fixture-only-encrypted-spawn"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "child-turn-1"
+        }
+      }
+    },
+    {
+      "type": "inter_agent_communication_metadata",
+      "payload": {
+        "trigger_turn": false
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "agent_message",
+        "author": "/root",
+        "recipient": "/root/worker",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "fixture-only-routed-input"
+          },
+          {
+            "type": "encrypted_content",
+            "encrypted_content": "fixture-only-encrypted-send"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "child-turn-1"
+        }
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "task_complete",
+        "turn_id": "child-turn-1"
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "task_started",
+        "turn_id": "child-turn-2",
+        "root_turn_id": "parent-turn-1"
+      }
+    },
+    {
+      "type": "turn_context",
+      "payload": {
+        "turn_id": "child-turn-2",
+        "root_turn_id": "parent-turn-1",
+        "model": "gpt-6-sol",
+        "effort": "high"
+      }
+    },
+    {
+      "type": "inter_agent_communication_metadata",
+      "payload": {
+        "trigger_turn": true
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "agent_message",
+        "author": "/root",
+        "recipient": "/root/worker",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "fixture-only-routed-input"
+          },
+          {
+            "type": "encrypted_content",
+            "encrypted_content": "fixture-only-encrypted-followup"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "child-turn-2"
+        }
+      }
+    },
+    {
+      "type": "event_msg",
+      "payload": {
+        "type": "task_complete",
+        "turn_id": "child-turn-2"
+      }
+    }
+  ]
+}

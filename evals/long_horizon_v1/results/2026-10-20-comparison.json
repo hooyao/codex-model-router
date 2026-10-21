@@ -1,0 +1,260 @@
+{
+  "experiment": "2026-10-20 current-runtime comparison",
+  "task_id": "flipt-oci-reference-rollout-v1",
+  "profile": {
+    "manifest_sha256": "882ab16390663f6c2cee73645bed67c4a03b9fe47c4d82cf0b79f0ca7daa101f",
+    "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
+    "seed_patch_sha256": "3d824219a77b11d8b6f6ec506403daad092594d07c9a697a3c2280a2c935c74b",
+    "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
+    "arm_execution_sha256": "67f9c9aef078c64861c3e7742948d54dfdc51d2dcbe472ff91e6a3513d28ffff",
+    "shared_initial_prompt_sha256": "17dfb57f3930a4b2d443f3f110ff2cdc72112ad9ca1c27ed8b9bfb415a44cdc8",
+    "runtime": {
+      "cli_sha256": "f6dbf48cb70f62649c645f26c87dc9bf84cc36986202dfad8e12fb5b8ca70312",
+      "cli_version": "codex-cli 0.163.0-alpha.10.2",
+      "code_mode_host_sha256": "3b6a9179a4da17fa5fc6948219cd61486dc3b534c683838076d8c61bd311c68e",
+      "plugin_hooks_sha256": "9cf09fb63c6e3c208f83796ebb51f2425b70a7f528dde3fc77efdfff1a0aa7f2",
+      "plugin_manifest_sha256": "af9d520b3de628fd610678d1dee0e940f9fd63d67ca4a8bf174766480174cc5d",
+      "router_hook_sha256": "5896da6b06ff6462ef7bd9c81a71c7a6a758f00c77435311e5fab4688cf8cc15",
+      "routing_validator_sha256": "ab91853ef8673b079f6ef8e1033ea918b61c16bb0ff9aae7ecbd32dd7ab3deb4"
+    },
+    "pricing": {
+      "as_of": "2026-09-24",
+      "long_context_threshold_input_tokens": 272000,
+      "per_million": {
+        "gpt-6-astra": [
+          10.0,
+          1.0,
+          12.5,
+          50.0
+        ],
+        "gpt-6-luna": [
+          0.1,
+          0.01,
+          0.125,
+          0.5
+        ],
+        "gpt-6-sol": [
+          2.0,
+          0.2,
+          2.5,
+          10.0
+        ]
+      },
+      "source": "https://developers.openai.com/api/docs/pricing",
+      "tier": "Standard"
+    },
+    "limits_per_arm": {
+      "dispatch_stop_usd": 30.0,
+      "wall_seconds": 4500,
+      "automatic_whole_run_retries": 0,
+      "quality_correction_episodes": 1
+    }
+  },
+  "arms": {
+    "baseline": {
+      "candidate_patch_sha256": "8556629a06c0bae28d172768fddec15aa5cf3a3b450580cdaf6241ba47fcbfe4",
+      "quality_status": "PASS",
+      "semantic_requirements_passed": 10,
+      "quality_check_exit_codes": {
+        "hidden": [
+          0,
+          0
+        ],
+        "backend": [
+          0
+        ]
+      },
+      "workflow_cost_status": "complete",
+      "workflow_estimated_usd": 10.6858765,
+      "runner_wall_seconds": 2537.36,
+      "original_end_to_end_receipt_seconds": 2537.865,
+      "common_recorded_quality_wall_seconds": 2537.2319654,
+      "actors": [
+        {
+          "role": "primary",
+          "model": "gpt-6-astra",
+          "effort": "xhigh",
+          "responses": 62,
+          "estimated_usd": 9.1780165,
+          "token_classes": {
+            "cache_write_input_tokens": 139611,
+            "cached_input_tokens": 4997769,
+            "input_tokens": 5137566,
+            "output_tokens": 48665,
+            "reasoning_output_tokens": 18721
+          }
+        },
+        {
+          "role": "independent evaluator",
+          "model": "gpt-6-astra",
+          "effort": "xhigh",
+          "responses": 12,
+          "estimated_usd": 1.50786,
+          "token_classes": {
+            "input_tokens": 584192,
+            "cached_input_tokens": 520700,
+            "cache_write_input_tokens": 63456,
+            "output_tokens": 3872,
+            "reasoning_output_tokens": 1488,
+            "total_tokens": 588064
+          }
+        }
+      ],
+      "hard_episodes": [],
+      "usage_issues": [],
+      "quality_corrections": 0,
+      "total_input_tokens": 5721758,
+      "total_cached_input_tokens": 5518469,
+      "total_output_tokens": 52537,
+      "local_evidence_root": "_scratch/fresh-pair-20261020-d-evidence",
+      "artifact_sha256": {
+        "baseline-live/run.json": "8ef3384226b7538e32ad977a450945c4726f211dbe0b595d15f0eaf7d06f1c08",
+        "baseline-end-to-end.json": "0b6ef4fc00a3beb02b22ea31d7ab84e525172e66e1de6ea6bb8c991b49e31043",
+        "baseline-live/quality/request-r0.json": "81b120c0b1026a2e87d7b60484d0430ba44db4000fecb9d10e5d2f917715f9d8",
+        "baseline-live/quality/response-r0.json": "c195f7c819ddc1f1af76b6729b23685b070614707e2ed206010f4da5fd4e1a24",
+        "baseline-live/quality/r0-semantic-review.json": "d6a13da18d3f7473df3e2679611c5b3d3b3248a676260a7e9a88dbf586ec7bcd",
+        "baseline-live/quality/r0-hidden-grade.json": "cebc0ac1af317299b4457089fab60ae0e1fba731694b0088aa31a771a1e2436c",
+        "baseline-live/quality/r0-backend-grade.json": "96c5aeb64f10ec5efa6887a09a851b008c1dc6229acd636e7bffd82e8395d668"
+      }
+    },
+    "treatment": {
+      "candidate_patch_sha256": "21a4dc0e3cf0411ffbd623a8ec69c636b95ce29ba12ba4d1780a538b9cb26b8f",
+      "quality_status": "PASS",
+      "semantic_requirements_passed": 10,
+      "quality_check_exit_codes": {
+        "hidden": [
+          0,
+          0
+        ],
+        "backend": [
+          0
+        ]
+      },
+      "workflow_cost_status": "complete",
+      "workflow_estimated_usd": 5.9174195,
+      "runner_wall_seconds": 1641.25,
+      "original_end_to_end_receipt_seconds": 1641.044,
+      "common_recorded_quality_wall_seconds": 1641.0436867,
+      "actors": [
+        {
+          "role": "controller",
+          "model": "gpt-6-sol",
+          "effort": "low",
+          "responses": 93,
+          "estimated_usd": 1.4259695,
+          "token_classes": {
+            "cache_write_input_tokens": 71031,
+            "cached_input_tokens": 5171220,
+            "input_tokens": 5245935,
+            "output_tokens": 20678,
+            "reasoning_output_tokens": 3395
+          }
+        },
+        {
+          "role": "hard-kernel worker",
+          "model": "gpt-6-astra",
+          "effort": "xhigh",
+          "responses": 24,
+          "estimated_usd": 2.526833,
+          "token_classes": {
+            "cache_write_input_tokens": 68440,
+            "cached_input_tokens": 1170333,
+            "input_tokens": 1246963,
+            "output_tokens": 8382,
+            "reasoning_output_tokens": 4740
+          }
+        },
+        {
+          "role": "independent evaluator",
+          "model": "gpt-6-astra",
+          "effort": "xhigh",
+          "responses": 15,
+          "estimated_usd": 1.964617,
+          "token_classes": {
+            "input_tokens": 751483,
+            "cached_input_tokens": 683092,
+            "cache_write_input_tokens": 68346,
+            "output_tokens": 8535,
+            "reasoning_output_tokens": 3575,
+            "total_tokens": 760018
+          }
+        }
+      ],
+      "hard_episodes": [
+        {
+          "round": 1,
+          "responses": 8,
+          "estimated_usd": 0.846738,
+          "native_tool_calls": {
+            "exec": 5,
+            "send_message": 2
+          },
+          "native_turn_wall_seconds": 91.713,
+          "terminal": "task_complete",
+          "closure": "completed"
+        },
+        {
+          "round": 2,
+          "responses": 16,
+          "estimated_usd": 1.680095,
+          "native_tool_calls": {
+            "exec": 6,
+            "send_message": 7,
+            "wait_agent": 2
+          },
+          "native_turn_wall_seconds": 237.384,
+          "terminal": "task_complete",
+          "closure": "completed"
+        }
+      ],
+      "usage_issues": [],
+      "quality_corrections": 0,
+      "total_input_tokens": 7244381,
+      "total_cached_input_tokens": 7024645,
+      "total_output_tokens": 37595,
+      "local_evidence_root": "_scratch/fresh-pair-20261020-e-evidence",
+      "artifact_sha256": {
+        "treatment-live/run.json": "a16891e66f7de8955ba180b60131798ec3a47c2756ba9dc1a3a94157999f4129",
+        "treatment-end-to-end.json": "77ae33889d5d2ff4a045f8dbf00418cbe69c3cbc8cbe416d5e0b3afcbaab11cf",
+        "treatment-live/quality/request-r0.json": "fb906fee68100b96cb1581e52c68764172b3452c28deb475254490f3392c2f39",
+        "treatment-live/quality/response-r0.json": "29588c679a8bb965b9694889eebdef76ed9f01409848720e77f2af05cba10195",
+        "treatment-live/quality/r0-semantic-review.json": "89ca02a0a03c4e73fe33d05d454f070c4bca40dd2e3b97e882e6ea626944836d",
+        "treatment-live/quality/r0-hidden-grade.json": "8c6bc2b75fd2d0da19b59313b0ae300a374655406935c9dcf5082483d8ea8497",
+        "treatment-live/quality/r0-backend-grade.json": "16f729be1013095a3cbb3904eafe12d0c926c6794b6b4ce7a14b99964eef5ec1"
+      }
+    }
+  },
+  "prior_failed_attempts": [
+    {
+      "pair": "fresh-pair-20261010-c",
+      "stop_reason": "active child turn usage missing beyond grace",
+      "wall_seconds": 579.078,
+      "cost_status": "UNKNOWN",
+      "known_recorded_solver_usd": 0.8382511,
+      "workflow_estimated_usd": null
+    },
+    {
+      "pair": "fresh-pair-20261020-d",
+      "stop_reason": "context-policy-failure",
+      "wall_seconds": 527.328,
+      "cost_status": "UNKNOWN",
+      "known_recorded_solver_usd": 0.6787321,
+      "workflow_estimated_usd": null
+    }
+  ],
+  "observed_comparison": {
+    "estimated_usd_difference": 4.768457,
+    "estimated_usd_lower_fraction": 0.4462392018099778,
+    "common_wall_difference_seconds": 896.1882786999997,
+    "stable_latency_advantage_claim": false,
+    "all_attempts_total_cost": "UNKNOWN because prior failed attempts have UNKNOWN whole cost",
+    "controller_role_note": "Controller usage includes direct easy implementation and coordination; it is not a pure orchestration-only overhead measurement."
+  },
+  "limits": [
+    "One successful matched task with baseline first and a separately fresh treatment after a harness fix; repeated interleaved runs were not performed.",
+    "Both use the same task manifest, original start tree, actor policy, runtime, prices, public reveals, and full quality profile.",
+    "Encrypted native packet scope remains UNKNOWN; no technical context isolation claim.",
+    "Costs use the experiment rate card dated 2026-09-24 and are estimates, not billed USD.",
+    "The tracked summary excludes private prompts, native payloads, and raw transport events. Full cost and quality replay requires retained local artifacts."
+  ]
+}

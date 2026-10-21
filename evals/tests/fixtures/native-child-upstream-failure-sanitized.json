@@ -1,0 +1,195 @@
+{
+  "source_raw_sha256": "9412e641e9aa4b099a2e0a31b782dd8139d8c9719148526b1e67c0250fbdd53f",
+  "source_line_numbers": [
+    1,
+    2,
+    8,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28
+  ],
+  "events": [
+    {
+      "timestamp": "2026-10-10T15:21:22.524Z",
+      "type": "session_meta",
+      "payload": {
+        "id": "01a12667-8838-7b91-95d7-e259d4e8c82a",
+        "parent_thread_id": "01a1265f-ba2c-71f3-8f36-484ae89e31c0",
+        "agent_path": "/root/oci_invariant_review_gpt_6_astra_xhigh"
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:22.524Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "task_started",
+        "turn_id": "01a12667-89c7-78f3-83da-a5d1df2d2ee8",
+        "root_turn_id": "01a12666-8692-7640-8dfc-efe02bb2cdba"
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:22.700Z",
+      "type": "turn_context",
+      "payload": {
+        "turn_id": "01a12667-89c7-78f3-83da-a5d1df2d2ee8",
+        "root_turn_id": "01a12666-8692-7640-8dfc-efe02bb2cdba",
+        "model": "gpt-6-astra",
+        "effort": "xhigh"
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:25.664Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:26.899Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:28.371Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:30.485Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:33.311Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:37.622Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:37.640Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "task_complete",
+        "turn_id": "01a12667-89c7-78f3-83da-a5d1df2d2ee8",
+        "error": {
+          "message": "stream disconnected before completion: the upstream model backend failed mid-stream",
+          "codex_error_info": "other"
+        },
+        "last_agent_message": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:42.278Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "task_started",
+        "turn_id": "01a12667-d865-74a3-b9bb-1b283f54bd64",
+        "root_turn_id": "01a12666-8692-7640-8dfc-efe02bb2cdba"
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:42.312Z",
+      "type": "turn_context",
+      "payload": {
+        "turn_id": "01a12667-d865-74a3-b9bb-1b283f54bd64",
+        "root_turn_id": "01a12666-8692-7640-8dfc-efe02bb2cdba",
+        "model": "gpt-6-astra",
+        "effort": "xhigh"
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:43.568Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:45.475Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:46.923Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:48.732Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:51.383Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:55.849Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "token_count",
+        "info": null
+      }
+    },
+    {
+      "timestamp": "2026-10-10T15:21:55.871Z",
+      "type": "event_msg",
+      "payload": {
+        "type": "task_complete",
+        "turn_id": "01a12667-d865-74a3-b9bb-1b283f54bd64",
+        "error": {
+          "message": "stream disconnected before completion: the upstream model backend failed mid-stream",
+          "codex_error_info": "other"
+        },
+        "last_agent_message": null
+      }
+    }
+  ]
+}

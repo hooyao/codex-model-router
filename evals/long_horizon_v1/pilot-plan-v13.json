@@ -1,0 +1,133 @@
+{
+  "acceptance": {
+    "arm_blind_patch_bound_semantic_retention_review": true,
+    "complete_parent_and_child_usage": true,
+    "complete_three_round_event_chain": true,
+    "end_to_end_wall_includes_post_run_quality": true,
+    "hidden_behavior_and_race": true,
+    "performance_advantage_claim_allowed": false,
+    "pinned_backend_regressions": true
+  },
+  "arm_order": [
+    "treatment"
+  ],
+  "cancellation_adjudications": {
+    "treatment": {
+      "path": "_scratch/cancellation-canary/retry-20260930120001-96e403dd/adjudication-v2.json",
+      "sha256": "7eba0edc2e714d98dd6506fbb0fecd92a2629158d87c9b4f57e0f5034d31519c"
+    }
+  },
+  "capabilities": {
+    "treatment": "_scratch/pilot-13-evidence/treatment-capability.json"
+  },
+  "claim": "treatment-only-feasibility",
+  "controls": {
+    "expected_additional_status_checks": 5,
+    "expected_controls": 12,
+    "expected_grades": 20,
+    "expected_linux_status_checks": 22,
+    "matrix_path": "controls/control-matrix-r9e-20261001.json",
+    "matrix_sha256": "a3b6c13417bf4dbccddbcb3016183fc819b977ce7c8266948107f5cf41ed717b",
+    "receipt_path": "controls/oracle-erratum-r9e-receipt.json",
+    "receipt_sha256": "d309d35f49c7dc235c6c006867fc04d13254fed62477bf9c601afd92a138ebfd"
+  },
+  "end_to_end": {
+    "finish": "after-hidden-race-backend-and-arm-blind-review",
+    "receipts": {
+      "treatment": "_scratch/pilot-13-evidence/treatment-end-to-end.json"
+    },
+    "start": "runner-start-before-app-server-launch"
+  },
+  "evidence_root": "_scratch/pilot-13-evidence",
+  "execution_sources_sha256": {
+    "accounting.py": "7ec94a425fc20bdc26a79c0c596ee0dae7fb69e6d64e7d00a1bab051659ae296",
+    "cancellation_adjudication.py": "cad6e1d4731c8e295278ca003c98f36f1b0d6f6dd0d3657f7f52ad0fe1afab29",
+    "collect.py": "1b8f38c7fe7537c501a6195062ee522aff0fd6223392e2c76df2b3284d977320",
+    "common.py": "b2f6ce8acafa5874c69f9a8035b512c8f0b1f5961bc5f6eaeb10fbdcb146b7ab",
+    "controls.py": "008eaadcd63cc2ba4d43b7a88c00e184bfb60827f7903877059ebe9091d711e0",
+    "end_to_end.py": "f055f16a022a17cb2b20d02d1753ff23bcc771030813dd9a15904ba3972475eb",
+    "evals/scripts/run_paired_arm.py": "3f1da63739bdb27a2c3ce26c72b024ae1db72f26304907f22549d9c840daaadd",
+    "fork_policy.py": "e0371037d301c334426b4486f05fb21c4fdda7be30613f7e7be07a8793a7186c",
+    "grade.py": "b5a2626adc89bb2bb6c823e60afd8d4735662a00bbada22c63c2fefa2bd72cf2",
+    "live_preflight.py": "d7fb6812f3ba8e26be293fcdee75f3ded14b6887b9627f22a8dfa7ff2e87dbee",
+    "prepare.py": "38fbbe1ca27e94ef5a304b43f1287dc7b17e854f0f8c7cf6db94be4b56c95821",
+    "protocol.py": "3cc4ffb1e6f219315d639a47c84922b3ec21fc49aaf981452ff1470f44cc5253",
+    "runtime_binding.py": "7e818ccb34787a84c0f30407e07329732ec36214f5116dd72378e90ee866398f",
+    "standalone_quality.py": "fb0ecfb4bf929e88733f83c9542c84e6fc5d8062666bd47495e28b300ef5dbfd",
+    "transport.py": "a6b5718a6d87b1d8adbd4fc8ec46cfda5df83c5790d12a91a01e4c5560452527"
+  },
+  "fixture": {
+    "arm_execution_sha256": "1f368c2565747f7e7dc99bd53ff2eef3984ff41a2f0554c92bd640e1566b2956",
+    "assets_sha256": {
+      "checkpoint_hash.py": "54347a487ea3057cb9a58f7dba8268f0494f3b1be3eb32909cf5e29471f2dec1",
+      "environment.md": "bb588603ab4f26f88766b880815e6d1c9af42ceaf684723a494870c0ddcccf0b",
+      "oracle/internal/oci/benchmark_oracle_test.go": "65002ecd2469ff0197dd067ac0879f26499304dc84e39529c3061e25904c7965",
+      "oracle/internal/storage/fs/benchmark_oracle_test.go": "61048feecbf4f09fa19566faaa7514346786c0ddd2020ba63cb1d33e5f815d53",
+      "oracle/internal/storage/fs/oci/benchmark_oracle_schedule_test.go": "08117edf37252c8671850dd823c678bc5a9fb7928a68e2255e3f71606a6870cc",
+      "oracle/internal/storage/fs/oci/benchmark_oracle_test.go": "f19d9e6e4caffdb70298edceada05286282d95a0b7abaf42365a47d999cd655e",
+      "oracle/internal/storage/fs/store/benchmark_oracle_test.go": "0f2ecb08ba2b03367f44291596a8e4f9e6417f21d923862759d05f1e52c54383",
+      "public/g0/internal/storage/fs/oci/benchmark_g0_test.go": "7d59f2c577144c7ed4d93e518f570b08113c82e936ba8a9055ebdbf01d7eb2c9",
+      "public/g1/internal/storage/fs/oci/benchmark_g1_progress_test.go": "71f01c6e0f272a084e388154c9c70d4c63e553e44b6420e473d0116783259f2a",
+      "public/g1/internal/storage/fs/oci/benchmark_g1_test.go": "52b0652fa8047ee446fb929a31389c979aa577c0172e77aec68e326942d4e963",
+      "public/g2/internal/storage/fs/oci/benchmark_g2_test.go": "b8936b489c3bacc4106b22ed764211c52569c8a18b92795d8a7ade49e4c94706",
+      "round0.md": "a3b9961e12f2b8c18d9375c9778afa5297bc70d4eb304cdc9c14c45926309ffd",
+      "round1.md": "e6c7ccc37f24ededa3ab34697eca8fa3c605841a27d8690b3a4c9a0e06e766be",
+      "round2.md": "a7a1b0f19521f3555877805244dad122efec5b6cab303372c441a63bd22b104c",
+      "submit_checkpoint.py": "b38f0256ab6587afb14b48c6fee074fdd5ef658f78d2e25beeab33a1327df136"
+    },
+    "end_to_end_sha256": "f055f16a022a17cb2b20d02d1753ff23bcc771030813dd9a15904ba3972475eb",
+    "fork_policy_sha256": "e0371037d301c334426b4486f05fb21c4fdda7be30613f7e7be07a8793a7186c",
+    "grader_sha256": "b5a2626adc89bb2bb6c823e60afd8d4735662a00bbada22c63c2fefa2bd72cf2",
+    "routing_config_canonical_sha256": "81827c8776172fe5b0bb7164f8713e59992e658ac86ca7a156321c32e2522ace",
+    "seed_patch_sha256": "3d824219a77b11d8b6f6ec506403daad092594d07c9a697a3c2280a2c935c74b",
+    "source_sha256": "d936e33490bfbfc686871c236abfde86b629c4aa153cc6220a108d05c5827dfe",
+    "start_tree": "3354dd97a389bac41536cc1cfa4ffe4861912bc8",
+    "treatment_suffix_sha256": "2efb00985a77449b9528cb9478164340984f1ac7feafe8645a50f476e412e921"
+  },
+  "limits_per_arm": {
+    "automatic_retries": 0,
+    "cleanup_reserve_seconds": 25.0,
+    "dispatch_stop_usd": 15.0,
+    "planning_envelope_usd": 18.0,
+    "public_repairs_per_round": 1,
+    "wall_seconds": 4500
+  },
+  "live_rebind": {
+    "expected_final_manifest_sha256_required": true,
+    "mode": "no-model-rebind-v1",
+    "turn_start_forbidden": true
+  },
+  "matched_pairs": 0,
+  "mode": "standalone-feasibility",
+  "oracle_erratum": {
+    "adjudication_path": "controls/oracle-erratum-r9e-evidence/adjudication/checks.json",
+    "adjudication_sha256": "4a23b29c5f9bb2d337b2f511333bdc69af9f855f3356d1ab91e8f2de3d682909",
+    "manifest_descriptor": {
+      "adjudication_sha256": "4a23b29c5f9bb2d337b2f511333bdc69af9f855f3356d1ab91e8f2de3d682909",
+      "changed_assets": [
+        "oracle/internal/oci/benchmark_oracle_test.go",
+        "oracle/internal/storage/fs/oci/benchmark_oracle_schedule_test.go"
+      ],
+      "historical_hidden_grade_sha256": "8f992d3b1621eb90bc8d99a2a9e682f81898c058f9abaed8041c4cc875d55661",
+      "prior_manifest_sha256": "05c04ed1e3e54b1b11e8e9ed27f663ea4cba44140651e6e558de6b5a7b914daa",
+      "version": "r9e-20261001"
+    }
+  },
+  "packet_scope_mode": "diagnostic-feasibility",
+  "pilot_id": "flipt-oci-long-horizon-pilot-13",
+  "preparation_root": "_scratch/pilot-13-prep",
+  "run_outputs": {
+    "treatment": "_scratch/pilot-13-evidence/treatment-live"
+  },
+  "runner_normalized_sha256": "fa01f7cc6fc16d9e62312145a82ed16c00988320744d135e430052ea81e9cabd",
+  "runtime": {
+    "cli_sha256": "8f0554ede25bbc5450921897c468b2e84635aa513c5017457997af0954581f49",
+    "code_mode_host_sha256": "4970a4ce8a7c6091a87dfea34cae03b3b95dd70f26f89f392e11de7fd8ea759e",
+    "plugin_hooks_sha256": "9cf09fb63c6e3c208f83796ebb51f2425b70a7f528dde3fc77efdfff1a0aa7f2",
+    "plugin_manifest_sha256": "af9d520b3de628fd610678d1dee0e940f9fd63d67ca4a8bf174766480174cc5d",
+    "router_hook_sha256": "5896da6b06ff6462ef7bd9c81a71c7a6a758f00c77435311e5fab4688cf8cc15",
+    "routing_validator_sha256": "ab91853ef8673b079f6ef8e1033ea918b61c16bb0ff9aae7ecbd32dd7ab3deb4"
+  },
+  "schema_version": 4,
+  "stop_rule": "One fresh standalone treatment only. Frozen current sources and final manifest, clean R0, exact-hash no-model capability rebinding, and zero-turn preflight precede any paid turn. Accepted-final, complete parent and child usage, hidden/race/backend grades, and independent blind semantic review are required for PASS. Zero automatic retries. No comparison or performance advantage claim."
+}

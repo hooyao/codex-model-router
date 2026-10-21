@@ -200,8 +200,18 @@ class AppServerProbeTests(unittest.TestCase):
                 with self.assertRaisesRegex(probe.ProbeFailure, "canary_python_hash_mismatch"):
                     probe._validated_canary_interpreter(None)
             with mock.patch.object(probe, "_file_sha256", return_value=probe.BUNDLED_PYTHON_SHA256):
-                self.assertEqual(Path(probe.sys.executable).resolve(),
-                                 probe._validated_canary_interpreter(None))
+                try:
+                    import cryptography
+                except ImportError:
+                    with self.assertRaisesRegex(probe.ProbeFailure, "canary_crypto_unavailable"):
+                        probe._validated_canary_interpreter(None)
+                else:
+                    with mock.patch.object(cryptography, "__version__", "unsupported"):
+                        with self.assertRaisesRegex(probe.ProbeFailure, "canary_crypto_unavailable"):
+                            probe._validated_canary_interpreter(None)
+                    with mock.patch.object(cryptography, "__version__", "50.0.1"):
+                        self.assertEqual(Path(probe.sys.executable).resolve(),
+                                         probe._validated_canary_interpreter(None))
         else:
             with self.assertRaisesRegex(probe.ProbeFailure,
                                         "canary_interpreter_not_bundled"):

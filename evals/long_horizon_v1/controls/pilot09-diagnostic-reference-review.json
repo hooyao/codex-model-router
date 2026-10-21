@@ -1,0 +1,191 @@
+{
+  "authorization": {
+    "approves": "construction-of-a-new-diagnostic-freeze-only",
+    "authorizes_paid_execution": false,
+    "current_live_enabled": false
+  },
+  "decision": "PASS-diagnostic-reuse",
+  "equivalence_method": {
+    "baseline_behavior": "Functional fork validation is treatment-only. Additional baseline receipt metadata and branch/import overhead do not alter the reviewed completed baseline task, budget decisions, grading contract, or accounting totals.",
+    "historical_manifest": "Reconstructed only in memory by restoring live_enabled=true and the historical LF JSON serialization; exact bytes matched the frozen manifest SHA-256. No historical file was changed.",
+    "historical_sources": "Reversed only the identified fork-policy imports, treatment-guarded validation blocks, optional fork-plan argument, workspace parameter, and added receipt metadata in memory. Reconstructed accounting and collector bytes and normalized runner text exactly matched the historical recorded hashes.",
+    "runner_normalization": "The historical normalized hash excludes only the literal PILOT_CAPABILITY_SHA256 slots; source text uses universal newline normalization.",
+    "verification": "Reconstructed all three historical submitted prompt hashes with current baseline assembly and preserved gate receipts. Replayed the raw baseline under current accounting and validated the collector, telemetry, and original full-quality admission using the hash-verified historical manifest in memory. Fork validators were configured to raise if invoked during those baseline checks."
+  },
+  "historical_reference": {
+    "arm": "baseline",
+    "artifact_path_base": "evals/long_horizon_v1",
+    "artifacts": {
+      "accepted_patch": {
+        "path": "_scratch/pilot-09-evidence/baseline-live/candidate-g2-attempt0.patch",
+        "sha256": "bdd1cfbec1245b9cc1a61de3003bd4989888c4ed1450a790b3f73fb6ecd1334a"
+      },
+      "backend_grade": {
+        "path": "_scratch/pilot-09-evidence/baseline-backend-grade/grade.json",
+        "sha256": "b7e5745ed3b1bb7f96650698eb0a55a12bdbd1bccbb9c5584e978b3fb98acc23"
+      },
+      "canonical_semantic_review": {
+        "path": "_scratch/pilot-09-evidence/baseline-review.json",
+        "sha256": "da4c1e456d8d64533ff8306e964000e5443f9cbef480b173948fc047d7aa7167"
+      },
+      "end_to_end": {
+        "path": "_scratch/pilot-09-evidence/baseline-end-to-end.json",
+        "sha256": "4c681e170fec982c02feaef8072594808dd7e3a74a690f4640a9bd05064edd4a"
+      },
+      "hidden_race_grade": {
+        "path": "_scratch/pilot-09-evidence/baseline-hidden-grade/grade.json",
+        "sha256": "ae6193753012634b1d1849f4ad9cd418e29a96415f0452cd4eed4db46d13213a"
+      },
+      "neutral_semantic_review": {
+        "path": "_scratch/pilot-09-evidence/blind-review/semantic-review.json",
+        "sha256": "594a60f3002854084c9043fd2b8646a975ed4f9b0ab12e7427c31f5cb6f23ab7"
+      },
+      "plan": {
+        "path": "pilot-plan-v9.json",
+        "sha256": "376b9e4ddca1b1e1f31d5828acc5565416433db28cb428a6ac73bd9e36744304"
+      },
+      "preparation": {
+        "path": "_scratch/pilot-09-prep/preparation.json",
+        "sha256": "c44dc4cb6eb31f2d254bc39092c1c60aeef5eeb804331f5e75a3925135a3e0bb"
+      },
+      "public_g0_grade": {
+        "path": "_scratch/pilot-09-evidence/baseline-live/gate-1/grade.json",
+        "sha256": "6bb1f5f65be109c32e24313d89174ada43e6193c20361723bcf371e9eaab7030"
+      },
+      "public_g1_grade": {
+        "path": "_scratch/pilot-09-evidence/baseline-live/gate-2/grade.json",
+        "sha256": "e703c4dce5948209f590ffc4a62b218f9f01255c8b1f191c02f612702d7f200d"
+      },
+      "public_g2_grade": {
+        "path": "_scratch/pilot-09-evidence/baseline-live/gate-3/grade.json",
+        "sha256": "a88934edb23106ff0ab8ad67724de2ad1e896f1f1e53b723d8a11af3c100bedf"
+      },
+      "quality_admission": {
+        "path": "_scratch/pilot-09-evidence/baseline-quality-admission.json",
+        "sha256": "1602d62a0d82cd0e66e940e4c8c1e523a387d2b6b56d66b217b485a919bbf59d"
+      },
+      "run": {
+        "path": "_scratch/pilot-09-evidence/baseline-live/run.json",
+        "sha256": "dce69e0439540675a8b59c645db8eed6b128dcb99a65a50d6bd0f24ccf49d372"
+      },
+      "semantic_review_attestation": {
+        "path": "_scratch/pilot-09-evidence/quality/review-attestation.json",
+        "sha256": "5133cb1c9dccda5ea76526ed1ba37978bb0d25dfc94309e8933f786e3d3718b7"
+      }
+    },
+    "end_to_end_wall_seconds": 2892.04,
+    "estimated_usd": 11.153323,
+    "manifest_sha256": "7f8c7c39ea66a39a6ac211f626c62fe9c5c15e8043704449b1687cda4f8fdb54",
+    "model": "gpt-6-astra",
+    "model_responses": 71,
+    "native_children": 0,
+    "pilot_id": "flipt-oci-long-horizon-pilot-09",
+    "quality_admission_verdict": "pass",
+    "reasoning_effort": "xhigh",
+    "run_wall_seconds": 1923.989
+  },
+  "historical_source_hashes_verified": {
+    "accounting_sha256": "4479d0b0985856ecd0c0f9a55ec940cb548cdb70c067e3879868eae5c8e20483",
+    "collector_sha256": "38a02e49c4cb382e2807c8383d00c98f43b2c63cbade41bf7c66ff93cae84935",
+    "runner_normalized_sha256": "f4d22dce8205c846d888d220cb0d6c0982fc0cab56591dbf6a2e04f554b56ebb"
+  },
+  "kind": "independent-diagnostic-reference-review",
+  "limits": [
+    "The $18 planning envelope is not a spending target or guaranteed billed ceiling.",
+    "Actual future model output and elapsed time are not guaranteed identical.",
+    "A historical baseline and one adapted treatment attempt cannot establish stable performance; fresh repeated interleaved matched runs are required for such claims.",
+    "Blinding and bounded packets are procedural evidence, not technical isolation.",
+    "This is a hash-bound independent review attestation, not a cryptographic author signature."
+  ],
+  "prohibited_claims": [
+    "fresh-matched-pair",
+    "interleaved-performance-comparison",
+    "newly-executed-baseline",
+    "stable-latency-advantage",
+    "causal-or-generalized-cost-savings"
+  ],
+  "required_new_plan_conditions": [
+    "Declare treatment-only exploratory feasibility with a precommitted historical diagnostic reference before any new paid turn.",
+    "Hash-bind this review, the original baseline manifest and source identities, and every historical reference artifact; preserve original identities and bytes.",
+    "Implement an explicit diagnostic-reference validation path. Do not relabel or copy the old baseline as a new matched run or silently bypass the existing admission gate.",
+    "Freeze the new treatment policy and source hashes and independently review its readiness. Start a fresh treatment from the same seed and public requirements; exclude baseline answers and hidden evidence from worker packets.",
+    "Retain the $15 observed estimated-cost dispatch stop, informational $18 planning envelope, 4500-second runner limit including 25 seconds for cleanup, and zero automatic retries.",
+    "Record all observed treatment controller and worker usage and failures with the historical baseline cost scope disclosed. Report any reference comparison as descriptive and disclose adaptive development, historical selection, and non-interleaving.",
+    "Complete treatment hidden/race/backend grades, independent semantic review, and the same end-to-end wall boundary before describing quality or cost feasibility.",
+    "Obtain a new equivalence review if baseline-effective inputs, pricing, runtime, grading, accounting, or limits change; otherwise require a fresh baseline for changed conditions."
+  ],
+  "reviewed_at_utc": "2026-10-01T01:23:34Z",
+  "reviewed_current_runner_normalized_sha256": "0eca0d5c2f834882e4c5b040697b850ff4d87217515a5f331fd1cfb2f60bfe17",
+  "reviewed_current_sources": {
+    "accounting": {
+      "path": "evals/long_horizon_v1/accounting.py",
+      "sha256": "288f2f552b5570e1102a5e58525ec3cc21f54c6e738a2d27074feee54a9fb8c6"
+    },
+    "arm_policy_v2": {
+      "path": "evals/long_horizon_v1/arm-execution-v2.json",
+      "sha256": "1f368c2565747f7e7dc99bd53ff2eef3984ff41a2f0554c92bd640e1566b2956"
+    },
+    "collector": {
+      "path": "evals/long_horizon_v1/collect.py",
+      "sha256": "2c2df2d990d598dfb2be9793452acfe497b0a12fd4e516cd5b9f8f349f5fac13"
+    },
+    "end_to_end": {
+      "path": "evals/long_horizon_v1/end_to_end.py",
+      "sha256": "f055f16a022a17cb2b20d02d1753ff23bcc771030813dd9a15904ba3972475eb"
+    },
+    "fork_policy": {
+      "path": "evals/long_horizon_v1/fork_policy.py",
+      "sha256": "37ecfde0bb1506c3f86752ab3434ace54cb469d5835996ab2e184bb7dc36b015"
+    },
+    "grader": {
+      "path": "evals/long_horizon_v1/grade.py",
+      "sha256": "b5a2626adc89bb2bb6c823e60afd8d4735662a00bbada22c63c2fefa2bd72cf2"
+    },
+    "quality_admission": {
+      "path": "evals/long_horizon_v1/quality_admission.py",
+      "sha256": "e7232f390b03683d705110ebaa29db1958b0651eef21a54012fb26c81486ecdd"
+    },
+    "runner": {
+      "path": "evals/long_horizon_v1/run.py",
+      "sha256": "0bd90fb28459fd47caa307cec8c5a2b2bf2059b018bb63c7624f6efab0d9c4f6"
+    },
+    "session_meter": {
+      "path": "evals/scripts/run_paired_arm.py",
+      "sha256": "3f1da63739bdb27a2c3ce26c72b024ae1db72f26304907f22549d9c840daaadd"
+    },
+    "transport": {
+      "path": "evals/long_horizon_v1/transport.py",
+      "sha256": "54415a7746523e190b98888f97bc0eb7af44fad47d9140731871d1c910c9c53f"
+    },
+    "treatment_suffix_v2": {
+      "path": "evals/long_horizon_v1/treatment-execution-v2.md",
+      "sha256": "2efb00985a77449b9528cb9478164340984f1ac7feafe8645a50f476e412e921"
+    }
+  },
+  "reviewer_id": "review-frozen-pilot-gpt-6-astra-high",
+  "reviewer_role": "independent",
+  "schema_version": 1,
+  "scope": "treatment-only-exploratory-feasibility",
+  "task_id": "review-frozen-pilot-gpt-6-astra-high",
+  "validation": {
+    "all_referenced_artifact_hashes_rechecked_at_write": true,
+    "paid_calls_made": false,
+    "raw_prompts_or_private_data_copied": false,
+    "source_files_edited": false,
+    "source_reconstruction_hashes_rechecked_at_write": true
+  },
+  "verdict": "PASS",
+  "verified_equivalence": {
+    "baseline_agents_plugins_hooks_disabled": true,
+    "baseline_arm_v1_equals_v2": true,
+    "baseline_model_effort_and_cli_options_unchanged": true,
+    "baseline_usage_and_quality_preserved": true,
+    "byte_identical_future_output_guaranteed": false,
+    "historical_bytes_preserved": true,
+    "identical_future_wall_time_guaranteed": false,
+    "runtime_and_source_pins_checked": true,
+    "seed_task_reveals_oracle_grader_and_prices_unchanged": true,
+    "three_historical_submitted_prompt_hashes_reproduced": true
+  },
+  "worker_name": "review-frozen-pilot-gpt-6-astra-high"
+}

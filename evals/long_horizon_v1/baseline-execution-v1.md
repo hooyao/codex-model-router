@@ -1,0 +1,1 @@
+Execution policy for this arm: solve the staged task yourself as GPT-6 Astra at xhigh. Native delegation and the model-router plugin are disabled. Do not start child agents. This execution policy is separate from the shared task, environment note, and evaluator reports.
