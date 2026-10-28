@@ -41,13 +41,17 @@ def describe_context(config_path: Path, config: dict[str, Any]) -> dict[str, Any
             "Router self-improvement, routing-policy review, evaluation design and benchmark selection need "
             "independent_review_required=true, an independent reviewer, and an implementation worker for requested code changes.",
             "For each business stage record a stable ID, owner, dependencies, exclusive write scope, context budget, "
-            "acceptance and self-check. DIRECT performs its bounded implementation and self-check. If bounds expand, stop and resolve "
+            "acceptance and self-check. One decision covers that same owner's declared source reads, hash-bound receipt "
+            "preparation/consumption, bounded edit and self-check; a tool call or receipt is not a new stage. "
+            "If bounds expand, stop and resolve "
             "phase=reclassification, prior_ownership=DIRECT, with an explicit escalation_trigger. "
             "A controller-owned stage within DELEGATE needs its own DIRECT decision and inherits whole-request risk and review.",
             "DELEGATE loads the coordination skill and relevant references before business work. "
             "Never duplicate worker-owned work or substitute controller execution when required native capability is missing.",
             "A pure status/coordination reply using already accepted results may reuse its decision. "
-            "Any new inspection, edit, test, or changed scope requires a fresh decision; do not claim new validation from memory.",
+            "Resolve a new business request or separately owned stage, and reassess changed config, decision inputs, permissions, "
+            "risk, or failed verification before further work. Preserve independent units, review owners, and real prerequisite/recovery gates. "
+            "Do not repeat a decision for an already covered read, receipt, edit or self-check, or claim new validation from memory.",
             "Invalid config or resolver output stops routing. Preserve user intent, permissions, safety, and workspace constraints.",
         ],
         "delegate_references": {"skill": str(skill / "SKILL.md"),

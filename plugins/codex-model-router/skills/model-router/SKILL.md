@@ -7,10 +7,9 @@ description: Coordinate delegated Codex stages after an ownership decision, choo
 
 ## Role and context
 
-A dispatched worker follows its bounded packet and SubagentStart override,
-performs the assigned analysis, edits, commands, tests, and validation, and
-returns its result without starting subagents. Controller-only rules below do
-not apply to worker duties. Respect higher-priority instructions and user scope.
+A worker follows its bounded packet and SubagentStart override, performs its
+own work and validation, and returns results without subagents. Controller-only
+rules do not apply; permissions, safety, and user scope remain binding.
 
 For the controller, reuse instructions and configuration already in context.
 Read a reference only when its stage needs it and it is absent or outdated.
@@ -19,22 +18,23 @@ A hook entrypoint is a file pointer, not evidence that a reference was read.
 
 ## Ownership before business work
 
-The hook's read-only `describe_router.py` program supplies the validated config
-and request template in one compact response. Run it beside the injected
-decision resolver with the workspace `--config` path when that context is
-missing or changed. Reuse current context rather than reading the config and
-[decision-contract.md](references/decision-contract.md) again. That reference
-is only needed for deeper contract details. Submit a new business request to
-the decision resolver, then record its validated result and
+Run the advertised `describe_router.py` with the workspace `--config` path
+only when decision context is missing or revised. It supplies config and the
+request template; reuse them instead of rereading config or
+[decision-contract.md](references/decision-contract.md). Send classified JSON
+on stdin to the advertised resolver with the same `--config`, record its
+validated result and
 `ROUTE: DIRECT — <rule/reason>` or
 `ROUTE: DELEGATE — <topology/rule/model/effort/reason>`.
-Classify the full request semantically; skills describe how to work and do not
-replace ownership decisions. Invalid config or an invalid resolver result stops
-routing; do not reconstruct it or silently use defaults.
-A pure status/coordination reply based on accepted results needs no new
-business decision. A new inspection, edit, test, or changed scope does; never
-claim fresh validation from memory. DIRECT does not require loading this skill
-or delegated-work references.
+Classify the full request; skills do not replace ownership. Invalid config or
+resolver results stop routing; do not guess or silently use defaults.
+One decision covers the same owner's declared reads, hash-bound receipt,
+bounded edit, and self-check. A file, receipt, or tool call is not a stage.
+Resolve new business requests or separately owned stages; reassess changed
+config, inputs, scope, permissions, risk, or failed validation before acting.
+Keep independent units, review owners, and real prerequisite/recovery gates
+separate. Status-only replies reuse accepted results. Never claim fresh
+validation from memory. DIRECT needs no skill/reference read.
 
 DIRECT requires all bounded facts, permissions, scope, and a self-check. A false
 or unknown direct criterion delegates. If bounds expand, stop before further

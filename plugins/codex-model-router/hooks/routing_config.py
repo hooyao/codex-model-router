@@ -321,8 +321,9 @@ def configured_execution_mode(
 ) -> str:
     """Resolve config precedence after semantic matching, before hard-signal gating.
 
-    One matching route overrides the global default. No match uses the global
-    default. Conflicting matching routes fail closed to delegation.
+    Matched routes override the global default. Evaluate defers to the hard
+    gate and does not conflict with direct. Any explicit delegate still wins.
+    No match uses the global default.
     """
 
     if isinstance(matched_example_ids, (str, bytes)):
@@ -341,7 +342,9 @@ def configured_execution_mode(
         return effective_execution_policy(config)["default_mode"]
 
     modes = {effective_execution_mode(config, examples[route_id]) for route_id in route_ids}
-    return next(iter(modes)) if len(modes) == 1 else "delegate"
+    if "delegate" in modes:
+        return "delegate"
+    return "direct" if "direct" in modes else "evaluate"
 
 
 def validate_config(config: Any, source: str = "routing config") -> dict[str, Any]:
@@ -536,6 +539,7 @@ def routing_context_block(path: Path, config: dict[str, Any]) -> str:
         f"Workspace routing config: {path}\n"
         f"Validated config SHA256 (canonical JSON): {config_digest}\n"
         f"Router skill: {root / 'skills' / 'model-router' / 'SKILL.md'}\n"
+        f"Decision context program: {root / 'hooks' / 'describe_router.py'}\n"
         f"Decision resolver program: {root / 'hooks' / 'execution_decision.py'}\n"
         "ROUTING_CONFIG_END"
     )

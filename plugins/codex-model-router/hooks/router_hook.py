@@ -28,12 +28,14 @@ SUPPORTED_EVENTS = {"SessionStart", "UserPromptSubmit", "SubagentStart"}
 MAX_HOOK_OUTPUT_BYTES = 4_096
 CONTEXT_TOKEN_THRESHOLD = 1_500
 CONTROLLER_ENTRYPOINT = (
-    "CONTROLLER: Before new business work, run describe_router.py alongside the decision resolver below "
-    "with --config set to the workspace config to obtain the contract and validated config. Reuse that context "
-    "while its revisions remain current. Send a classified request to the resolver, record its validated result, "
+    "CONTROLLER: Run the Decision context program below with --config set to the workspace config "
+    "when context is missing or revised. It supplies the template and validated config. "
+    "Send classified JSON on stdin to the Decision resolver program with the same --config, record its validated result, "
     "and emit ROUTE: DIRECT or ROUTE: DELEGATE with its rule/reason before acting. "
     "DIRECT needs no skill/reference read. DELEGATE loads the coordination skill and relevant references. "
-    "Pure status/coordination from accepted results may reuse a decision; any new read, edit, or test needs a fresh one. "
+    "One decision covers a request/stage's declared reads, receipt, edit and self-check under the same owner/scope. "
+    "Resolve new requests or separately owned stages; reclassify changed bounds before acting. "
+    "Status-only replies reuse accepted results. "
     "This is instruction-layer policy, not a permission barrier."
 )
 WORKER_ENTRYPOINT = (

@@ -101,7 +101,12 @@ For new business work, the read-only `describe_router.py` program supplies the
 validated workspace config, a request template, and conditional reference
 paths in one compact response. DIRECT needs no skill/reference read. DELEGATE
 loads the coordination skill and relevant references after ownership is known.
-Only a status/synthesis reply based on already accepted results may reuse an
-existing decision without new business work. A fresh read, edit, or test still
-needs its own decision. No resolver predicate, inherited constraint, model
-policy, or dispatch validation is relaxed.
+A decision covers the same owner's declared reads, hash-bound receipt,
+bounded edit, and self-check within one request or stage. Resolve a new
+business request or separately owned stage; reassess changed inputs, config,
+scope, permissions, risk, or failed verification before further work. A pure
+status/synthesis reply reuses accepted results. Independent units, review
+owners, and real prerequisite/recovery gates remain separate. The cold hook
+now exposes the descriptor's absolute path and both programs' invocation
+contract. See [decision lifetime](decision-lifetime.md) for the observed
+1.3.2 regression, matched-mode fix, safety boundaries, and validation limits.

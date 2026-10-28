@@ -48,6 +48,24 @@ class ContextLoadingTests(unittest.TestCase):
         self.assertEqual({}, self.output())
         self.assertEqual({}, self.output(prompt="A follow-up without routing keywords"))
 
+    def test_advertised_descriptor_executes_with_the_advertised_config(self):
+        output = self.output("SessionStart", source="startup")
+        context = output["hookSpecificOutput"]["additionalContext"]
+        def advertised(label):
+            return next(line.removeprefix(label) for line in context.splitlines() if line.startswith(label))
+        program = Path(advertised("Decision context program: "))
+        config = Path(advertised("Workspace routing config: "))
+        self.assertEqual((PLUGIN / "hooks/describe_router.py").resolve(), program)
+        self.assertEqual(self.config, config)
+        result = subprocess.run([sys.executable, str(program), "--config", str(config)],
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(0, result.returncode, result.stderr)
+        descriptor = json.loads(result.stdout)
+        self.assertEqual("decision_context", descriptor["kind"])
+        self.assertFalse(descriptor["evaluated_request"])
+        self.assertEqual(config, Path(descriptor["config_path"]))
+        self.assertEqual(Path(advertised("Decision resolver program: ")), Path(descriptor["resolver_program"]))
+
     def test_recovery_sources_restore_entrypoint_before_next_turn(self):
         self.output("SessionStart")
         for source in ("startup", "resume", "clear", "fork", "compact"):

@@ -40,6 +40,13 @@ controller sends one decision-request-v1 JSON object to
 `execution_decision.py --config <routing.json>` on standard input and uses the
 validated JSON result. The full request schema and example are documented in
 [`skills/model-router/references/decision-contract.md`](skills/model-router/references/decision-contract.md).
+One decision covers the same owner's declared reads, receipt, bounded edit,
+and self-check. Resolve new business requests and separately owned stages;
+reassess changes to configuration, inputs, scope, permissions, risk, or failed
+validation before further work. A file or command is not itself a new stage.
+Matched `evaluate` examples defer to the hard-signal gate; they do not conflict
+with `direct`. Any matched `delegate` example still wins. See
+[decision lifetime](docs/decision-lifetime.md) for the regression and fix.
 
 A delegated decision resolves to `PARALLEL` only for multiple bounded,
 independent, dependency-free tasks with disjoint write scopes. Any unknown,
@@ -189,10 +196,11 @@ applies the structured semantic gate. These fields are machine-readable policy
 inputs, not a claim that static config can completely classify arbitrary
 natural-language tasks.
 
-Precedence is: hard delegation signals first; one matching example overrides
-`execution_policy.default_mode`; no match uses the global default; disagreeing
-matches fail closed to delegation. A `direct` result from either level remains
-subject to every direct criterion.
+Precedence is: hard delegation signals first; matching examples override
+`execution_policy.default_mode`; no match uses the global default. Among
+matches, any `delegate` wins; otherwise `direct` wins over neutral `evaluate`,
+and evaluate-only matches use the structured gate. A `direct` result from
+either level remains subject to every direct criterion.
 
 Model classes are preferences, not assumed runtime identifiers. The controller
 resolves them against the current runtime catalog only after choosing DELEGATE.

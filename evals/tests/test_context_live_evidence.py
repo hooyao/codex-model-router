@@ -3,6 +3,8 @@
 import hashlib
 import json
 import statistics
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -10,6 +12,27 @@ from evals.scripts.run_paired_arm import USAGE_KEYS, response_cost_interval
 
 
 class ContextLiveEvidenceTests(unittest.TestCase):
+    def test_repair_replays_original_classified_requests_without_rescoring_live_runs(self):
+        root = Path(__file__).resolve().parents[1] / "live/context-repair-20261028"
+        repo = Path(__file__).resolve().parents[2]
+        replay = json.loads((root / "decision-replay.json").read_text(encoding="utf-8"))
+        self.assertEqual(3, len(replay["records"]))
+        self.assertEqual(["DELEGATE", "DIRECT", "DIRECT"],
+                         [r["old_result"]["ownership"] for r in replay["records"]])
+        for row in replay["records"]:
+            receipt = json.loads((root / row["source_receipt"]).read_text(encoding="utf-8"))
+            self.assertEqual(receipt["raw_events_sha256"], row["raw_events_sha256"])
+            original = receipt["observed_resolver_decisions"][0]
+            self.assertEqual(original["decision_id"], row["request"]["decision_id"])
+            self.assertEqual(original["ownership"], row["old_result"]["ownership"])
+            result = subprocess.run([sys.executable,
+                str(repo / "plugins/codex-model-router/hooks/execution_decision.py"),
+                "--config", str(repo / "plugins/codex-model-router/defaults/default-routing.json")],
+                input=json.dumps(row["request"]), capture_output=True, text=True, timeout=10)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual(row["candidate_result"], json.loads(result.stdout))
+            self.assertEqual("DIRECT", row["candidate_result"]["ownership"])
+
     def test_refined_cohort_response_accounting_and_paired_verdict(self):
         root = Path(__file__).resolve().parents[1] / "live/context-refinement-20261028"
         campaign = json.loads((root / "scored/campaign.json").read_text(encoding="utf-8"))
