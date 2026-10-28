@@ -193,7 +193,8 @@ def run_arm(root: Path, output: Path, cli: Path, arm: str, case_id: str, repetit
                 usage = meter.summary()
                 record["usage_issues"] = meter.integrity_issues()
                 record["usage"] = usage
-                record["usage_complete"] = not usage["unknown_models"] and not usage["unknown_usage"] and \
+                record["usage_complete"] = not record["usage_issues"] and \
+                    not usage["unknown_models"] and not usage["unknown_usage"] and \
                     bool(usage["model_calls"]) and all(value is not None for value in usage["token_classes"].values())
                 record["sessions"] = len(meter.paths)
                 record["native_evidence"] = [{"sha256": sha(path), "bytes": path.stat().st_size}
@@ -231,7 +232,8 @@ def summarize(output: Path) -> dict:
                 pairs.append({"repetition": repetition, "status": "incomplete"})
                 continue
             before, after = rows["before"], rows["after"]
-            complete = all(r.get("complete") and r.get("usage_complete") for r in rows.values())
+            complete = all(r.get("complete") and r.get("usage_complete") and
+                           not r.get("usage_issues") for r in rows.values())
             pair = {"repetition": repetition, "status": "complete" if complete else "incomplete",
                     "quality_parity": before["artifact_pass"] and after["artifact_pass"],
                     "wall_ratio": after["wall_seconds"] / before["wall_seconds"]}
