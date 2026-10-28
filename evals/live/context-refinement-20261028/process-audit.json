@@ -1,0 +1,843 @@
+{
+  "schema_version": 1,
+  "scope": "Supplementary offline observations; not a replacement artifact or routing-compliance oracle. Original scored receipts remain unchanged.",
+  "parser": "Successful command outputs containing execution_decision.py; decode line-start JSON objects and select decision-request-v1 resolver results even when followed by other output.",
+  "records": [
+    {
+      "run_id": "scored-architecture-review-r1-after",
+      "raw_events_sha256": "90a3a6e7966f08f589e8f111fc1ff1888ff4a6e53f9600ae2edaae307c9dd1b1",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "create-decision",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "review-decision",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181b8-d7b9-7c40-9656-9089b82e8012",
+          "message_sha256": "b51510dfc3af5fd0ae7575efd23f71c9c85ec7ae322215049f23fe1bb0db05ae",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a181b9-9ba3-7100-b844-9f6b46dd3dfe",
+          "message_sha256": "b1e39feeba6f5d76429d1c9831b3af12ffcf07540e5bb2f6d183914ec2ff01ac",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-architecture-review-r1-before",
+      "raw_events_sha256": "8422ed68b5ad1bd793148a5ee96ead94112665438d64df93fa3f4ed6f9fd29e3",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "create-decision",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "author-gpt-6-luna-low",
+          "configured_mode": "direct",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181b5-90c9-7331-8e9d-ce429c45a1a6",
+          "message_sha256": "75877523f320770d23d5b8d46d333fd1d52e6ea64e3eeafecdb8b893d4dff20c",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a181b6-ccd1-78a3-b482-c273acefc08c",
+          "message_sha256": "16013eccf1a127cb50622def4a39bb9b962124e3f07916ab6f335025cae493ad",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-architecture-review-r2-after",
+      "raw_events_sha256": "9b6974b3e70757033a226e845d30d509e9ace04726ee590d518a075065c4a44e",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "decision-artifact",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "review-decision-artifact",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 2,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181ca-4306-71d1-a949-64c04108f773",
+          "message_sha256": "fb3ef6a45b3c532aaa274f108b7962079ef82e0f358a6d529a3ad57a6e8eca09",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a181cb-036a-7ce2-a599-16426b5eb2f0",
+          "message_sha256": "cc5d550e5334dc9901d5505e346e0fa9ff88dab9daa04d8ed009736a9261e421",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-architecture-review-r2-before",
+      "raw_events_sha256": "03b0de66fff090430d05d85aef902df871d0a99721e319a9ff1ab66f92e570b9",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "create-decision",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181cd-590b-7721-ab96-218c00756bb2",
+          "message_sha256": "fa0536bf17cf457c3107ce60d19ba3ae0e9082b22e391d7d91136061e947b4a9",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-architecture-review-r3-after",
+      "raw_events_sha256": "68d1486fb78e1e8ba9fb872276613a08ad12fe2d23da4c9807e86436973bb2ca",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "decision-artifact",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181df-cba8-70d0-abd9-c1329b1d8153",
+          "message_sha256": "28636def399bde05e032605b152c77bf1162e3a10a0bd1aaf1ae9bb31551b478",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-architecture-review-r3-before",
+      "raw_events_sha256": "14a89f7aa4ae45ed95da9f34a4ea7545c99ed02e9c06b2bf173aa8d96161bbb6",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "decision-artifact",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181dd-3593-7940-81b8-c3bdd1e7d42f",
+          "message_sha256": "02df6217b8beecf8e442b46ce9cbb9d2f11d41f44ccdada4eabf72ba82522da9",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r1-after",
+      "raw_events_sha256": "9bf0101976e5dc6eb2370b65e75f0c1ba42e02d3fc6f6c7a16fecbde15fa5572",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-typo",
+          "configured_mode": "evaluate",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "verify-readme-typo",
+          "configured_mode": "evaluate",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a181a7-21de-7930-a166-22c02daf29b5",
+          "completed_commands": 4,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181a7-eac3-7542-89fa-8bdd9f8e89c0",
+          "completed_commands": 2,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181a8-2bae-7303-85da-84930605e9af",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r1-before",
+      "raw_events_sha256": "9439de2f3bf017db6b186c85fc57b89f00f1455a16cf2eacc65218594a9f4154",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "verify-readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a181a5-db5f-74b2-aaef-69ca941225ea",
+          "completed_commands": 4,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181a6-b750-7610-9d1e-c2f28488e574",
+          "completed_commands": 2,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181a7-0194-7612-a40b-a3ab50c10ffe",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r2-after",
+      "raw_events_sha256": "d285b8e3706ea3bc241c15f585ff89e2d252e71be79642eb508987bbbce5d555",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "readme-typo-verify",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a181ba-76b2-7501-933b-aa3b90903059",
+          "completed_commands": 4,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181bb-153e-7363-9d40-87f51b849491",
+          "completed_commands": 2,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181bb-5ef0-7900-a70b-f7400ddff4de",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r2-before",
+      "raw_events_sha256": "d8eb6687e1497d1c0eb089659cc367861927e6a6e6fbca02ecb533ec463eaf6b",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "verify-readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a181bb-80ea-70a3-9eee-2a3b4cedffb9",
+          "completed_commands": 4,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181bc-54e9-7862-809d-6704f47d1812",
+          "completed_commands": 2,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181bc-a6bf-7470-8839-da598e18ecd6",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r3-after",
+      "raw_events_sha256": "e932e61b7570888297d57939475c8878de1f89aaf8a6c0cefa2b5d29076aba46",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "readme-typo-verify",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a181ce-e76a-7060-9bc8-ad788bbfc4cc",
+          "completed_commands": 4,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181cf-bc9a-7130-aebe-e156f396d71d",
+          "completed_commands": 2,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181d0-0a71-74a0-91e0-e1a8eaec0a9c",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r3-before",
+      "raw_events_sha256": "49a13e0c13926273f817c7a2a5b705aa8d0e421122336723530e2a6d23c98143",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "verify-readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a181ce-0d72-7960-bfe5-029253ebbc36",
+          "completed_commands": 3,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181ce-75b9-73a2-8ec7-59e79172baec",
+          "completed_commands": 2,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a181ce-b960-7e00-a716-515967e05532",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-investigation-reuse-r1-after",
+      "raw_events_sha256": "c671b304a82f9bf0b7bad316c4b1b29cd948d0e8767b5193bfced8490ccc45a8",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "ttl-authoritative-extraction",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "ttl-receipt-implementation",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "ttl-apply-and-self-check",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 2,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181aa-9f43-7b03-8689-e171be0bf4d1",
+          "message_sha256": "1f90286a79e9899bd3bccc5a3ca16dc7e4f97ddebf9a5382a64e536066bc3307",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-investigation-reuse-r1-before",
+      "raw_events_sha256": "d7dec22ff6470077a14ff805ea45d1d1da245c91ea2b5a3acee4d990b537ebb4",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "ttl-authoritative-update",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-investigation-reuse-r2-after",
+      "raw_events_sha256": "52b7d80060da90e8ea773d418c6526c064b0d303e80c9d74e05e4c6966a42bb5",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "cache-ttl-update",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "cache-ttl-implementation",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-investigation-reuse-r2-before",
+      "raw_events_sha256": "db834f861bac54f32449d39d3f248570d6371b2ce4771afcc20da26081bb592a",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "ttl-update",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-investigation-reuse-r3-after",
+      "raw_events_sha256": "9b51d4b837437e6e7d1f2dcb8238e65cecad654bdc52bc18bbe8c14d5e1f109f",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "ttl-authoritative-extraction",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "ttl-implementation",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-investigation-reuse-r3-before",
+      "raw_events_sha256": "82e8a6518369c9801e2c2cf8c67f44d70cee99187d39fecb14655e5bb5d007cf",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "authoritative-ttl-edit",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r1-after",
+      "raw_events_sha256": "f2519ec133d61a19d715611bfa4f3f43db3f80ca15aa9cf43cbfa8a8eff2c13f",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "reports-replacements",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r1-before",
+      "raw_events_sha256": "3341be2c588ac96893b99a2654fd2f5140ec371fb5ebf5e469d22c1f35dd9199",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "replace-three-reports",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181b1-af51-7ae2-8f07-9a6e2cbe6a45",
+          "message_sha256": "6b724ea936759d19ad2a1d461821f5346432fac7968cd9529ce79d792288c354",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r2-after",
+      "raw_events_sha256": "7559ff672acb13622373cf26b077107ded964c89a7f3f76e716527684e31a1d9",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "replace-three-reports",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181c6-0250-7bc2-8061-4828a1813de5",
+          "message_sha256": "da760f66c86835eece4ecf8a87644ec17646602ff7cfb465beb764b4a4783a41",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a181c6-6fce-7c72-86a8-9c5d1f02c175",
+          "message_sha256": "72a719a6cb4e26d0610a2b45fca66a4be7d05d81ddb222d57c2025b24910348b",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r2-before",
+      "raw_events_sha256": "d345a0a6fda697bc70472030e6ba93f7898c021c4a0a93dc143c8c1a8bfe2033",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "replace-report-todos",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r3-after",
+      "raw_events_sha256": "1bf57afb79ac0f1aeb07cce2965baafa8f11ae66a19ef757e074dd0dfed6b7b2",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "reports-replacements",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 2,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181da-d6e4-7c60-8695-d190965a10c0",
+          "message_sha256": "ccd7435e0e107391354740933e2bfa8b30e3325bf2768e73921bc54ff07efb58",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a181da-c1d2-7490-9735-b03487a5d6f6",
+          "message_sha256": "bb8bcca292d173f2c24e90dd2b8600585c68600b7df79999a59253a20ac99ca9",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a181db-2025-7a01-9a49-aab5cf0cdd74",
+          "message_sha256": "4a26ff3429fa35def0d2a528e5260f01e5db73c1224faf073195c4326fd27841",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r3-before",
+      "raw_events_sha256": "bb56cd8e77dce58778fb6f43f2fdf6e3160b4b6023ff5666f92137ddb91cb372",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "replace-three-reports",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-serial-escalation-r1-after",
+      "raw_events_sha256": "0d01c02aa965a96d0056beea79c4ae3f19aae828bba5dfce5d5c465305a1294e",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "bounded-schema",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "migration-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-serial-escalation-r1-before",
+      "raw_events_sha256": "f346b8f610af51ce090483c514d387cd6295fd4e5b545b1bd123dbce5897e202",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "bounded-schema",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "schema-migration-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "nonzero_command_exits": 4,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181ad-0af2-7e53-870d-18fcd05fb939",
+          "message_sha256": "cd0e06ffca9fe4b77224724b014b891bee2f43b8e07519ca59bceb4cb7506ea9",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-serial-escalation-r2-after",
+      "raw_events_sha256": "668fd665e6179d10c1d24a942363bcf17b64e579f0742df4572fbf9f0d68c253",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "bounded-schema",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "migration-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "nonzero_command_exits": 2,
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-serial-escalation-r2-before",
+      "raw_events_sha256": "57e044b6dc22139de79128d08cfef46c9ec154bd73768e56ebd51a4529943064",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "bounded-schema",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "migration-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "nonzero_command_exits": 1,
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a181c3-699a-7ff2-ba41-113f55a0a78d",
+          "message_sha256": "31755d80bc50f72da5d2ba20c4c99fded5ac6b6508fe554294f9767c06ddb055",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-serial-escalation-r3-after",
+      "raw_events_sha256": "1a9f18f62e50620e68a3d490cb03989be096aa5d492cd2cb2d3a8977992c838c",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "bounded-schema",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "migration-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "nonzero_command_exits": 0,
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-serial-escalation-r3-before",
+      "raw_events_sha256": "86340804c9af9a8fca9cef64d97ebe21c419a7993cbd2484c6cd6a27509c1b75",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "bounded-schema",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "migration-scope-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "nonzero_command_exits": 3,
+      "worker_messages_with_pass_text": []
+    }
+  ]
+}

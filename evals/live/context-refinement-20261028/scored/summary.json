@@ -1,0 +1,179 @@
+{
+  "scope": "small functional/overhead regression; process proof remains separate",
+  "records": 30,
+  "cases": {
+    "direct-small-control": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 0.8928185174595676,
+          "token_ratio": 0.8959779885468862,
+          "estimated_cost_ratio": 0.8494204802332005
+        },
+        {
+          "repetition": 2,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 0.7998831252797534,
+          "token_ratio": 0.8223166043923551,
+          "estimated_cost_ratio": 0.7755476580503652
+        },
+        {
+          "repetition": 3,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.5290724327628362,
+          "token_ratio": 0.9237680575829265,
+          "estimated_cost_ratio": 0.8052809331387376
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": 0.8928185174595676,
+        "token_ratio": 0.8959779885468862,
+        "estimated_cost_ratio": 0.8052809331387376
+      },
+      "exploratory_artifact_and_economics_pass": true
+    },
+    "investigation-reuse": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 2.4703018206012217,
+          "token_ratio": 3.4147409268426157,
+          "estimated_cost_ratio": 1.6473185596264923
+        },
+        {
+          "repetition": 2,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.4591396327873492,
+          "token_ratio": 1.0707923646516144,
+          "estimated_cost_ratio": 0.8623922764707876
+        },
+        {
+          "repetition": 3,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 0.9423076923076925,
+          "token_ratio": 0.6448852001804034,
+          "estimated_cost_ratio": 0.7525543006947698
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": 1.4591396327873492,
+        "token_ratio": 1.0707923646516144,
+        "estimated_cost_ratio": 0.8623922764707876
+      },
+      "exploratory_artifact_and_economics_pass": false
+    },
+    "serial-escalation": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.1932247235534688,
+          "token_ratio": 0.9079251229385714,
+          "estimated_cost_ratio": 0.9280983351873879
+        },
+        {
+          "repetition": 2,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.1049357619125062,
+          "token_ratio": 1.0110604376775483,
+          "estimated_cost_ratio": 0.986155519473215
+        },
+        {
+          "repetition": 3,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 0.8764881785702285,
+          "token_ratio": 0.6909668392870887,
+          "estimated_cost_ratio": 0.8690580070960191
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": 1.1049357619125062,
+        "token_ratio": 0.9079251229385714,
+        "estimated_cost_ratio": 0.9280983351873879
+      },
+      "exploratory_artifact_and_economics_pass": true
+    },
+    "parallel-disjoint": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 0.910592551825353,
+          "token_ratio": 0.6977982109291714,
+          "estimated_cost_ratio": 0.7819025213456877
+        },
+        {
+          "repetition": 2,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.0451102532608059,
+          "token_ratio": 0.8467347910486027,
+          "estimated_cost_ratio": 0.9481308163641052
+        },
+        {
+          "repetition": 3,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 0.9178482381567484,
+          "token_ratio": 1.0892541459331684,
+          "estimated_cost_ratio": 0.9114533717967721
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": 0.9178482381567484,
+        "token_ratio": 0.8467347910486027,
+        "estimated_cost_ratio": 0.9114533717967721
+      },
+      "exploratory_artifact_and_economics_pass": true
+    },
+    "architecture-review": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.0515497481004066,
+          "token_ratio": 0.829207099205342,
+          "estimated_cost_ratio": 0.9903957807121233
+        },
+        {
+          "repetition": 2,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.3115463076295388,
+          "token_ratio": 1.2641272468565787,
+          "estimated_cost_ratio": 0.5325411031155571
+        },
+        {
+          "repetition": 3,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.0908272271080095,
+          "token_ratio": 0.945128045250078,
+          "estimated_cost_ratio": 0.6656130497090614
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": 1.0908272271080095,
+        "token_ratio": 0.945128045250078,
+        "estimated_cost_ratio": 0.6656130497090614
+      },
+      "exploratory_artifact_and_economics_pass": true
+    }
+  },
+  "billing_status": "API-price estimates only; provider billing and upstream identity unverified",
+  "observed_campaign_usd_upper_bound": 4.789826465000001,
+  "matrix_wall_elapsed_seconds": 3830.2526429999853
+}

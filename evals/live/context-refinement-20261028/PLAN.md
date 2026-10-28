@@ -1,6 +1,9 @@
-# Proposed refinement retest
+# Approved refinement retest
 
-Status: prepared without model calls; paid scope awaits selection.
+Status: the user approved the full five-scenario, three-pair retest on
+2026-10-28, with an additional observed safety stop of $7 under the common
+API rate card. Actual bridge charges remain unverified. No new model calls
+occurred before that selection.
 
 The first [30-run campaign](../context-regression-20261028/REPORT.md) did not
 pass. Its original scores, missing timer, strict byte failures, and costs are
@@ -32,6 +35,12 @@ fresh matched repetitions (30 arms). A targeted alternative uses only the
 multi-turn direct control with three matched repetitions (6 arms). User
 selection determines the paid scope and observed budget stop before execution.
 No original successful arm is reused as the new cohort's comparator.
+
+Selected scope: all five cases, three matched repetitions (30 arms), controller
+gpt-6.1-sol/low, per-arm observed stop $1, per-arm wall limit 240 seconds, and
+matrix wall allowance 5,400 seconds. Usage arrives after responses, so the
+observed stop is not a guaranteed provider billing cap. Failed, interrupted,
+and unknown runs remain in the report; no whole-run retry is automatic.
 
 Quality is declared before any model call in this cohort. Four fixtures keep
 their existing exact-tree acceptance. The architecture prompt requests a
