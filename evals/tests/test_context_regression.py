@@ -2,10 +2,13 @@
 
 import json
 import tempfile
+import shutil
 import unittest
 from pathlib import Path
 
-from evals.scripts.context_regression import summarize
+from evals.scripts.context_regression import REPO, business_tree, grade_artifacts, summarize
+from evals.scripts.artifact_reader import ArtifactReader
+from evals.scripts.fixture import load_fixture
 
 
 class ContextRegressionReportTests(unittest.TestCase):
@@ -44,6 +47,33 @@ class ContextRegressionReportTests(unittest.TestCase):
             case = summarize(root)["cases"]["direct-small-control"]
             self.assertEqual(1, case["median_paired_ratios"]["token_ratio"])
             self.assertTrue(case["exploratory_artifact_and_economics_pass"])
+
+    def test_explicit_new_json_oracle_accepts_terminal_whitespace_only(self):
+        source = REPO / "evals/fixtures/architecture-review"
+        definition = load_fixture(source / "fixture.json")
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace"
+            shutil.copytree(source / "reference", workspace)
+            decision = workspace / "decision.json"
+            decision.write_bytes(decision.read_bytes().rstrip(b"\r\n"))
+            reader = ArtifactReader(Path("unused"), Path(directory) / "home", workspace)
+            actual = business_tree(workspace)
+            self.assertFalse(grade_artifacts(definition, actual, workspace, reader))
+            self.assertTrue(grade_artifacts(definition, actual, workspace, reader, True))
+            value = json.loads(decision.read_text())
+            value["schema_version"] = True
+            decision.write_text(json.dumps(value, separators=(",", ":")))
+            self.assertFalse(grade_artifacts(definition, business_tree(workspace), workspace, reader, True))
+
+    def test_new_json_oracle_does_not_allow_unrelated_file_changes(self):
+        source = REPO / "evals/fixtures/architecture-review"
+        definition = load_fixture(source / "fixture.json")
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace"
+            shutil.copytree(source / "reference", workspace)
+            (workspace / "current.md").write_text("changed unrelated input")
+            reader = ArtifactReader(Path("unused"), Path(directory) / "home", workspace)
+            self.assertFalse(grade_artifacts(definition, business_tree(workspace), workspace, reader, True))
 
 
 if __name__ == "__main__":

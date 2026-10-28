@@ -63,7 +63,7 @@ Place the four completed capability receipts in one capability directory.
 Run the predeclared five-case, three-pair matrix:
 
 ```powershell
-python -m evals.scripts.context_regression --runtime-root <private-root> --output <new-results-directory> --live --mode matrix --capability-root <capability-directory>
+python -m evals.scripts.context_regression --runtime-root <private-root> --output <new-results-directory> --live --mode matrix --capability-root <capability-directory> --before-ref <before-plugin-commit> --after-ref <after-plugin-commit>
 ```
 
 All first-run and failed-probe usage contributes to the observed campaign

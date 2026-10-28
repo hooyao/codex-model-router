@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import platform
 import re
 import shutil
@@ -82,8 +83,28 @@ def verified_hooks(transport: PortableTransport, workspace: Path, arm: str) -> l
             for row in rows]
 
 
+def grade_artifacts(definition: dict, actual: dict, workspace: Path, reader: ArtifactReader,
+                    semantic_architecture: bool = False) -> bool:
+    expected = definition["reference"]["tree"]
+    if not semantic_architecture or definition["id"] != "architecture-review":
+        return actual == expected
+    name = "decision.json"
+    if set(actual["files"]) != set(expected["files"]) or actual["directories"] != expected["directories"] or \
+            any(actual["files"][path] != value for path, value in expected["files"].items() if path != name):
+        return False
+    try:
+        text = reader.read_bytes(workspace / name).decode("utf-8").rstrip("\r\n")
+        value = json.loads(text)
+        reference = json.loads((REPO / "evals/fixtures/architecture-review/reference/decision.json").read_text())
+        compact = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        canonical = lambda obj: json.dumps(obj, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        return type(value) is dict and text == compact and canonical(value) == canonical(reference)
+    except (ValueError, UnicodeError):
+        return False
+
+
 def run_arm(root: Path, output: Path, cli: Path, arm: str, case_id: str, repetition: int,
-            model: str, effort: str, mode: str = "scored") -> dict:
+            model: str, effort: str, mode: str = "scored", semantic_architecture: bool = False) -> dict:
     run_id = f"{mode}-{case_id}-r{repetition}-{arm}"
     workspace = root / arm / "runs" / run_id
     workspace.parent.mkdir(exist_ok=True)
@@ -209,7 +230,10 @@ def run_arm(root: Path, output: Path, cli: Path, arm: str, case_id: str, repetit
     reader = ArtifactReader(cli, root / arm / "home", workspace)
     try:
         actual = business_tree(workspace, reader)
-        record["artifact_pass"] = actual == expected
+        record["artifact_pass"] = grade_artifacts(definition, actual, workspace, reader, semantic_architecture) \
+            if mode == "scored" else actual == expected
+        record["grader"] = "compact-json-and-unchanged-files-v1" if semantic_architecture and case_id == "architecture-review" \
+            else "exact-tree-v2"
         record["grade_complete"] = True
         record["actual_tree_sha256"] = fixture.tree_digest(actual)
     except Exception as error:
@@ -234,12 +258,12 @@ def run_arm(root: Path, output: Path, cli: Path, arm: str, case_id: str, repetit
     return record
 
 
-def summarize(output: Path) -> dict:
+def summarize(output: Path, case_ids=CASES, repetitions: int = 3) -> dict:
     records = [json.loads(path.read_text(encoding="utf-8")) for path in output.glob("scored-*.json")]
     cases = {}
-    for case in CASES:
+    for case in case_ids:
         pairs = []
-        for repetition in range(1, 4):
+        for repetition in range(1, repetitions + 1):
             rows = {r["arm"]: r for r in records if r["case_id"] == case and r["repetition"] == repetition}
             if set(rows) != {"before", "after"}:
                 pairs.append({"repetition": repetition, "status": "incomplete"})
@@ -261,10 +285,10 @@ def summarize(output: Path) -> dict:
             pairs.append(pair)
         usable = [p for p in pairs if p["status"] == "complete"]
         medians = {key: statistics.median(p[key] for p in usable)
-                   if len(usable) == 3 and all(p.get(key) is not None for p in usable) else None
+                   if len(usable) == repetitions and all(p.get(key) is not None for p in usable) else None
                    for key in ("wall_ratio", "token_ratio", "estimated_cost_ratio")}
         cases[case] = {"pairs": pairs, "median_paired_ratios": medians,
-                       "exploratory_artifact_and_economics_pass": len(usable) == 3 and
+                       "exploratory_artifact_and_economics_pass": repetitions >= 3 and len(usable) == repetitions and
                        all(p["quality_parity"] for p in usable) and
                        medians["wall_ratio"] <= 1.15 and medians["token_ratio"] <= 1.05 and
                        medians["estimated_cost_ratio"] is not None and medians["estimated_cost_ratio"] <= 1.05}
@@ -399,9 +423,23 @@ def main():
     parser.add_argument("--capability-root", type=Path)
     parser.add_argument("--resume", action="store_true", help="Continue remaining scheduled runs; never replace retained attempts.")
     parser.add_argument("--resume-reason")
+    parser.add_argument("--before-ref")
+    parser.add_argument("--after-ref")
+    parser.add_argument("--cases", nargs="+", choices=CASES, default=list(CASES))
+    parser.add_argument("--repetitions", type=int, default=3)
+    parser.add_argument("--campaign-stop-usd", type=float, default=10.0)
+    parser.add_argument("--semantic-architecture", action="store_true", help="Use the predeclared compact JSON object oracle for a fresh cohort.")
     args = parser.parse_args()
     if not args.live:
         parser.error("--live explicitly enables model usage")
+    if args.mode == "matrix" and (not args.before_ref or not args.after_ref):
+        parser.error("matrix requires explicit --before-ref and --after-ref subject identities")
+    if not 1 <= args.repetitions <= 9:
+        parser.error("repetitions must be 1 to 9")
+    if args.model not in RATES:
+        parser.error("requested controller has no verified dated rate card")
+    if not math.isfinite(args.campaign_stop_usd) or not 0 < args.campaign_stop_usd <= 30:
+        parser.error("campaign observed stop must be finite, positive, and at most 30 API-estimated USD")
     if args.resume and (args.mode != "matrix" or not args.resume_reason):
         parser.error("--resume requires matrix mode and an explicit --resume-reason")
     args.output.mkdir(parents=True, exist_ok=args.resume)
@@ -410,15 +448,24 @@ def main():
     tag = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     if args.resume:
         original_runtime = json.loads((args.output / "runtime.json").read_text())
+        original_campaign = json.loads((args.output / "campaign.json").read_text())
         if original_runtime["cli_sha256"] != metadata["cli_sha256"]:
             raise SystemExit("runtime changed; start a fresh matched campaign")
+        if any(original_campaign.get(key) != value for key, value in
+               (("before_ref", args.before_ref), ("after_ref", args.after_ref),
+                ("model", args.model), ("effort", args.effort))):
+            raise SystemExit("resume cannot change subjects or controller settings")
+        if original_campaign.get("semantic_architecture", False) != args.semantic_architecture:
+            raise SystemExit("resume cannot change the acceptance oracle")
         write_new(args.output / f"resume-{tag}.json", {"reason": args.resume_reason, "runtime": metadata,
+                   "cases": args.cases, "repetitions": args.repetitions,
                    "runner_sha256": sha(Path(__file__)), "capability_adapter_sha256": sha(Path(__file__).with_name("codex_runtime.py"))})
     else:
         write_new(args.output / "runtime.json", metadata)
         write_new(args.output / "campaign.json", {
-        "before_ref": "e75ef8785d960b12e6d1ce27ad4c6b184b8a0fc0",
-        "after_ref": "a93ba3af99b9ad58c97f82c4938129b634d5c446",
+        "before_ref": args.before_ref, "after_ref": args.after_ref,
+        "cases": args.cases, "repetitions": args.repetitions,
+        "semantic_architecture": args.semantic_architecture, "campaign_stop_usd": args.campaign_stop_usd,
         "model": args.model, "effort": args.effort, "platform": platform.system(),
         "fixture_sha256": {case: sha(REPO / "evals/fixtures" / case / "fixture.json") for case in CASES},
         "runner_sha256": sha(Path(__file__)), "capability_adapter_sha256": sha(Path(__file__).with_name("codex_runtime.py")),
@@ -454,8 +501,8 @@ def main():
             prior_elapsed = (datetime.now(timezone.utc) - min(starts)).total_seconds()
     total = prior["estimated_usd_upper_bound"]
     try:
-        for repetition in range(1, 4):
-            for case in CASES:
+        for repetition in range(1, args.repetitions + 1):
+            for case in args.cases:
                 for arm in (("before", "after") if repetition % 2 else ("after", "before")):
                     retained = args.output / f"scored-{case}-r{repetition}-{arm}.json"
                     if args.resume and retained.exists():
@@ -464,12 +511,12 @@ def main():
                                 (case, repetition, arm, args.model, args.effort):
                             raise SystemExit("retained attempt does not match the requested campaign")
                         continue
-                    if prior_elapsed + time.monotonic() - start > 5400 or total >= 10:
+                    if prior_elapsed + time.monotonic() - start > 5400 or total >= args.campaign_stop_usd:
                         raise SystemExit("campaign observed budget or wall stop")
                     if hashlib.sha256(cli.read_bytes()).hexdigest() != metadata["cli_sha256"]:
                         raise SystemExit("runtime changed during matched campaign; remaining pairs are not comparable")
                     record = run_arm(args.runtime_root, args.output, cli, arm, case, repetition,
-                                     args.model, args.effort)
+                                     args.model, args.effort, semantic_architecture=args.semantic_architecture)
                     usage = record.get("usage")
                     if usage is None:
                         raise SystemExit("missing usage; campaign whole cost is unknown")
@@ -477,7 +524,7 @@ def main():
                     if record.get("usage_issues") or not record.get("complete") or record.get("grade_complete") is False:
                         raise SystemExit("incomplete scored run; preserve evidence and diagnose before continuing")
     finally:
-        report = summarize(args.output)
+        report = summarize(args.output, args.cases, args.repetitions)
         report["observed_campaign_usd_upper_bound"] = total
         report["matrix_wall_elapsed_seconds"] = prior_elapsed + time.monotonic() - start
         write_new(args.output / (f"summary-{tag}.json" if args.resume else "summary.json"), report)
