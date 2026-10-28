@@ -1,5 +1,7 @@
 # Fixture and campaign hashes are byte-sensitive across platforms.
 evals/** text eol=lf
+# Preserve binary visual fixtures used by hash-bound model evaluations.
+evals/terra_matrix_smoke/*.png -text -eol
 # Frozen benchmark inputs are hash-bound, including the binary OCI layer.
 # Preserve their original bytes even when core.autocrlf is enabled.
 evals/paired_selective/** -text -eol whitespace=cr-at-eol

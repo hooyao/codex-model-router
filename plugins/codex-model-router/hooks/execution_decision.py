@@ -308,7 +308,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Validate and resolve one Codex Model Router decision-request-v1 JSON object."
     )
-    parser.add_argument("--config", type=Path, required=True, help="Validated schema-v3 routing.json path.")
+    parser.add_argument("--config", type=Path, required=True, help="Validated schema-v3 or v4 routing.json path.")
     args = parser.parse_args(argv)
     try:
         from routing_config import RoutingConfigError, load_config

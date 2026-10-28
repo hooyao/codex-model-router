@@ -144,9 +144,16 @@ meta-tasks semantically, including follow-ups without explicit router keywords.
 | Task profile | Preferred role | Reasoning effort |
 | --- | --- | --- |
 | Clear, repeatable work and fixed-format summaries | GPT-6 Luna | Low, then Medium if needed |
+| Bounded visual comparison, precise application-screen work, natural prose drafting or revision (schema v4) | GPT-6.1 Terra | Medium; increase only when needed |
 | Repository discovery, everyday coding, technical documentation, test triage, routine code review | GPT-6.1 Sol | Medium; High for notable edge cases |
 | Complex implementation, integration, or open-ended analysis | GPT-6.1 Sol | High; Xhigh when High is insufficient |
 | Architecture, security, critical decisions, independent meta-task review | GPT-6 Astra | High; Xhigh for demanding cases |
+
+Terra's visual and computer-use preference covers bounded, low-risk tasks;
+ambiguous or consequential visual judgments and demanding multi-application
+workflows still warrant Astra. Fixed-format summaries remain Luna work;
+technical writing requiring repository or coding judgment remains Sol work.
+Check that the worker runtime can access the required image or UI tools.
 
 Use the lowest capable available model and effort that can meet the task's
 acceptance criteria, subject to the meta-task review rule. Escalate when
@@ -163,18 +170,23 @@ effective policy; it omits the full JSON to stay within the model-visible output
 budget. Execution ownership is decided before model selection. Resolve a
 model preference against the current runtime capability catalog only for a
 DELEGATE route. The stable delegated fallback when no example matches is
-capability-based: Luna for clear repeatable work,
-Sol for everyday engineering and complex or open-ended work, and Astra for work
+capability-based: Luna for clear repeatable work, Terra for bounded visual,
+computer-use, or natural-writing work, Sol for everyday engineering and complex
+or open-ended work, and Astra for work
 requiring the strongest sustained judgment. Sol prefers `gpt-6.1-sol` when the
 runtime exposes that model and the requested effort. Use `gpt-6-sol` as a
 compatibility fallback only when the preferred model/effort is unavailable and
-the runtime confirms the fallback model/effort. Resolve Luna to `gpt-6-luna`
-and Astra to `gpt-6-astra` only when the runtime exposes the model and effort.
+the runtime confirms the fallback model/effort. Resolve Terra to `gpt-6.1-terra`,
+Luna to `gpt-6-luna`, and Astra to `gpt-6-astra` only when the runtime exposes
+the model and effort. If Terra is unavailable, choose another available model
+with the necessary task and modality capabilities, or report a blocker.
 An existing schema-v3 workspace example may still name
 `Terra`; the loader normalizes that legacy preference to Sol in memory for
 discovery, implementation, documentation, triage, and review without rewriting
-the workspace file. Preserve the workspace's execution mode and any user-edited
-rationale.
+the workspace file. Schema-v4 examples use Terra as a distinct role. Apply the
+Terra row and fallback only to schema v4; schema v3 retains the previous
+Luna/Sol/Astra fallback. Preserve the workspace's execution mode and any
+user-edited rationale.
 Choose the lowest sufficient supported effort: medium for planning, high for
 difficult work, xhigh for demanding cases where added reasoning is justified,
 and max only for extreme cases when xhigh is inadequate. Max is never a default.
@@ -198,6 +210,10 @@ time went; neither synthetic spans nor model-call counts are speed proxies.
 Require repeated interleaved matched runs before claiming a stable speed
 difference. No routing change earns a savings claim from policy alone.
 
+The Terra roles follow the official [GPT-6.1 Terra model page](https://developers.openai.com/api/docs/models/gpt-6.1-terra)
+and [GPT-6 guide](https://developers.openai.com/api/docs/guides/latest-model),
+consulted on 2026-10-28. These are workload hypotheses, not comparative
+measurements; see the [Terra evaluation note](../../../docs/terra-support.md).
 The Sol preference follows official
 [Codex model guidance](https://developers.openai.com/codex/models), consulted
 on 2026-10-06. The existing Astra/Luna workload examples follow the official

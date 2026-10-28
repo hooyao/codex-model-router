@@ -14,14 +14,14 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
+SUPPORTED_SCHEMA_VERSIONS = {3, SCHEMA_VERSION}
 CONFIG_DIRECTORY = ".codex-model-router"
 CONFIG_FILENAME = "routing.json"
 MAX_CONFIG_FILE_BYTES = 32_768
 MAX_SERIALIZED_CONFIG_BYTES = 16_384
 MAX_EXAMPLES = 64
-# Terra remains accepted for existing schema-v3 workspace files; new defaults
-# use only the current GPT-6 Astra, Sol, and Luna roles.
+# In v3 Terra is a legacy alias for Sol; v4 uses it as a distinct role.
 MODEL_CLASSES = {"Astra", "Sol", "Terra", "Luna"}
 REASONING_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 EXAMPLE_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -347,8 +347,8 @@ def configured_execution_mode(
 def validate_config(config: Any, source: str = "routing config") -> dict[str, Any]:
     root = _require_object(config, source)
     version = root.get("schema_version")
-    if type(version) is not int or version != SCHEMA_VERSION:
-        raise RoutingConfigError(f"{source}.schema_version must be integer {SCHEMA_VERSION}")
+    if type(version) is not int or version not in SUPPORTED_SCHEMA_VERSIONS:
+        raise RoutingConfigError(f"{source}.schema_version must be integer 3 or 4")
     _require_exact_fields(root, TOP_LEVEL_FIELDS, source)
     _require_string(root["selection_principle"], f"{source}.selection_principle", 1_000)
     _require_string(root["runtime_resolution"], f"{source}.runtime_resolution", 1_000)
@@ -463,11 +463,11 @@ def load_config(path: Path) -> dict[str, Any]:
             f"routing config {path} is malformed JSON at line {error.lineno}, column {error.colno}: {error.msg}"
         ) from error
     config = validate_config(parsed, str(path))
-    # Existing schema-v3 files are preserved on disk, while their retired
-    # Terra preference is resolved to the current Sol role in hook context.
-    for example in config["examples"]:
-        if example["preferred_model_class"] == "Terra":
-            example["preferred_model_class"] = "Sol"
+    # Preserve the v3 meaning of Terra without changing the workspace file.
+    if config["schema_version"] == 3:
+        for example in config["examples"]:
+            if example["preferred_model_class"] == "Terra":
+                example["preferred_model_class"] = "Sol"
     return config
 
 

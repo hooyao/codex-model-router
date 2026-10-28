@@ -59,7 +59,7 @@ class RouterPluginTests(unittest.TestCase):
         workspace = config_module.load_config(workspace_path)
         for label, config in (("default", default), ("workspace", workspace)):
             with self.subTest(config=label):
-                self.assertEqual(3, config["schema_version"])
+                self.assertEqual(4, config["schema_version"])
                 self.assertEqual("evaluate", config["execution_policy"]["default_mode"])
                 self.assertLessEqual(
                     len(config_module.serialized_config(config).encode("utf-8")),
@@ -70,14 +70,14 @@ class RouterPluginTests(unittest.TestCase):
         template = json.loads(
             (PLUGIN_ROOT / "defaults" / "default-routing.json").read_text(encoding="utf-8")
         )
-        for old_version in (1, 2):
+        for old_version in (1, 2, 5):
             with self.subTest(version=old_version):
                 obsolete = json.loads(json.dumps(template))
                 obsolete["schema_version"] = old_version
-                with self.assertRaisesRegex(config_module.RoutingConfigError, "must be integer 3"):
+                with self.assertRaisesRegex(config_module.RoutingConfigError, "must be integer 3 or 4"):
                     config_module.validate_config(obsolete)
 
-    def test_v3_execution_policy_and_route_modes_are_strictly_validated(self) -> None:
+    def test_v3_and_v4_execution_policy_and_route_modes_are_strictly_validated(self) -> None:
         template = json.loads(
             (PLUGIN_ROOT / "defaults" / "default-routing.json").read_text(encoding="utf-8")
         )
@@ -88,12 +88,14 @@ class RouterPluginTests(unittest.TestCase):
             ("execution_policy.limits.max_concurrency", lambda value: value["execution_policy"]["limits"].__setitem__("max_concurrency", 0)),
             ("examples[0].execution_mode", lambda value: value["examples"][0].__setitem__("execution_mode", "controller")),
         )
-        for expected, mutate in cases:
-            with self.subTest(field=expected):
-                config = json.loads(json.dumps(template))
-                mutate(config)
-                with self.assertRaisesRegex(config_module.RoutingConfigError, expected.replace("[", r"\[").replace("]", r"\]")):
-                    config_module.validate_config(config)
+        for version in (3, 4):
+            for expected, mutate in cases:
+                with self.subTest(version=version, field=expected):
+                    config = json.loads(json.dumps(template))
+                    config["schema_version"] = version
+                    mutate(config)
+                    with self.assertRaisesRegex(config_module.RoutingConfigError, expected.replace("[", r"\[").replace("]", r"\]")):
+                        config_module.validate_config(config)
 
     def test_default_config_includes_required_routing_examples(self) -> None:
         config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
@@ -101,6 +103,9 @@ class RouterPluginTests(unittest.TestCase):
         expected = {
             "astra-3d-modeling": ("Astra", "high"),
             "astra-image-analysis": ("Astra", "high"),
+            "terra-visual-analysis": ("Terra", "medium"),
+            "terra-computer-use": ("Terra", "medium"),
+            "terra-natural-writing": ("Terra", "medium"),
             "sol-code-reading-analysis": ("Sol", "high"),
             "luna-detailed-manual-procedure": ("Luna", "medium"),
             "astra-architecture": ("Astra", "xhigh"),
@@ -125,13 +130,14 @@ class RouterPluginTests(unittest.TestCase):
         self.assertEqual("direct", examples["luna-local-bounded-change"]["execution_mode"])
         self.assertEqual("delegate", examples["astra-complex-tools"]["execution_mode"])
         self.assertEqual("evaluate", examples["sol-documentation"]["execution_mode"])
-        self.assertEqual({"Astra", "Sol", "Luna"}, {example["preferred_model_class"] for example in examples.values()})
+        self.assertEqual({"Astra", "Sol", "Terra", "Luna"}, {example["preferred_model_class"] for example in examples.values()})
         self.assertIn("max", config["effort_guidance"])
         self.assertTrue(any(example["reasoning_effort"] == "xhigh" for example in examples.values()))
         self.assertTrue(all(example["reasoning_effort"] != "max" for example in examples.values()))
 
     def test_existing_v3_terra_config_and_optional_max_guidance_remain_valid(self) -> None:
         template = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        template["schema_version"] = 3
         template["effort_guidance"].pop("max")
         template["examples"][0]["preferred_model_class"] = "Terra"
         self.assertEqual(template, config_module.validate_config(template))
@@ -159,12 +165,24 @@ class RouterPluginTests(unittest.TestCase):
 
     def test_existing_terra_workspace_is_loaded_as_sol_without_rewriting_file(self) -> None:
         template = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        template["schema_version"] = 3
         template["examples"][0]["preferred_model_class"] = "Terra"
         config_path = self.policy_workspace / "legacy-routing.json"
         config_path.write_text(json.dumps(template), encoding="utf-8")
         original = config_path.read_bytes()
         loaded = config_module.load_config(config_path)
         self.assertEqual("Sol", loaded["examples"][0]["preferred_model_class"])
+        self.assertEqual(original, config_path.read_bytes())
+
+    def test_v4_terra_workspace_is_preserved_without_rewriting_file(self) -> None:
+        template = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        config_path = self.policy_workspace / "terra-routing.json"
+        config_path.write_text(json.dumps(template), encoding="utf-8")
+        original = config_path.read_bytes()
+        loaded = config_module.load_config(config_path)
+        self.assertEqual("Terra", next(item for item in loaded["examples"]
+                                      if item["id"] == "terra-visual-analysis")["preferred_model_class"])
+        self.assertIn("gpt-6.1-terra", loaded["runtime_resolution"])
         self.assertEqual(original, config_path.read_bytes())
 
     def test_config_rejects_none_and_ultra_efforts(self) -> None:
@@ -277,6 +295,15 @@ class RouterPluginTests(unittest.TestCase):
         self.assertEqual("DELEGATE", result["ownership"])
         self.assertEqual("INDEPENDENT_REVIEW", result["verification_requirement"])
         self.assertEqual("ISOLATED_SERIAL", result["delegate_topology"])
+
+    def test_terra_example_does_not_bypass_high_risk_review(self) -> None:
+        config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        result = decision.resolve_routing_decision(
+            config, self.decision_request(matched_example_ids=["terra-visual-analysis"],
+                                          signals={"high_risk": True}),
+        )
+        self.assertEqual("DELEGATE", result["ownership"])
+        self.assertEqual("INDEPENDENT_REVIEW", result["verification_requirement"])
 
     def test_direct_bound_escalation_is_recorded_and_reclassified(self) -> None:
         config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
@@ -521,7 +548,7 @@ class RouterPluginTests(unittest.TestCase):
             config = json.loads((PLUGIN_ROOT / "defaults" / "default-routing.json").read_text(encoding="utf-8"))
             config["selection_principle"] = "s" * 1_000
             config["runtime_resolution"] = "r" * 1_000
-            for example in config["examples"][:12]:
+            for example in config["examples"][:11]:
                 example["rationale"] = "r" * 500
             config_module.validate_config(config)
             self.assertGreater(len(config_module.serialized_config(config).encode("utf-8")), 12_000)
@@ -1048,7 +1075,7 @@ class RouterPluginTests(unittest.TestCase):
         configured_classes = {
             example["preferred_model_class"] for example in config_module.load_config(workspace_config)["examples"]
         }
-        self.assertTrue({"Luna", "Sol", "Astra"}.issubset(configured_classes))
+        self.assertTrue({"Luna", "Sol", "Terra", "Astra"}.issubset(configured_classes))
         self.assertNotIn(str(PLUGIN_ROOT.parents[1] / ".codex-model-router" / "routing.json"), context)
 
     def test_controller_context_declares_selective_stage_boundary(self) -> None:
@@ -1494,6 +1521,30 @@ class RouterPluginTests(unittest.TestCase):
         value = self.dispatch_contract(model="gpt-6.1-sol")
         value["selection"]["reasoning_effort"] = "ultra"
         with self.assertRaisesRegex(dispatch.DispatchContractError, "unsupported by the router"):
+            dispatch.validate_dispatch_contract(value)
+
+    def test_terra_dispatch_requires_runtime_catalog_and_preserves_selector(self) -> None:
+        value = self.dispatch_contract(model="gpt-6.1-terra", efforts=["medium", "high"])
+        canonical = naming.build_subagent_name("edit", "gpt-6.1-terra", "medium")
+        native = naming.native_task_name(canonical)
+        value["canonical_name"] = canonical
+        value["packet"] = {"worker_name": canonical, "task_id": canonical, "native_task_name": native}
+        value["native_dispatch"]["native_name"] = native
+        value["selection"]["reasoning_effort"] = "medium"
+        checked = dispatch.validate_dispatch_contract(value)
+        self.assertEqual("gpt-6.1-terra", checked["selection"]["model"])
+        self.assertEqual("medium", checked["selection"]["reasoning_effort"])
+        value = self.dispatch_contract(model="gpt-6.1-terra", efforts=["medium"])
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "high is unsupported for model gpt-6.1-terra"):
+            dispatch.validate_dispatch_contract(value)
+        value = self.dispatch_contract(model="gpt-6.1-terra")
+        catalog_item = next(item for item in value["capability_evidence"] if item["kind"] == "model_catalog")
+        catalog_path = Path(catalog_item["source"])
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        catalog["models"][0]["id"] = "gpt-6-sol"
+        catalog_path.write_text(json.dumps(catalog), encoding="utf-8")
+        catalog_item["sha256"] = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "selected model is absent from model catalog"):
             dispatch.validate_dispatch_contract(value)
 
     def test_dispatch_contract_requires_observed_selectors_and_resolved_values(self) -> None:

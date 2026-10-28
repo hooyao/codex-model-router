@@ -26,9 +26,10 @@ are explicitly independent, dependency-free, and write-disjoint.
 - Gives every dispatch a deterministic user-visible
   `<purpose>-<model>-<effort>` name, with a packet/result fallback when native
   dispatch cannot name the worker card.
-- Routes clear and repeatable work toward GPT-6 Luna, everyday coding and
-  read-heavy work toward GPT-6.1 Sol, and demanding hard-kernel work toward
-  GPT-6 Astra. Existing Terra workspace preferences load as Sol.
+- Routes repeatable work toward GPT-6 Luna, bounded visual, screen, and natural
+  writing tasks toward GPT-6.1 Terra, coding toward GPT-6.1 Sol, and demanding
+  hard-kernel work toward GPT-6 Astra. Legacy schema-v3 Terra preferences load
+  as Sol; schema v4 treats Terra as a distinct role.
 - Records each stage's owner, dependencies, write scope, context budget,
   acceptance criteria, and self-check. A lightweight primary may own a
   qualifying easy stage; a cheap worker is preferable when local tool context

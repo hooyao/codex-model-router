@@ -154,9 +154,10 @@ and interpreter failures. On POSIX it runs every event through the resolved
 launches, so `hooks.json` and the package validator also require the literal
 `python` command on Windows.
 
-Schema version 3 is a JSON object with exactly these fields:
+Schema version 4 is a JSON object with exactly these fields (version 3 remains
+supported with the legacy Terra behavior described below):
 
-- `schema_version`: integer `3`.
+- `schema_version`: integer `4` for new configurations, or `3` for legacy files.
 - `selection_principle` and `runtime_resolution`: non-empty strings.
 - `execution_policy`: `default_mode` (`direct`, `delegate`, or `evaluate`),
   non-empty `direct_requires_all` and `delegate_if_any` arrays of supported
@@ -164,19 +165,19 @@ Schema version 3 is a JSON object with exactly these fields:
   topology rules, bounded depth/concurrency/retry limits, and verification
   minima. Required signal arrays are exact sets.
 - `effort_guidance`: non-empty string guidance for `low`, `medium`, `high`, and
-  `xhigh`, with optional `max` guidance for existing schema-v3 files. The
-  bundled template includes `max` and reserves it for extreme cases.
+  `xhigh`, with optional `max` guidance. The bundled template includes `max`
+  and reserves it for extreme cases.
 - `official_sources`: a non-empty array of HTTPS URLs.
 - `examples`: one to 64 objects with a unique lower-case hyphenated `id`, a
   non-empty `task_signals` string array, `execution_mode` set to `direct`,
   `delegate`, or `evaluate`, `preferred_model_class` set to `Astra`, `Sol`,
-  or `Luna`, a `reasoning_effort` of `low`, `medium`, `high`, `xhigh`, or `max`,
+  `Terra`, or `Luna`, a `reasoning_effort` of `low`, `medium`, `high`, `xhigh`, or `max`,
   and a non-empty `rationale`.
   Legacy schema-v3 workspace files may still use `Terra`; the loader maps that
   advisory role to Sol in memory.
 
 Obsolete schema v1 and v2 files are rejected rather than silently translated.
-Regenerate or deliberately migrate them to schema v3. `direct` is an eligibility
+Regenerate or deliberately migrate them to schema v4. `direct` is an eligibility
 hint subject to every direct criterion, `delegate` is mandatory, and `evaluate`
 applies the structured semantic gate. These fields are machine-readable policy
 inputs, not a claim that static config can completely classify arbitrary
@@ -190,9 +191,9 @@ subject to every direct criterion.
 Model classes are preferences, not assumed runtime identifiers. The controller
 resolves them against the current runtime catalog only after choosing DELEGATE.
 The defaults prefer GPT-6 Astra for the hardest work, GPT-6.1 Sol for coding, technical
-discovery, documentation, triage, and review, and Luna for focused repeatable
-work. They include
-architecture, security, complex tool workflows, 3D modeling, image analysis,
+discovery, documentation, triage, and review, GPT-6.1 Terra for bounded visual,
+application-screen, and natural-writing work, and Luna for focused repeatable
+work. They include architecture, security, complex tool workflows, 3D modeling, image analysis,
 code analysis, debugging, open-ended and everyday implementation, discovery,
 documentation, test triage, detailed manual procedures, extraction,
 classification, normalization, and structured summarization. They follow the
@@ -201,8 +202,10 @@ which recommends `gpt-6.1-sol` for complex coding and agentic workflows,
 consulted on 2026-10-06. Sol resolves to `gpt-6.1-sol` only when the current
 runtime exposes that model and requested effort. `gpt-6-sol` remains a
 compatibility fallback when the preferred model/effort is unavailable and the
-runtime confirms the fallback model/effort. Astra and Luna retain their roles
-and runtime availability checks. The router permits `low`, `medium`, `high`,
+runtime confirms the fallback model/effort. Terra resolves to `gpt-6.1-terra`
+only when the runtime exposes that model and requested effort. If unavailable,
+choose another capable available model or report a blocker. Astra and Luna
+retain their roles and runtime availability checks. The router permits `low`, `medium`, `high`,
 `xhigh`, and `max` only when supported; it does not select `ultra`.
 
 Verify exact model prices against the current official
@@ -212,11 +215,12 @@ do not establish GPT-6.1 Sol prices, Codex subscription charges, or savings.
 
 An existing workspace `routing.json` is not overwritten by an updated plugin.
 Its schema-v3 `Terra` examples remain valid for compatibility; the loader
-normalizes their preferred class to Sol in memory without rewriting the
-workspace file. To adopt the new example IDs and rationales, deliberately edit
-that workspace file after reviewing local customizations. See the
-[Sol upgrade note](docs/sol-upgrade.md) for the model preference update and
-historical evaluation boundaries.
+normalizes their preferred class to Sol in memory without rewriting the file.
+To adopt Terra, back up and review the file, replace legacy Terra preferences
+with Sol to preserve their old behavior, change the version to 4, then add the
+new Terra examples and resolution guidance deliberately. See the
+[Terra support note](docs/terra-support.md) for sources, migration and
+evaluation limits.
 
 The controller model is selected by Codex, not by this plugin. Codex's
 [model selection guide](https://developers.openai.com/codex/models) documents
@@ -284,7 +288,7 @@ python -m unittest discover -s tests -v
 
 The validation command checks package structure and synthetic lifecycle outputs
 without a network connection or a live Codex session. Regression tests check
-schema v3 and obsolete-version rejection, ownership/topology precedence,
+schemas v3/v4 and obsolete-version rejection, ownership/topology precedence,
 escalation records, verification, deterministic worker naming, worker
 responsibilities, and context size. These are
 instruction-contract checks, not evidence of live-model compliance or savings.
