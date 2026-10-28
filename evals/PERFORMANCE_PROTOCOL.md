@@ -16,6 +16,16 @@ live Astra baseline and cannot answer the decision question above.
 
 ## Paired arms
 
+New campaigns select the CLI from PATH or an explicit caller path and probe
+required runtime capabilities. Do not admit or reject a runtime using a
+hard-coded Codex version whitelist or a historical installation path. Record
+the observed version, executable hash, protocol schema, model catalog, and
+hook/dispatch support as evidence. Hold the observed runtime constant within
+each matched pair; a runtime change makes that pair incomparable. A later
+campaign may use a different capable runtime. Historical frozen receipts keep
+their original identity checks for replay and must not be relabeled.
+`scripts/codex_runtime.py` implements capability-based admission for new runs.
+
 For every benchmark task and repetition, run the applicable arms from byte-identical
 copies of the same initial fixture, with the exact same user request, acceptance
 criteria, Codex build, tool permissions, network policy, and time limit:

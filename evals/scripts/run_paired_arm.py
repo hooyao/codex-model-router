@@ -43,7 +43,7 @@ USAGE_KEYS = ("input_tokens", "cached_input_tokens", "cache_write_input_tokens",
               "output_tokens", "reasoning_output_tokens")
 
 
-def response_cost_interval(usage: dict, model: str) -> tuple[float, float]:
+def response_cost_interval(usage: dict, model: str, rate_card: dict | None = None) -> tuple[float, float]:
     if any(key not in usage for key in USAGE_KEYS if key != "cache_write_input_tokens"):
         raise ValueError(f"missing token class for {model}: {usage}")
     input_tokens = int(usage["input_tokens"])
@@ -56,7 +56,7 @@ def response_cost_interval(usage: dict, model: str) -> tuple[float, float]:
     if min(uncached, cached, output, reasoning) < 0 or reasoning > output or (
             cache_write is not None and not 0 <= cache_write <= uncached):
         raise ValueError(f"invalid usage classes for {model}: {usage}")
-    rates = RATES[model]
+    rates = (RATES if rate_card is None else rate_card)[model]
     if input_tokens > LONG_CONTEXT_THRESHOLD:
         rates = tuple(rate * (1.5 if index == 3 else 2) for index, rate in enumerate(rates))
     def priced(writes: int) -> float:
@@ -94,7 +94,8 @@ def terminal_fields(payload: dict) -> dict:
 
 class SessionMeter:
     def __init__(self, root: Path, parent_id: str, parent_model: str,
-                 parent_effort: str | None = None, require_native_activity: bool = False):
+                 parent_effort: str | None = None, require_native_activity: bool = False,
+                 rate_card: dict | None = None):
         self.root = root
         self.parent_id = parent_id
         self.known_ids = {parent_id}
@@ -102,6 +103,7 @@ class SessionMeter:
         self.parent_model = parent_model
         self.parent_effort = parent_effort
         self.require_native_activity = require_native_activity
+        self.rate_card = dict(RATES if rate_card is None else rate_card)
         self.cost = 0.0
         self.cost_upper = 0.0
         self.calls = 0
@@ -318,11 +320,11 @@ class SessionMeter:
                             state["last_total_usage"] = total
                             state["last_response_usage"] = usage
                         model = state["model"]
-                        if model not in RATES:
+                        if model not in self.rate_card:
                             self.unknown_models.add(str(model))
                             continue
                         try:
-                            cost, cost_upper = response_cost_interval(usage, model)
+                            cost, cost_upper = response_cost_interval(usage, model, self.rate_card)
                         except (ValueError, TypeError) as error:
                             self.unknown_usage.append(f"{state['id']}: {error}")
                             continue
