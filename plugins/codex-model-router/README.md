@@ -87,12 +87,14 @@ selection require an independent reviewer separate from the author/implementer,
 using the highest suitable available model. An implementation request must also
 have an implementation worker; review advice alone does not complete it.
 
-`SessionStart` and every `UserPromptSubmit` repeat the full controller contract,
-explicitly scoped to the primary agent, including the meta-task rule even when
-a follow-up lacks router keywords. Inherited controller context does not apply
-to dispatched workers.
+`SessionStart` emits a short skill/config entrypoint on startup and recovery,
+including `source: compact`. `UserPromptSubmit` emits no context when the same
+session/config path already received the current revision. Configuration or
+instruction changes, missing session identity, or an unavailable cache cause a
+fresh entrypoint. The skill still requires an ownership decision for every
+request and applies meta-task review to semantic follow-ups.
 
-`SubagentStart` emits an explicit worker-role override: the worker is authorized
+`SubagentStart` emits a short worker-role override without controller config: the worker is authorized
 and required to perform assigned analysis, repository inspection, edits, commands,
 tests, and task validation within its bounded packet. Verification workers must
 inspect the relevant files and run their assigned checks. Workers do not apply
@@ -105,10 +107,14 @@ delegation.
 
 ## Workspace Routing Configuration
 
-Every supported hook loads and validates an editable workspace file at
-`.codex-model-router/routing.json` on every invocation. The emitted context
-contains a deterministic `ROUTING_CONFIG_BEGIN`/`ROUTING_CONFIG_END` block, so
-edits take effect on the next hook without rebuilding the plugin.
+Controller hooks load and validate the editable workspace file at
+`.codex-model-router/routing.json`. A nonempty controller emission contains a
+`ROUTING_CONFIG_BEGIN`/`ROUTING_CONFIG_END` block with file pointers and a config
+digest, not the config contents, signal schema, or effective policy. Edits take
+effect on the next event. The temporary per-session cache contains only hashed
+identity and a revision signature; it never caches a routing decision.
+See [context loading](docs/context-loading.md) for official guidance, recovery,
+privacy, and measurement boundaries.
 
 Discovery starts at the event `cwd`. An existing routing file at that directory
 or any parent wins. If none exists, the closest parent containing a `.git` file
@@ -233,9 +239,10 @@ Terra on controller planning, routing, and result synthesis; a representative
 matched evaluation is needed before recommending it as this plugin's controller
 default.
 
-The raw file limit is 32,768 bytes. Its validated deterministic serialization
-must be no more than 16,384 bytes, smaller than the 24,576-byte hook context
-limit to reserve space for the controller or worker contract. Malformed,
+The raw file limit is 32,768 bytes and its deterministic serialization must be
+no more than 16,384 bytes. The complete hook JSON has a separate 4,096-byte cap;
+handlers set a 1,500 approximate-token `additionalContextLimit`. These are
+different units, and full configuration is never injected. Malformed,
 schema-invalid, oversized, unreadable, or uncreatable config fails the hook or
 init with a non-zero exit and an actionable diagnostic. There is no fallback to
 bundled defaults once a workspace config exists, and input is never truncated.

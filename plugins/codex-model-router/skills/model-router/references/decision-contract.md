@@ -5,6 +5,9 @@ Use the bundled pure resolver before the first business action. The injected
 paths. Invoke the shown Python 3.9+ program with `--config <routing.json>`, send
 one JSON request on standard input, and use its JSON result. Calling this
 routing-only program is part of the ownership preflight, not a business action.
+Reuse this schema and already-loaded config while current; resolve a new
+decision for every request or separately owned stage without rereading the
+same reference. The hook's config digest signals when to reload config.
 
 Example invocation in PowerShell:
 

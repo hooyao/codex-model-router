@@ -52,6 +52,12 @@ dependency/receipt edges are case data, not record-authored claims.
 
 ## Offline run
 
+The separate [context-loading byte probe](context-loading-bytes.json) measures
+hook emissions without model calls. Reproduce it with
+`python evals/scripts/measure_context_loading.py --baseline e75ef8785d960b12e6d1ce27ad4c6b184b8a0fc0 --output <new-results.json>`.
+It measures emitted UTF-8 bytes, not quality, billed tokens, or latency.
+See the [context-loading design](../plugins/codex-model-router/docs/context-loading.md).
+
 Python 3.9+ and the standard library are sufficient:
 
 ```powershell

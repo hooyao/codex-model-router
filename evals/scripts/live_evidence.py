@@ -41,7 +41,13 @@ IANA_TIMEZONES = frozenset(
 )
 sys.path.insert(0, str(REPO_ROOT / "plugins" / "codex-model-router" / "hooks"))
 from routing_config import routing_context_block, validate_config, serialized_config  # noqa: E402
-from router_hook import CONTROLLER_CONTRACT  # noqa: E402
+from router_hook import CONTROLLER_ENTRYPOINT as CONTROLLER_CONTRACT  # noqa: E402
+try:
+    from .legacy_router_context import (CONTROLLER_CONTRACT as LEGACY_CONTROLLER_CONTRACT,
+                                        routing_context_block as legacy_routing_context_block)
+except ImportError:
+    from legacy_router_context import (CONTROLLER_CONTRACT as LEGACY_CONTROLLER_CONTRACT,
+                                       routing_context_block as legacy_routing_context_block)
 
 
 def frozen_case(case_id: str) -> tuple[dict[str, Any], Path, dict[str, Any]]:
@@ -81,8 +87,11 @@ def installed_hook_block_matches(block: str, expected: str, captured_manifest: P
     if len(observed_lines) != len(expected_lines) or len(resolver_lines) != 1:
         return False
     resolver_index = resolver_lines[0]
+    skill_marker = "Router skill: "
+    skill_lines = [index for index, line in enumerate(expected_lines) if line.startswith(skill_marker)]
+    path_indices = {resolver_index, *skill_lines}
     if any(actual != wanted for index, (actual, wanted) in enumerate(zip(observed_lines, expected_lines))
-           if index != resolver_index):
+           if index not in path_indices):
         return False
     resolver = Path(observed_lines[resolver_index][len(marker):])
     if not resolver.is_absolute() or resolver.name != "execution_decision.py" or resolver.parent.name != "hooks":
@@ -90,6 +99,17 @@ def installed_hook_block_matches(block: str, expected: str, captured_manifest: P
     installed_manifest = resolver.parent.parent / ".codex-plugin" / "plugin.json"
     source_resolver = REPO_ROOT / "plugins" / "codex-model-router" / "hooks" / "execution_decision.py"
     try:
+        if skill_lines:
+            if len(skill_lines) != 1:
+                return False
+            skill_line = observed_lines[skill_lines[0]]
+            if not skill_line.startswith(skill_marker):
+                return False
+            skill = Path(skill_line[len(skill_marker):])
+            source_skill = source_resolver.parent.parent / "skills" / "model-router" / "SKILL.md"
+            if skill != resolver.parent.parent / "skills" / "model-router" / "SKILL.md" or \
+                    not skill.is_file() or sha256(skill) != sha256(source_skill):
+                return False
         return (resolver.is_file() and installed_manifest.is_file() and
                 sha256(installed_manifest) == sha256(captured_manifest) and
                 sha256(resolver) == sha256(source_resolver))
@@ -1140,22 +1160,27 @@ def activation_session_checks(root: Path, spec: dict[str, Any], resolved: dict[s
         config_json = serialized_config(config, str(source))
         current_block = routing_context_block(source, config).split("ROUTING_CONFIG_BEGIN\n", 1)[1].split(
             "\nROUTING_CONFIG_END", 1)[0]
+        previous_block = legacy_routing_context_block(source, config).split("ROUTING_CONFIG_BEGIN\n", 1)[1].split(
+            "\nROUTING_CONFIG_END", 1)[0]
         for line, value in items:
             payload = value.get("payload")
             if value.get("type") != "response_item" or not isinstance(payload, dict) or \
                     payload.get("type") != "message" or payload.get("role") != "developer":
                 continue
             text = content_text(payload.get("content"))
-            if CONTROLLER_CONTRACT in text and text.count("ROUTING_CONFIG_BEGIN") == 1 and \
-                    text.count("ROUTING_CONFIG_END") == 1:
+            if text.count("ROUTING_CONFIG_BEGIN") == 1 and text.count("ROUTING_CONFIG_END") == 1:
                 block = text.split("ROUTING_CONFIG_BEGIN\n", 1)[-1].split("\nROUTING_CONFIG_END", 1)[0]
                 legacy_block = block.startswith(f"Workspace routing config: {source}\n") and \
                     block.endswith("\n" + config_json)
-                if installed_hook_block_matches(block, current_block, resolved["plugin_manifest"]) or legacy_block:
+                current = CONTROLLER_CONTRACT in text and installed_hook_block_matches(
+                    block, current_block, resolved["plugin_manifest"])
+                legacy = LEGACY_CONTROLLER_CONTRACT in text and (installed_hook_block_matches(
+                    block, previous_block, resolved["plugin_manifest"]) or legacy_block)
+                if current or legacy:
                     hook_lines.append(line)
         hook_ok = 1 <= len(hook_lines) <= 2 and all(line < routes[0]["line"] for line in hook_lines)
         checks.append(status("actual-hook-context", "pass" if hook_ok else "fail", refs,
-                             "one context per firing lifecycle hook contains the exact contract and config commitment before routing"))
+                             "verified bootstrap context and config commitment precede routing; unchanged prompt hooks may emit none"))
 
         expected_note = spec["expected_note_contents"]
         note_before = resolved["note_before"]

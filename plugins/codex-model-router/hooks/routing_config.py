@@ -530,28 +530,12 @@ def load_workspace_config(workspace_cwd: Path) -> tuple[Path, dict[str, Any], bo
 def routing_context_block(path: Path, config: dict[str, Any]) -> str:
     serialized = serialized_config(config, str(path))
     config_digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
-    resolver = plugin_root() / "hooks" / "execution_decision.py"
-    effective_policy = json.dumps(
-        effective_execution_policy(config), ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    )
+    root = plugin_root()
     return (
         "ROUTING_CONFIG_BEGIN\n"
         f"Workspace routing config: {path}\n"
         f"Validated config SHA256 (canonical JSON): {config_digest}\n"
-        "Read this config for routing examples and model guidance before selecting matched_example_ids. "
-        "The resolver reads it too.\n"
-        "Routing decision contract version: 1. Ownership is resolved before delegate topology, verification, "
-        "and model selection. Unknown decision signals cannot qualify for DIRECT.\n"
-        f"Decision resolver program: {resolver}\n"
-        "Invocation: use Python 3.9+ to run the resolver with --config set to the workspace config path above; "
-        "send one decision-request-v1 JSON on stdin and use its validated JSON result.\n"
-        "Request fields: schema_version=1, decision_id, phase, prior_ownership, escalation_trigger, "
-        "matched_example_ids, and signals. Signals: one_local_scope, bounded_known_outcome, "
-        "network_or_sync, long_running_or_monitoring, failure_or_recovery, named_multistep_runbook, "
-        "substantive_research_or_investigation, independent_review_required, high_risk, "
-        "multiple_bounded_tasks, tasks_independent, dependencies_absent, write_scopes_disjoint, "
-        "permissions_confirmed, safety_constraints_known, verification_plan_present, write_scope_known. "
-        "Every signal is true, false, or null; null is unknown.\n"
-        f"EFFECTIVE_EXECUTION_POLICY:{effective_policy}\n"
+        f"Router skill: {root / 'skills' / 'model-router' / 'SKILL.md'}\n"
+        f"Decision resolver program: {root / 'hooks' / 'execution_decision.py'}\n"
         "ROUTING_CONFIG_END"
     )

@@ -16,13 +16,14 @@ are explicitly independent, dependency-free, and write-disjoint.
 
 ## What It Does
 
-- Repeats an explicit pre-business-action DIRECT/DELEGATE gate on
-  `SessionStart` and `UserPromptSubmit`.
+- Loads a short routing entrypoint at session start and recovery; unchanged
+  user submissions add no repeated hook context. Each request still resolves
+  its own DIRECT/DELEGATE decision.
 - Records a versioned decision that separates ownership, delegate topology,
   and verification requirements; unknown signals cannot take the direct path.
 - Injects a bounded worker contract on `SubagentStart`.
-- Loads, validates, and injects editable repo-local routing examples on every
-  supported lifecycle event.
+- Validates editable repo-local routing configuration on lifecycle events and
+  reloads model guidance only when needed or changed.
 - Gives every dispatch a deterministic user-visible
   `<purpose>-<model>-<effort>` name, with a packet/result fallback when native
   dispatch cannot name the worker card.

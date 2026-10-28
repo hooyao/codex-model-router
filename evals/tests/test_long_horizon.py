@@ -112,10 +112,12 @@ class LongHorizonProtocolTests(unittest.TestCase):
         source = Path(__file__).resolve().parents[2] / "plugins" / "codex-model-router"
         plugin = self.workspace / "installed-plugin"
         for relative in (".codex-plugin/plugin.json", "hooks/router_hook.py",
-                         "hooks/routing_config.py", "hooks/hooks.json"):
+                         "hooks/routing_config.py", "hooks/context_cache.py", "hooks/hooks.json"):
             destination = plugin / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source / relative, destination)
+        shutil.copytree(source / "skills" / "model-router", plugin / "skills" / "model-router",
+                        dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__"))
         spec = copy.deepcopy(spec)
         runtime = spec["runtime"]
         runtime["plugin_root"] = str(plugin)
