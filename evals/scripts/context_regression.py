@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import fixture
+from .artifact_reader import ArtifactReader
 from .codex_runtime import (PortableTransport, RuntimeSessionMeter, discover_cli,
                             isolated_environment, runtime_capabilities)
 
@@ -45,7 +46,7 @@ def write_new(path: Path, value: dict) -> None:
         stream.write("\n")
 
 
-def business_tree(workspace: Path) -> dict:
+def business_tree(workspace: Path, reader=None) -> dict:
     files, directories = {}, []
     for path in sorted(workspace.rglob("*")):
         relative = path.relative_to(workspace)
@@ -56,7 +57,8 @@ def business_tree(workspace: Path) -> dict:
         if path.is_dir():
             directories.append(relative.as_posix())
         else:
-            files[relative.as_posix()] = sha(path)
+            data = reader.read_bytes(path) if reader is not None else path.read_bytes()
+            files[relative.as_posix()] = hashlib.sha256(data).hexdigest()
     return {"files": files, "directories": directories}
 
 
@@ -120,6 +122,7 @@ def run_arm(root: Path, output: Path, cli: Path, arm: str, case_id: str, repetit
               "repetition": repetition, "model": model, "effort": effort,
               "started_utc": datetime.now(timezone.utc).isoformat(), "complete": False}
     with (private / "events.jsonl").open("x", encoding="utf-8") as raw:
+        write_new(private / "start.json", {"started_utc": record["started_utc"], "monotonic": started})
         try:
             transport = PortableTransport(cli, workspace, [], model, effort,
                 started + (240 if mode == "scored" else 120),
@@ -186,6 +189,8 @@ def run_arm(root: Path, output: Path, cli: Path, arm: str, case_id: str, repetit
                 record["cancellation"] = transport.cancel_and_drain(meter, timeout=15, descendants_first=True)
         finally:
             record["wall_seconds"] = round(time.monotonic() - started, 3)
+            write_new(private / "model-end.json", {"wall_seconds": record["wall_seconds"],
+                                                   "complete": record["complete"]})
             if meter is not None:
                 for _ in range(8):
                     meter.refresh()
@@ -201,10 +206,18 @@ def run_arm(root: Path, output: Path, cli: Path, arm: str, case_id: str, repetit
                                              for path in meter.paths]
             if transport is not None:
                 transport.close()
-    actual = business_tree(workspace)
-    record["artifact_pass"] = actual == expected
+    reader = ArtifactReader(cli, root / arm / "home", workspace)
+    try:
+        actual = business_tree(workspace, reader)
+        record["artifact_pass"] = actual == expected
+        record["grade_complete"] = True
+        record["actual_tree_sha256"] = fixture.tree_digest(actual)
+    except Exception as error:
+        record["artifact_pass"] = None
+        record["grade_complete"] = False
+        record["grader_failure"] = type(error).__name__
+    record["sandbox_artifact_reads"] = reader.sandbox_reads
     record["initial_tree_sha256"] = fixture.tree_digest(initial)
-    record["actual_tree_sha256"] = fixture.tree_digest(actual)
     record["hook_events"] = hook_events
     record["turns"] = turns
     record["observed_resolver_decisions"] = decisions
@@ -234,9 +247,10 @@ def summarize(output: Path) -> dict:
             before, after = rows["before"], rows["after"]
             complete = all(r.get("complete") and r.get("usage_complete") and
                            not r.get("usage_issues") for r in rows.values())
-            pair = {"repetition": repetition, "status": "complete" if complete else "incomplete",
+            timed = before.get("wall_seconds") is not None and after.get("wall_seconds") is not None
+            pair = {"repetition": repetition, "status": "complete" if complete and timed else "incomplete",
                     "quality_parity": before["artifact_pass"] and after["artifact_pass"],
-                    "wall_ratio": after["wall_seconds"] / before["wall_seconds"]}
+                    "wall_ratio": after["wall_seconds"] / before["wall_seconds"] if timed else None}
             if complete:
                 def tokens(row):
                     counts = row["usage"]["token_classes"]
@@ -328,6 +342,50 @@ def reconcile_cancel(original: Path, root: Path, output: Path) -> dict:
     return record
 
 
+def recover_completed_run(root: Path, output: Path, cli: Path, arm: str, case_id: str, repetition: int) -> dict:
+    """Recover usage/content after a grader crash; do not reconstruct a lost timer."""
+    run_id = f"scored-{case_id}-r{repetition}-{arm}"
+    private = root / arm / "raw" / run_id
+    events_path = private / "events.jsonl"
+    events = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines()]
+    starts = [e["params"]["thread"] for e in events if e.get("method") == "thread/started"]
+    if not starts:
+        raise ValueError("original runtime thread identity is unavailable")
+    parent = starts[0]["id"]
+    workspace = root / arm / "runs" / run_id
+    meter = RuntimeSessionMeter(root / arm / "home/sessions", parent, "gpt-6.1-sol", "low", rate_card=RATES)
+    meter.refresh()
+    if meter.integrity_issues() or next(s for s in meter.paths.values() if s["id"] == parent)["terminal"] not in \
+            ("task_complete", "task_completed"):
+        raise ValueError("original run did not close with complete successful native usage")
+    reader = ArtifactReader(cli, root / arm / "home", workspace)
+    actual = business_tree(workspace, reader)
+    definition = fixture.load_fixture(REPO / "evals/fixtures" / case_id / "fixture.json")
+    messages = [e["params"]["item"].get("text", "") for e in events
+                if e.get("method") == "item/completed" and e.get("params", {}).get("threadId") == parent and
+                e["params"].get("item", {}).get("type") == "agentMessage"]
+    journal = private / "model-end.json"
+    timing = json.loads(journal.read_text()) if journal.is_file() else {}
+    record = {"run_id": run_id, "mode": "scored", "arm": arm, "case_id": case_id,
+              "repetition": repetition, "model": "gpt-6.1-sol", "effort": "low", "complete": True,
+              "started_utc": None, "wall_seconds": timing.get("wall_seconds"),
+              "timing_status": "journal" if timing else "unknown-original-recorder-failed",
+              "artifact_pass": actual == definition["reference"]["tree"], "grade_complete": True,
+              "usage_complete": True, "usage": meter.summary(), "usage_issues": [],
+              "sessions": len(meter.paths), "native_workers": len(meter.paths) - 1,
+              "initial_tree_sha256": fixture.tree_digest(definition["initial"]["tree"]),
+              "actual_tree_sha256": fixture.tree_digest(actual),
+              "sandbox_artifact_reads": reader.sandbox_reads,
+              "raw_events_sha256": sha(events_path),
+              "native_evidence": [{"sha256": sha(path), "bytes": path.stat().st_size} for path in meter.paths],
+              "route_lines": [line for text in messages for line in text.splitlines()
+                              if re.match(r"^ROUTE: (DIRECT|DELEGATE)\b", line)],
+              "final_answer": messages[-1] if messages else None,
+              "recovery": "No model retry; content and usage replayed from the retained native run. Lost timing remains unknown."}
+    write_new(output / f"{run_id}.json", record)
+    return record
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime-root", required=True, type=Path)
@@ -339,14 +397,26 @@ def main():
     parser.add_argument("--model", default="gpt-6.1-sol")
     parser.add_argument("--effort", default="low")
     parser.add_argument("--capability-root", type=Path)
+    parser.add_argument("--resume", action="store_true", help="Continue remaining scheduled runs; never replace retained attempts.")
+    parser.add_argument("--resume-reason")
     args = parser.parse_args()
     if not args.live:
         parser.error("--live explicitly enables model usage")
-    args.output.mkdir(parents=True, exist_ok=False)
+    if args.resume and (args.mode != "matrix" or not args.resume_reason):
+        parser.error("--resume requires matrix mode and an explicit --resume-reason")
+    args.output.mkdir(parents=True, exist_ok=args.resume)
     cli = discover_cli(args.cli)
     metadata = runtime_capabilities(cli)
-    write_new(args.output / "runtime.json", metadata)
-    write_new(args.output / "campaign.json", {
+    tag = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    if args.resume:
+        original_runtime = json.loads((args.output / "runtime.json").read_text())
+        if original_runtime["cli_sha256"] != metadata["cli_sha256"]:
+            raise SystemExit("runtime changed; start a fresh matched campaign")
+        write_new(args.output / f"resume-{tag}.json", {"reason": args.resume_reason, "runtime": metadata,
+                   "runner_sha256": sha(Path(__file__)), "capability_adapter_sha256": sha(Path(__file__).with_name("codex_runtime.py"))})
+    else:
+        write_new(args.output / "runtime.json", metadata)
+        write_new(args.output / "campaign.json", {
         "before_ref": "e75ef8785d960b12e6d1ce27ad4c6b184b8a0fc0",
         "after_ref": "a93ba3af99b9ad58c97f82c4938129b634d5c446",
         "model": args.model, "effort": args.effort, "platform": platform.system(),
@@ -372,16 +442,29 @@ def main():
             if not record.get("complete") or not record.get("usage_complete") or record.get("native_workers", 0) < 1:
                 raise SystemExit("required native/cancellation capability is incomplete")
     prior = previous_observed_spend(args.runtime_root)
-    write_new(args.output / "prior-spend.json", prior)
+    write_new(args.output / (f"prior-spend-{tag}.json" if args.resume else "prior-spend.json"), prior)
     if prior["usage_issues"]:
         raise SystemExit("prior probe usage is incomplete; campaign spend cannot be bounded")
     start = time.monotonic()
+    prior_elapsed = 0.0
+    if args.resume:
+        starts = [datetime.fromisoformat(row["started_utc"]) for path in args.output.glob("scored-*.json")
+                  for row in [json.loads(path.read_text())] if row.get("started_utc")]
+        if starts:
+            prior_elapsed = (datetime.now(timezone.utc) - min(starts)).total_seconds()
     total = prior["estimated_usd_upper_bound"]
     try:
         for repetition in range(1, 4):
             for case in CASES:
                 for arm in (("before", "after") if repetition % 2 else ("after", "before")):
-                    if time.monotonic() - start > 5400 or total >= 10:
+                    retained = args.output / f"scored-{case}-r{repetition}-{arm}.json"
+                    if args.resume and retained.exists():
+                        row = json.loads(retained.read_text())
+                        if (row.get("case_id"), row.get("repetition"), row.get("arm"), row.get("model"), row.get("effort")) != \
+                                (case, repetition, arm, args.model, args.effort):
+                            raise SystemExit("retained attempt does not match the requested campaign")
+                        continue
+                    if prior_elapsed + time.monotonic() - start > 5400 or total >= 10:
                         raise SystemExit("campaign observed budget or wall stop")
                     if hashlib.sha256(cli.read_bytes()).hexdigest() != metadata["cli_sha256"]:
                         raise SystemExit("runtime changed during matched campaign; remaining pairs are not comparable")
@@ -391,12 +474,13 @@ def main():
                     if usage is None:
                         raise SystemExit("missing usage; campaign whole cost is unknown")
                     total += usage["estimated_usd_upper_bound"]
-                    if record.get("usage_issues") or not record.get("complete"):
+                    if record.get("usage_issues") or not record.get("complete") or record.get("grade_complete") is False:
                         raise SystemExit("incomplete scored run; preserve evidence and diagnose before continuing")
     finally:
         report = summarize(args.output)
         report["observed_campaign_usd_upper_bound"] = total
-        write_new(args.output / "summary.json", report)
+        report["matrix_wall_elapsed_seconds"] = prior_elapsed + time.monotonic() - start
+        write_new(args.output / (f"summary-{tag}.json" if args.resume else "summary.json"), report)
 
 
 if __name__ == "__main__":

@@ -82,3 +82,20 @@ shared by both arms and does not change any quality or regression threshold.
 
 Publish only reduced evidence, public task artifacts, and reproducible
 commands; keep original private sessions locally with hash references.
+
+## Infrastructure repair during repetition 1
+
+The original recorder completed eight scored arms, then failed while reading
+the sandbox-owned `decision.json` from the before/architecture arm. Its native
+solver and both workers had already completed with complete usage. The paid
+run was not retried. Usage and content were recovered from the original
+events and rollouts; its lost wall timer remains unknown. The strict byte
+oracle fails that file because its final LF is absent, although the JSON
+object matches semantically; the original strict score is retained.
+
+The grader now reads a denied output through the same configured workspace
+sandbox, without changing its ACL or contents. New timing journals are written
+before grading. Remaining scheduled arms continue with the same tasks,
+subjects, model, runtime, limits, and thresholds. Existing attempts and the
+original partial summary are not replaced. The maintenance interval counts
+against the matrix wall allowance. Missing timing cannot count as a speed pass.
