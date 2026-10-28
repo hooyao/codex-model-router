@@ -252,6 +252,7 @@ def validate_policy_files(plugin_root: Path, errors: list[str]) -> None:
         (policy_path, "routing policy"),
         (policy_path.with_name("delegation.md"), "delegation contract"),
         (decision_contract_path, "routing decision contract"),
+        (plugin_root / "hooks" / "describe_router.py", "compact decision context program"),
         (naming_path, "worker naming helper"),
         (plugin_root / "scripts" / "init_router.py", "router init script"),
     ):

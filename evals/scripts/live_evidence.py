@@ -44,10 +44,12 @@ from routing_config import routing_context_block, validate_config, serialized_co
 from router_hook import CONTROLLER_ENTRYPOINT as CONTROLLER_CONTRACT  # noqa: E402
 try:
     from .legacy_router_context import (CONTROLLER_CONTRACT as LEGACY_CONTROLLER_CONTRACT,
-                                        routing_context_block as legacy_routing_context_block)
+                                        routing_context_block as legacy_routing_context_block,
+                                        ENTRYPOINT_V2, MANIFEST_V2, SKILL_HASHES_V2)
 except ImportError:
     from legacy_router_context import (CONTROLLER_CONTRACT as LEGACY_CONTROLLER_CONTRACT,
-                                       routing_context_block as legacy_routing_context_block)
+                                       routing_context_block as legacy_routing_context_block,
+                                       ENTRYPOINT_V2, MANIFEST_V2, SKILL_HASHES_V2)
 
 
 def frozen_case(case_id: str) -> tuple[dict[str, Any], Path, dict[str, Any]]:
@@ -79,7 +81,8 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def installed_hook_block_matches(block: str, expected: str, captured_manifest: Path) -> bool:
+def installed_hook_block_matches(block: str, expected: str, captured_manifest: Path,
+                                 expected_skill_hashes: set[str] | None = None) -> bool:
     """Allow a relocated installation only when its manifest and resolver match."""
     marker = "Decision resolver program: "
     observed_lines, expected_lines = block.split("\n"), expected.split("\n")
@@ -108,7 +111,7 @@ def installed_hook_block_matches(block: str, expected: str, captured_manifest: P
             skill = Path(skill_line[len(skill_marker):])
             source_skill = source_resolver.parent.parent / "skills" / "model-router" / "SKILL.md"
             if skill != resolver.parent.parent / "skills" / "model-router" / "SKILL.md" or \
-                    not skill.is_file() or sha256(skill) != sha256(source_skill):
+                    not skill.is_file() or sha256(skill) not in (expected_skill_hashes or {sha256(source_skill)}):
                 return False
         return (resolver.is_file() and installed_manifest.is_file() and
                 sha256(installed_manifest) == sha256(captured_manifest) and
@@ -1176,7 +1179,9 @@ def activation_session_checks(root: Path, spec: dict[str, Any], resolved: dict[s
                     block, current_block, resolved["plugin_manifest"])
                 legacy = LEGACY_CONTROLLER_CONTRACT in text and (installed_hook_block_matches(
                     block, previous_block, resolved["plugin_manifest"]) or legacy_block)
-                if current or legacy:
+                previous_entrypoint = ENTRYPOINT_V2 in text and parse_json(resolved["plugin_manifest"]) == MANIFEST_V2 and \
+                    installed_hook_block_matches(block, current_block, resolved["plugin_manifest"], SKILL_HASHES_V2)
+                if current or legacy or previous_entrypoint:
                     hook_lines.append(line)
         hook_ok = 1 <= len(hook_lines) <= 2 and all(line < routes[0]["line"] for line in hook_lines)
         checks.append(status("actual-hook-context", "pass" if hook_ok else "fail", refs,

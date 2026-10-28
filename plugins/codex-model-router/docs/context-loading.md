@@ -62,13 +62,14 @@ bytes separately from token usage, billing, and end-to-end performance.
 
 ## Reproducible byte measurement
 
-The [retained probe](../../../evals/context-loading-bytes.json) compares commit
-`e75ef8785d960b12e6d1ce27ad4c6b184b8a0fc0` with this implementation in isolated
+The [retained first probe](../../../evals/context-loading-bytes.json) compares commit
+`e75ef8785d960b12e6d1ce27ad4c6b184b8a0fc0` with
+`a93ba3af99b9ad58c97f82c4938129b634d5c446` in isolated
 temporary plugin directories of equal-length paths. It executes each hook in
 a separate process; it makes no model calls. Absolute installation paths affect
 the entrypoint size.
 
-| Model-visible context | Before, bytes | After, bytes |
+| Model-visible context | Before, bytes | After a93ba3a, bytes |
 | --- | ---: | ---: |
 | SessionStart | 8,274 | 734 |
 | Each unchanged UserPromptSubmit | 8,214 | 0 |
@@ -86,3 +87,21 @@ python evals/scripts/measure_context_loading.py --baseline e75ef8785d960b12e6d1c
 These are emitted/file byte counts, not measured token savings, quality parity,
 cost savings, or a stable speed advantage. Behavioral live validation and the
 repository performance protocol remain separate requirements.
+
+## Cold-path refinement
+
+The subsequent live paired campaign found that fewer hook bytes did not
+guarantee fewer model calls. The multi-turn direct control regressed in wall
+time while the controller read the skill and decision schema before resolving
+a simple task. A pure status reply also sometimes triggered another resolver
+round. The original measurements and live results remain attached to their
+original commit; they are not results for this refinement.
+
+For new business work, the read-only `describe_router.py` program supplies the
+validated workspace config, a request template, and conditional reference
+paths in one compact response. DIRECT needs no skill/reference read. DELEGATE
+loads the coordination skill and relevant references after ownership is known.
+Only a status/synthesis reply based on already accepted results may reuse an
+existing decision without new business work. A fresh read, edit, or test still
+needs its own decision. No resolver predicate, inherited constraint, model
+policy, or dispatch validation is relaxed.

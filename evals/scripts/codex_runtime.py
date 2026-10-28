@@ -30,6 +30,22 @@ def discover_cli(candidate: str | None = None) -> Path:
     return Path(selected).resolve()
 
 
+def exported_methods(document) -> set[str]:
+    methods = set()
+    if isinstance(document, dict):
+        method = (document.get("properties") or {}).get("method")
+        if isinstance(method, dict):
+            methods.update(value for value in method.get("enum", []) if isinstance(value, str))
+            if isinstance(method.get("const"), str):
+                methods.add(method["const"])
+        for value in document.values():
+            methods.update(exported_methods(value))
+    elif isinstance(document, list):
+        for value in document:
+            methods.update(exported_methods(value))
+    return methods
+
+
 def runtime_capabilities(cli: Path) -> dict:
     version = subprocess.run([str(cli), "--version"], capture_output=True, text=True,
                              check=True, timeout=15).stdout.strip()
@@ -41,8 +57,7 @@ def runtime_capabilities(cli: Path) -> dict:
             raise ValueError("runtime did not export its request schema")
         raw = request.read_bytes()
         document = json.loads(raw)
-        methods = {method for variant in document.get("oneOf", []) if isinstance(variant, dict)
-                   for method in ((variant.get("properties") or {}).get("method") or {}).get("enum", [])}
+        methods = exported_methods(document)
     missing = REQUIRED_METHODS - methods
     if missing:
         raise ValueError("required runtime methods unavailable: " + ", ".join(sorted(missing)))

@@ -60,3 +60,9 @@ def routing_context_block(path: Path, config: dict[str, Any]) -> str:
         f"EFFECTIVE_EXECUTION_POLICY:{effective_policy}\n"
         "ROUTING_CONFIG_END"
     )
+
+
+# Shipped v2 entrypoint identity for historical replay, never runtime admission.
+ENTRYPOINT_V2 = 'CONTROLLER: Before business work on each request, use the router skill below to resolve ownership. Load its instructions and config when absent, changed, or after compaction; reuse current context. This is instruction-layer policy, not a permission barrier.'
+MANIFEST_V2 = {'name': 'codex-model-router', 'version': '1.3.1', 'description': 'Choose direct execution or route bounded Codex worker tasks by complexity and risk.', 'author': {'name': 'Codex Model Router contributors'}, 'skills': './skills/', 'interface': {'displayName': 'Codex Model Router', 'shortDescription': 'Choose direct work or the right worker model.', 'longDescription': 'Injects execution-ownership, model-routing, and worker-contract context so a primary Codex agent can execute simple local work directly and delegate nontrivial work appropriately.', 'developerName': 'Codex Model Router contributors', 'category': 'Productivity', 'capabilities': ['Read'], 'defaultPrompt': ['Choose direct or delegated execution before acting, then route delegated tasks to suitable workers.']}}
+SKILL_HASHES_V2 = {'063e150b4bb33affb63f4aa55985fc292704a48eb4f3855ce9665005485482bb', '2a84b49b51174a6409ee5f025aac22089f3ea0f8e05200ce261655f1cb70aa16'}

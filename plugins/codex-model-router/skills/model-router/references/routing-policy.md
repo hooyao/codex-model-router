@@ -16,7 +16,18 @@ current runtime before dispatch.
 | Bounded visual comparison, precise screen work, natural writing (schema v4) | GPT-6.1 Terra | Medium |
 | Everyday coding, repository discovery, technical writing, triage, routine review | GPT-6.1 Sol | Medium; High for difficult cases |
 | Complex implementation, integration, open-ended analysis | GPT-6.1 Sol | High; Xhigh if needed |
-| Architecture, security, critical judgment, independent router meta-task review | GPT-6 Astra | High; Xhigh for demanding work |
+| Open architecture/security decisions, critical judgment, independent router meta-task review | GPT-6 Astra | High; Xhigh for demanding work |
+
+Route each packet by the work still requiring judgment, not its filename or
+the parent task's topic. Rendering supplied values or an already approved
+decision is focused implementation, not making that decision. A separate
+review of fixed facts may use a routine verification model unless the actual
+requested review needs deeper judgment. Keep the whole-request permissions
+and independent-review requirement; do not upscale every stage merely because
+one stage is demanding. Router meta-task review applies to actual router or
+benchmark assessment/change, not incidental terms in paths or input data.
+The mandatory highest-suitable-model review for actual router meta-tasks below
+still applies; a cheap implementation packet does not remove that obligation.
 
 Use the least expensive available model and lowest supported effort that can
 meet the acceptance criteria. Reserve Astra/xhigh for demanding hard kernels;

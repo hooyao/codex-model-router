@@ -17,6 +17,13 @@ A controller-owned easy stage must independently resolve DIRECT, inheriting
 the request's permissions, risks, and independent-review requirement. Use a
 cheap worker when easy-stage tool output would burden controller context.
 Worker-owned analysis, implementation, and testing remain with that worker.
+Keep small, deterministic dependent substeps with the same owner in one bounded
+packet when no external decision or validation gate is needed between them.
+Preserve their order and checkpoints; do not create a follow-up turn solely to
+relay an already authorized next substep. Do not combine independent units
+requested by the user, separate review owners, conflicting write scopes, or
+real prerequisite/recovery boundaries. A file or tool call is not automatically
+a separate stage or model turn.
 Reserve Astra/xhigh for the demanding hard kernel, not the entire mixed task;
 max is exceptional. Reclassify any stage that exceeds its approved bounds.
 

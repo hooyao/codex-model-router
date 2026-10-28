@@ -28,8 +28,12 @@ SUPPORTED_EVENTS = {"SessionStart", "UserPromptSubmit", "SubagentStart"}
 MAX_HOOK_OUTPUT_BYTES = 4_096
 CONTEXT_TOKEN_THRESHOLD = 1_500
 CONTROLLER_ENTRYPOINT = (
-    "CONTROLLER: Before business work on each request, use the router skill below to resolve ownership. "
-    "Load its instructions and config when absent, changed, or after compaction; reuse current context. "
+    "CONTROLLER: Before new business work, run describe_router.py alongside the decision resolver below "
+    "with --config set to the workspace config to obtain the contract and validated config. Reuse that context "
+    "while its revisions remain current. Send a classified request to the resolver, record its validated result, "
+    "and emit ROUTE: DIRECT or ROUTE: DELEGATE with its rule/reason before acting. "
+    "DIRECT needs no skill/reference read. DELEGATE loads the coordination skill and relevant references. "
+    "Pure status/coordination from accepted results may reuse a decision; any new read, edit, or test needs a fresh one. "
     "This is instruction-layer policy, not a permission barrier."
 )
 WORKER_ENTRYPOINT = (
@@ -53,6 +57,8 @@ def instruction_signature() -> str:
     """Refresh on any shipped routing instruction or entrypoint change."""
     root = HOOK_DIRECTORY.parent
     paths = [root / ".codex-plugin" / "plugin.json", Path(__file__),
+             HOOK_DIRECTORY / "describe_router.py", HOOK_DIRECTORY / "execution_decision.py",
+             HOOK_DIRECTORY / "routing_config.py",
              root / "skills" / "model-router" / "SKILL.md"]
     paths += sorted((root / "skills" / "model-router" / "references").glob("*.md"))
     digest = hashlib.sha256()
@@ -82,7 +88,7 @@ def prepare_hook_output(event: dict[str, Any]) -> tuple[dict[str, Any], Path | N
             return {}, None, ""
         context = controller_session_context(str(event.get("model") or "unknown"), block, revision)
         if event_name == "SessionStart" and event.get("source") in ("compact", "clear"):
-            context += "\nContext reset: reload router instructions and config before continuing."
+            context += "\nContext reset: reload compact decision context; load coordination references if delegated."
     output = {"hookSpecificOutput": {"hookEventName": event_name, "additionalContext": context}}
     size = len(json.dumps(output, separators=(",", ":")).encode("utf-8")) + len(os.linesep)
     if size > MAX_HOOK_OUTPUT_BYTES:

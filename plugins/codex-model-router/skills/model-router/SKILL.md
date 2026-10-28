@@ -1,6 +1,6 @@
 ---
 name: model-router
-description: Decide direct or delegated ownership for Codex work, then coordinate bounded native workers using runtime-supported models and reasoning efforts.
+description: Coordinate delegated Codex stages after an ownership decision, choosing runtime-supported worker models, validating dispatch, and collecting bounded results.
 ---
 
 # Codex Model Router
@@ -17,17 +17,24 @@ Read a reference only when its stage needs it and it is absent or outdated.
 Reload after compaction or a changed injected config/instruction revision.
 A hook entrypoint is a file pointer, not evidence that a reference was read.
 
-## Ownership on every request
+## Ownership before business work
 
-Before business work, read the current workspace config identified by the
-ROUTING_CONFIG_BEGIN block if its digest is new or its contents are unavailable.
-Use [decision-contract.md](references/decision-contract.md) to submit the whole
-request to the injected decision resolver. Record the validated result and
+The hook's read-only `describe_router.py` program supplies the validated config
+and request template in one compact response. Run it beside the injected
+decision resolver with the workspace `--config` path when that context is
+missing or changed. Reuse current context rather than reading the config and
+[decision-contract.md](references/decision-contract.md) again. That reference
+is only needed for deeper contract details. Submit a new business request to
+the decision resolver, then record its validated result and
 `ROUTE: DIRECT — <rule/reason>` or
 `ROUTE: DELEGATE — <topology/rule/model/effort/reason>`.
 Classify the full request semantically; skills describe how to work and do not
 replace ownership decisions. Invalid config or an invalid resolver result stops
 routing; do not reconstruct it or silently use defaults.
+A pure status/coordination reply based on accepted results needs no new
+business decision. A new inspection, edit, test, or changed scope does; never
+claim fresh validation from memory. DIRECT does not require loading this skill
+or delegated-work references.
 
 DIRECT requires all bounded facts, permissions, scope, and a self-check. A false
 or unknown direct criterion delegates. If bounds expand, stop before further

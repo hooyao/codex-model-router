@@ -111,11 +111,12 @@ class LongHorizonProtocolTests(unittest.TestCase):
         """Bind an installed-plugin copy to test-local hashes, independent of CI host."""
         source = Path(__file__).resolve().parents[2] / "plugins" / "codex-model-router"
         plugin = self.workspace / "installed-plugin"
-        for relative in (".codex-plugin/plugin.json", "hooks/router_hook.py",
-                         "hooks/routing_config.py", "hooks/context_cache.py", "hooks/hooks.json"):
+        for relative in (".codex-plugin/plugin.json",):
             destination = plugin / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source / relative, destination)
+        shutil.copytree(source / "hooks", plugin / "hooks", dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns("__pycache__"))
         shutil.copytree(source / "skills" / "model-router", plugin / "skills" / "model-router",
                         dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__"))
         spec = copy.deepcopy(spec)

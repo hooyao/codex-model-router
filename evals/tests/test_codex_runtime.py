@@ -45,6 +45,12 @@ class RuntimeCapabilityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "turn/interrupt"):
             self.capability_probe("codex-cli arbitrary", runtime.REQUIRED_METHODS - {"turn/interrupt"})
 
+    def test_equivalent_exported_schema_forms_are_supported(self):
+        for keyword in ("oneOf", "anyOf", "$defs"):
+            variants = [{"properties": {"method": {"const": method}}} for method in runtime.REQUIRED_METHODS]
+            value = {keyword: {str(i): item for i, item in enumerate(variants)}} if keyword == "$defs" else {keyword: variants}
+            self.assertEqual(runtime.REQUIRED_METHODS, runtime.exported_methods(value))
+
     def test_hook_trust_keeps_declaration_and_content_separate(self):
         declaration, content = "sha256:" + "a" * 64, "sha256:" + "b" * 64
         self.assertEqual({"enabled": True, "trusted_hash": declaration},
