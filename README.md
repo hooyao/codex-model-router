@@ -196,6 +196,12 @@ python evals/scripts/evaluate.py validate-manifest --manifest evals/benchmark.js
 python evals/scripts/runner.py --manifest evals/benchmark.json --output evals/generated
 ```
 
+The [plugin baseline history](evals/BASELINE_HISTORY.md) records the current
+accepted reference, earlier rejected candidates, measured comparators, and
+acceptance exceptions. Plugin 1.3.3 is the latest accepted reference with a
+serial-performance exception; historical context comparisons retain their
+original 1.3.0 baseline and scores.
+
 The scenarios target noisy investigation and receipt reuse, direct-to-delegate
 escalation, dependent serial work, safe parallelism with disjoint artifacts,
 independent architecture review, and one small direct calibration. Reports keep

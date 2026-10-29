@@ -23,3 +23,8 @@ Acceptance does not establish general performance gains, actual bridge billing,
 or full routing/receipt compliance beyond the evidence described in the report.
 
 No additional model calls or paid experiments were performed for this decision.
+
+The accepted-reference change and earlier candidates are indexed in
+[BASELINE_HISTORY.md](../../BASELINE_HISTORY.md). Historical comparison arms
+remain pinned to 1.3.0; the next plugin comparison selects the accepted 1.3.3
+source explicitly and collects fresh matched evidence.

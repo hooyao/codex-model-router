@@ -9,8 +9,13 @@ performance result against Astra.
 
 Plugin changes additionally require a fresh paired comparison against the last
 accepted plugin artifact, using the same task suite to detect quality, time,
-and cost regressions. The current live collector does not yet implement either
-paired comparison or a release gate.
+and cost regressions. The portable `context_regression` runner now provides
+small-task paired plugin comparisons; these do not replace the long-horizon
+performance protocol or establish a general release-performance result. The
+[baseline history](BASELINE_HISTORY.md) records accepted reference changes,
+actual historical comparators, failed candidates, and scoped exceptions.
+The latest accepted plugin reference is 1.3.3 (`9f72e6a`), with the user-approved
+serial exception; the three retained context campaigns compared against 1.3.0.
 
 The performance suite must use long-horizon repository tasks calibrated near
 the scale of roughly 100 natural Astra model calls; the five small fixtures
