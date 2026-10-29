@@ -1,0 +1,278 @@
+{
+  "captured_utc": "2026-10-29T00:41:10.619249+00:00",
+  "runtime": {
+    "version": "codex-cli 0.165.0-alpha.1.2",
+    "cli_sha256": "5c1b55966bf9f757dcbf00065c9a6cb862ead55d34b015f1be1939ff18e43943",
+    "request_schema_sha256": "9b89e2459362d20cec67a429ef9430fe6b0e9fb8bd87d445d4c9a6acccd87450",
+    "required_methods": [
+      "hooks/list",
+      "initialize",
+      "model/list",
+      "thread/start",
+      "turn/interrupt",
+      "turn/start"
+    ],
+    "version_allowlist": false
+  },
+  "observations": {
+    "before": {
+      "subject_ref": "e75ef8785d960b12e6d1ce27ad4c6b184b8a0fc0",
+      "plugin_version": "1.3.0",
+      "artifact_files": {
+        "README.md": "8b192ab2ac95f8dc2dd6c3170a6e86e07089b8562771cb6f4deeee9699fb8ab9",
+        ".codex-plugin/plugin.json": "3f3c24d90eb8f8440f7358a7b9d4317a3c2807f500479f5cce4969407c93dd8e",
+        "defaults/default-routing.json": "997075f97596ac383c40374bc668f980bcf9f6fa1f0eba1a9c0e02135d280b12",
+        "docs/live-cli-validation.md": "02528169ed3811912c1c698e64255688a2e862e4423a21082c2ac5f768dd2d03",
+        "docs/sol-upgrade.md": "1e91ca396ce337e5e98df2ed946ceb83ffb78a347cf4a22b1a4ec0f69a6e00fe",
+        "docs/terra-support.md": "b28677741029f90fbcc95cf4c11c82102204367a74942aa4866b9a96625f1627",
+        "hooks/dispatch_audit.py": "b8130e145a6c2e623fe3d12e1dcc77ea0655c22caa17a8e4eb4e62747a10f9f6",
+        "hooks/dispatch_contract.py": "f749b3076f7daa520d337681abfc7d1f7f20badb22455322f9f363637dfbeab1",
+        "hooks/execution_decision.py": "ed81103353517d6e4703e88911313caddc48cb0435f3df4cb4c9778078a8f7d5",
+        "hooks/hooks.json": "d8d32b861e4b2b306234d3da48578fa0c7fbb415dbcf54b07e67e61e2e536747",
+        "hooks/router_hook.py": "1d4d4a141d9b7a310947fdee260760659fdf7fa4fced7f6f01f084247b197f7d",
+        "hooks/routing_config.py": "92adac0ede22888b00052a4f13f3436bf7f4fc65d46ac14f43851e8baaa40c27",
+        "hooks/subagent_naming.py": "5a67bd481f70589e4cfc8625226c0fd0c8ad4b33690bbba1082cc87b21e911ce",
+        "scripts/bump_version.py": "9c98781f0a06511b3665ebe53d61c88c6c8b5c3db5292f7b78a7f15040e9f58b",
+        "scripts/init_router.py": "913aec8db34dba0988bb5e419ffa959473ced7e19eb0f556b0ef7d1d461f1373",
+        "scripts/validate_plugin.py": "6bf9b1ba2910cc99faeb74d6ec5f7e337ac325ef2bf468dd304f0eae2ac2578b",
+        "tests/test_dispatch_canary.py": "15d3cded909a05b98778f215734dba7d40f1568a7955592b01c6fe7fd74b3144",
+        "tests/test_router_plugin.py": "aae55f90ea8714ac6d996e650448f5cd72582c2a7aa52698d8ec323ff70e2a95",
+        "tests/fixtures/session-start.json": "d368a107c50c483f24e151298b470d7ff2250399b9cddcb9d08bef69c92354c9",
+        "tests/fixtures/subagent-start.json": "369f81ae073a680385e97517f100a4684d7b925d9b24739b974a38bf0d034a4f",
+        "tests/fixtures/user-prompt-submit.json": "81d5770d8cab05f4080f6b506c1aed08cb31e259e35fe98ef4d7f601f6430b07",
+        "skills/initialize-router/SKILL.md": "25baeb3ae0e30da5f320494bf3a954f4660dc199c33859b9ce7034abec770e45",
+        "skills/model-router/SKILL.md": "4666a22649cdc99b080a632fabb9524a3d484f606b0b6483f46a86375688604f",
+        "skills/model-router/references/decision-contract.md": "a7206818bc96d9b3d41b8726cf9ef9747756799c14c4ffcd29c71395e6a406f5",
+        "skills/model-router/references/dispatch-contract.md": "85cf58a65b87d1e9d4c67b9acabd69fe164f2089fdc8a59153f5dce544f43fa5",
+        "skills/model-router/references/routing-policy.md": "98728fbdc11aef201b18beef45de156e59874ceeb346f94cb803cb9d8412d8a6"
+      },
+      "artifact_digest": "db5c53050cfd41ed38a52f99a1eaf159ddbdd0d0d24528b550ac1cf1d1340efc",
+      "trusted_hook_count": 5,
+      "hook_hashes": {
+        "preToolUse": "sha256:4fadcc93db5f6b143fbecdfb0a5c5953f0822c3a04fca88a16376d7fe6f40b05/sha256:17dcfb25265a297c570a1e54562158e645cc7f9cfa3ae11e29cab473b1ac4ba9",
+        "postToolUse": "sha256:0bd6433353822ddb51cf5c07e44a3cc66e93f1ace78a602d9676835384e2435e/sha256:17dcfb25265a297c570a1e54562158e645cc7f9cfa3ae11e29cab473b1ac4ba9",
+        "sessionStart": "sha256:358081920e9cbe4ef259ea048891ed884a61c0c35f78960b1b86f88fd9f49738/sha256:17dcfb25265a297c570a1e54562158e645cc7f9cfa3ae11e29cab473b1ac4ba9",
+        "userPromptSubmit": "sha256:303a53cc211acc4c71b2bab72424f557455821b52dfb821823ff8bf8d4676659/sha256:17dcfb25265a297c570a1e54562158e645cc7f9cfa3ae11e29cab473b1ac4ba9",
+        "subagentStart": "sha256:cdf685a22f7a63aac0f9948d20dbf40f1d89ddd7f2f09fdcdf37541cf13cf74f/sha256:17dcfb25265a297c570a1e54562158e645cc7f9cfa3ae11e29cab473b1ac4ba9"
+      },
+      "model_efforts": {
+        "gpt-6.1-sol": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "xhigh"
+        ],
+        "gpt-6-astra": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "ultra",
+          "xhigh"
+        ],
+        "gpt-6-sol": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "ultra",
+          "xhigh"
+        ],
+        "gpt-6-luna": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "xhigh"
+        ],
+        "gpt-5.6-sol": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "ultra",
+          "xhigh"
+        ],
+        "gpt-6.1-terra": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "xhigh"
+        ],
+        "gpt-5.6-terra": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "ultra",
+          "xhigh"
+        ],
+        "gpt-5.6-luna": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "xhigh"
+        ]
+      },
+      "feature_state": {
+        "plugins": true,
+        "hooks": true,
+        "multi_agent": true
+      },
+      "native_feature_state": {
+        "enabled": true,
+        "expose_spawn_agent_model_overrides": true,
+        "max_concurrent_threads_per_session": 3
+      },
+      "capability_exports": {
+        "model-catalog.json": "fa90a7b1b2c00a780e0f8ff19e604977f9d41d16474be42216e0cc77404e11c6",
+        "native-catalog-source.json": "625c269468c87512e359cb091a1481f712026c0facdf4e7952cb8c59cddbb76a",
+        "native-spawn-source.json": "4809d6b01876b6c17bbbfea4bba0a32c821e3110092cb19d9ffc97371a34212e",
+        "provenance.json": "c30bc8ec7290fc34518406bbdc63631f4bce6f76d607932892a43a0dd99b1f71",
+        "spawn-schema.json": "d5929a754368f8f4c20994bbc8b33e94e0313877288c6e86eebc09b80b80e448"
+      }
+    },
+    "after": {
+      "subject_ref": "9f72e6aead1b28e11e7e8da385609cf1ba11f698",
+      "plugin_version": "1.3.3",
+      "artifact_files": {
+        "README.md": "a3d0ee3f57dcf358d0fdf1ed6548f420b857ca3c76d5f10d0f07f1d49eb57f8d",
+        ".codex-plugin/plugin.json": "c42560beb52535267a56dd548860503a4b387c45f4e892671ac1c02496b690cc",
+        "defaults/default-routing.json": "997075f97596ac383c40374bc668f980bcf9f6fa1f0eba1a9c0e02135d280b12",
+        "docs/context-loading.md": "4b22cacf259b3a8427c6a909c0c6b39528f22255bf8f8e3740e0f2e5c3219fbb",
+        "docs/decision-lifetime.md": "1d3560b74319fb9f2ce46b2fc97546c798b4176860a25e9d9ceebbbd476c5c8f",
+        "docs/live-cli-validation.md": "02528169ed3811912c1c698e64255688a2e862e4423a21082c2ac5f768dd2d03",
+        "docs/sol-upgrade.md": "1e91ca396ce337e5e98df2ed946ceb83ffb78a347cf4a22b1a4ec0f69a6e00fe",
+        "docs/terra-support.md": "b28677741029f90fbcc95cf4c11c82102204367a74942aa4866b9a96625f1627",
+        "hooks/context_cache.py": "05823aacf92e11558678397204008cdd68a247880a03139a0c31e3d2dbec8044",
+        "hooks/describe_router.py": "c84019dd4bb9d743e0606825def3a79577f310f327ae30cce9c4b9877970f6a3",
+        "hooks/dispatch_audit.py": "b8130e145a6c2e623fe3d12e1dcc77ea0655c22caa17a8e4eb4e62747a10f9f6",
+        "hooks/dispatch_contract.py": "f749b3076f7daa520d337681abfc7d1f7f20badb22455322f9f363637dfbeab1",
+        "hooks/execution_decision.py": "ed81103353517d6e4703e88911313caddc48cb0435f3df4cb4c9778078a8f7d5",
+        "hooks/hooks.json": "bcd87e9d478b32c0ee370d7d99c5dfeb56e7cb85040cda82eca746fb31ecd4fd",
+        "hooks/router_hook.py": "d5fe96e5afeef6303bd688f81d3c5dc3794a2c3533e1c3991903e43251971cdf",
+        "hooks/routing_config.py": "bcf2bc173fdcc489bb1ad70d0808f9c18940d26d85bfaf2cd3c1a3e8dcc7e03f",
+        "hooks/subagent_naming.py": "5a67bd481f70589e4cfc8625226c0fd0c8ad4b33690bbba1082cc87b21e911ce",
+        "scripts/bump_version.py": "9c98781f0a06511b3665ebe53d61c88c6c8b5c3db5292f7b78a7f15040e9f58b",
+        "scripts/init_router.py": "59a1e3ba3f0a7324643153dff65279d371581b097f384ce2dea6292a1ac8693e",
+        "scripts/validate_plugin.py": "7aaccd54acb9ffcf6586164ed8c19f24a352b2159920042fc584c88851e625fe",
+        "tests/test_context_loading.py": "ea9e2e114cef5d8a1c77bbeb94467ceca30ab966650ccf077bbebbfc905cee1b",
+        "tests/test_decision_context.py": "4367fb42e0acfdd68d2a846b2fdfc42f2c8439deff9401f2e51e7b09c3d99f79",
+        "tests/test_dispatch_canary.py": "15d3cded909a05b98778f215734dba7d40f1568a7955592b01c6fe7fd74b3144",
+        "tests/test_execution_modes.py": "c0965df3c09af300e337ee60741ec9bdc3ccd3b5a5128e0fc7a86ef88073614c",
+        "tests/test_router_plugin.py": "3b8ede1b49c4acb95508d1da49a9d2ba07ad5c37d7e756d3fb59a25ccd3146fb",
+        "tests/fixtures/session-start.json": "d368a107c50c483f24e151298b470d7ff2250399b9cddcb9d08bef69c92354c9",
+        "tests/fixtures/subagent-start.json": "369f81ae073a680385e97517f100a4684d7b925d9b24739b974a38bf0d034a4f",
+        "tests/fixtures/user-prompt-submit.json": "81d5770d8cab05f4080f6b506c1aed08cb31e259e35fe98ef4d7f601f6430b07",
+        "skills/initialize-router/SKILL.md": "25baeb3ae0e30da5f320494bf3a954f4660dc199c33859b9ce7034abec770e45",
+        "skills/model-router/SKILL.md": "3a0e4568f18687e7dd770c2c666a0f20f8f557790c294f1e35519fb37f163ca4",
+        "skills/model-router/references/decision-contract.md": "7aa19f7be9fed5b8d5def550099cfb045e6fe0aac789b87fbaa5ebce66c6747c",
+        "skills/model-router/references/delegation.md": "cab8eddbd07735515ec6f5cb26646f12423abb57ce07bf525bb9f2bc8a5b40e3",
+        "skills/model-router/references/dispatch-contract.md": "7c9e6d088561d8d57c77b9911e853ff438147ed6e04496625078657d1bbc3c76",
+        "skills/model-router/references/routing-policy.md": "cee1bb5e73ce1f56d6877c20ccca57dea7deeaeb9b4cddcb06161db3f8c13d29"
+      },
+      "artifact_digest": "3d14e65044c35481122c16f72b9dd681fbaa701dcf8da23c67cb20e877937df8",
+      "trusted_hook_count": 5,
+      "hook_hashes": {
+        "preToolUse": "sha256:4fadcc93db5f6b143fbecdfb0a5c5953f0822c3a04fca88a16376d7fe6f40b05/sha256:b8567c3ccdf6cab3ed35922732bb1dc4c4792bbaf7c0475bf3f57384a0c223ed",
+        "postToolUse": "sha256:0bd6433353822ddb51cf5c07e44a3cc66e93f1ace78a602d9676835384e2435e/sha256:b8567c3ccdf6cab3ed35922732bb1dc4c4792bbaf7c0475bf3f57384a0c223ed",
+        "sessionStart": "sha256:ba671b7c33fce0e8c284911c203db80bc1fc139644340ba1f757fb2a479904f8/sha256:b8567c3ccdf6cab3ed35922732bb1dc4c4792bbaf7c0475bf3f57384a0c223ed",
+        "userPromptSubmit": "sha256:3e08d61e88801537029552efa2909dff471dcc9901ee68c41eb1dbcf8a47986f/sha256:b8567c3ccdf6cab3ed35922732bb1dc4c4792bbaf7c0475bf3f57384a0c223ed",
+        "subagentStart": "sha256:3bd46662501076e0f527c01c5e9a64c495c0d1f4325bbd696196af189304c921/sha256:b8567c3ccdf6cab3ed35922732bb1dc4c4792bbaf7c0475bf3f57384a0c223ed"
+      },
+      "model_efforts": {
+        "gpt-6.1-sol": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "xhigh"
+        ],
+        "gpt-6-astra": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "ultra",
+          "xhigh"
+        ],
+        "gpt-6-sol": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "ultra",
+          "xhigh"
+        ],
+        "gpt-6-luna": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "xhigh"
+        ],
+        "gpt-5.6-sol": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "ultra",
+          "xhigh"
+        ],
+        "gpt-6.1-terra": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "xhigh"
+        ],
+        "gpt-5.6-terra": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "ultra",
+          "xhigh"
+        ],
+        "gpt-5.6-luna": [
+          "high",
+          "low",
+          "max",
+          "medium",
+          "xhigh"
+        ]
+      },
+      "feature_state": {
+        "plugins": true,
+        "hooks": true,
+        "multi_agent": true
+      },
+      "native_feature_state": {
+        "enabled": true,
+        "expose_spawn_agent_model_overrides": true,
+        "max_concurrent_threads_per_session": 3
+      },
+      "capability_exports": {
+        "model-catalog.json": "fa90a7b1b2c00a780e0f8ff19e604977f9d41d16474be42216e0cc77404e11c6",
+        "native-catalog-source.json": "625c269468c87512e359cb091a1481f712026c0facdf4e7952cb8c59cddbb76a",
+        "native-spawn-source.json": "4809d6b01876b6c17bbbfea4bba0a32c821e3110092cb19d9ffc97371a34212e",
+        "provenance.json": "1a21d75355857eba6876f10995bf022987155a8d14206c6f2bc0fb1e1643a27a",
+        "spawn-schema.json": "d5929a754368f8f4c20994bbc8b33e94e0313877288c6e86eebc09b80b80e448"
+      }
+    }
+  },
+  "provider": "copilot-bridge",
+  "provider_matches_local_config": true,
+  "security_settings_match_reused_proofs": true,
+  "model_calls": 0,
+  "scope": "New normally installed plugin subjects and matching platform ABI; native/cancellation platform evidence reused with provenance, new plugin behavior scored afresh.",
+  "reused_capabilities": {
+    "cancellation-read-note-r1-after.json": "fe1eb761c810938b17ffbe85028521d7e410744e0e5c79d3e043beade99f019b",
+    "cancellation-read-note-r1-before.json": "d0100d9a4e25ab4b7db041dc92df87f09b5db94bfc828ba5a71762c43d29eb3b",
+    "native-read-note-r1-after.json": "975e1beef99195c1fc96c12043ca539fd39866ba09569f9dbcc5633e56ab18d0",
+    "native-read-note-r1-before.json": "f024da2df9df151332378799928e19304c60483b92b353ae81a6dfe21c8a9ca2"
+  }
+}

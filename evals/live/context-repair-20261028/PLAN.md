@@ -1,8 +1,9 @@
 # Proposed 1.3.3 live repair validation
 
-Status: source repair and offline checks are complete. No new live model calls
-are authorized by this plan alone. The prior $7 selection covered the completed
-1.3.2 cohort; its unused estimate allowance is not silently reused here.
+Status: on 2026-10-29 the user approved the full five-scenario, three-pair
+1.3.3 cohort with an additional $7 observed API-price-estimate stop. Execution
+and fresh receipts are retained under [context-repair-20261029](../context-repair-20261029/PLAN.md).
+The earlier $7 selection covered the completed 1.3.2 cohort separately.
 
 ## Subjects and admission
 
@@ -19,7 +20,10 @@ are authorized by this plan alone. The prior $7 selection covered the completed
   platform capability receipts only with matching observed ABI/configuration
   and explicit source provenance; they do not prove new plugin behavior.
 
-## Scope choices awaiting user selection
+## Scope selection
+
+Selected: option 1, the full five-scenario cohort. Option 2 below is retained
+as the unselected proposal; it does not authorize an additional cohort.
 
 1. Full: five frozen cases, three matched fresh pairs each (30 arms), with
    an additional $7 observed API-price-estimate stop. Cases are
