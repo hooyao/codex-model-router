@@ -1,0 +1,581 @@
+{
+  "schema_version": 1,
+  "records": 30,
+  "all_response_accounting_recomputed": true,
+  "artifact_passes": 30,
+  "complete_timed_pairs": 15,
+  "scored_responses": 521,
+  "scored_api_estimated_usd": 4.789826465000001,
+  "token_classes": {
+    "input_tokens": 13347445,
+    "cached_input_tokens": 11827899,
+    "cache_write_input_tokens": 1440014,
+    "output_tokens": 116587,
+    "reasoning_output_tokens": 12718
+  },
+  "thresholds": {
+    "wall_ratio": 1.15,
+    "token_ratio": 1.05,
+    "estimated_cost_ratio": 1.05
+  },
+  "cases": {
+    "direct-small-control": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "quality_parity": true,
+          "wall_ratio": 0.8928185174595676,
+          "token_ratio": 0.8959779885468862,
+          "estimated_cost_ratio": 0.8494204802332005,
+          "arms": {
+            "after": {
+              "run_id": "scored-direct-small-control-r1-after",
+              "wall_seconds": 71.821,
+              "total_tokens": 200269,
+              "model_requests": 9,
+              "api_estimated_usd": 0.0914983,
+              "native_workers": 0,
+              "hook_context_bytes": 1434,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            },
+            "before": {
+              "run_id": "scored-direct-small-control-r1-before",
+              "wall_seconds": 80.443,
+              "total_tokens": 223520,
+              "model_requests": 9,
+              "api_estimated_usd": 0.1077185,
+              "native_workers": 0,
+              "hook_context_bytes": 33678,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            }
+          }
+        },
+        {
+          "repetition": 2,
+          "quality_parity": true,
+          "wall_ratio": 0.7998831252797534,
+          "token_ratio": 0.8223166043923551,
+          "estimated_cost_ratio": 0.7755476580503652,
+          "arms": {
+            "after": {
+              "run_id": "scored-direct-small-control-r2-after",
+              "wall_seconds": 64.333,
+              "total_tokens": 183546,
+              "model_requests": 9,
+              "api_estimated_usd": 0.0837987,
+              "native_workers": 0,
+              "hook_context_bytes": 1434,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            },
+            "before": {
+              "run_id": "scored-direct-small-control-r2-before",
+              "wall_seconds": 80.428,
+              "total_tokens": 223206,
+              "model_requests": 9,
+              "api_estimated_usd": 0.108051,
+              "native_workers": 0,
+              "hook_context_bytes": 33678,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            }
+          }
+        },
+        {
+          "repetition": 3,
+          "quality_parity": true,
+          "wall_ratio": 1.5290724327628362,
+          "token_ratio": 0.9237680575829265,
+          "estimated_cost_ratio": 0.8052809331387376,
+          "arms": {
+            "after": {
+              "run_id": "scored-direct-small-control-r3-after",
+              "wall_seconds": 80.05,
+              "total_tokens": 183525,
+              "model_requests": 9,
+              "api_estimated_usd": 0.0839784,
+              "native_workers": 0,
+              "hook_context_bytes": 1434,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            },
+            "before": {
+              "run_id": "scored-direct-small-control-r3-before",
+              "wall_seconds": 52.352,
+              "total_tokens": 198670,
+              "model_requests": 8,
+              "api_estimated_usd": 0.1042846,
+              "native_workers": 0,
+              "hook_context_bytes": 33678,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            }
+          }
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": 0.8928185174595676,
+        "token_ratio": 0.8959779885468862,
+        "estimated_cost_ratio": 0.8052809331387376
+      },
+      "paired_ratio_ranges": {
+        "wall_ratio": [
+          0.7998831252797534,
+          1.5290724327628362
+        ],
+        "token_ratio": [
+          0.8223166043923551,
+          0.9237680575829265
+        ],
+        "estimated_cost_ratio": [
+          0.7755476580503652,
+          0.8494204802332005
+        ]
+      },
+      "exploratory_artifact_and_economics_pass": true
+    },
+    "investigation-reuse": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "quality_parity": true,
+          "wall_ratio": 2.4703018206012217,
+          "token_ratio": 3.4147409268426157,
+          "estimated_cost_ratio": 1.6473185596264923,
+          "arms": {
+            "after": {
+              "run_id": "scored-investigation-reuse-r1-after",
+              "wall_seconds": 163.366,
+              "total_tokens": 549104,
+              "model_requests": 21,
+              "api_estimated_usd": 0.170206225,
+              "native_workers": 1,
+              "hook_context_bytes": 1998,
+              "resolver_decisions_in_mixed_command_outputs": 3
+            },
+            "before": {
+              "run_id": "scored-investigation-reuse-r1-before",
+              "wall_seconds": 66.132,
+              "total_tokens": 160804,
+              "model_requests": 6,
+              "api_estimated_usd": 0.1033232,
+              "native_workers": 0,
+              "hook_context_bytes": 16866,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            }
+          }
+        },
+        {
+          "repetition": 2,
+          "quality_parity": true,
+          "wall_ratio": 1.4591396327873492,
+          "token_ratio": 1.0707923646516144,
+          "estimated_cost_ratio": 0.8623922764707876,
+          "arms": {
+            "after": {
+              "run_id": "scored-investigation-reuse-r2-after",
+              "wall_seconds": 82.491,
+              "total_tokens": 141139,
+              "model_requests": 7,
+              "api_estimated_usd": 0.0839488,
+              "native_workers": 0,
+              "hook_context_bytes": 1433,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            },
+            "before": {
+              "run_id": "scored-investigation-reuse-r2-before",
+              "wall_seconds": 56.534,
+              "total_tokens": 131808,
+              "model_requests": 5,
+              "api_estimated_usd": 0.0973441,
+              "native_workers": 0,
+              "hook_context_bytes": 16866,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            }
+          }
+        },
+        {
+          "repetition": 3,
+          "quality_parity": true,
+          "wall_ratio": 0.9423076923076925,
+          "token_ratio": 0.6448852001804034,
+          "estimated_cost_ratio": 0.7525543006947698,
+          "arms": {
+            "after": {
+              "run_id": "scored-investigation-reuse-r3-after",
+              "wall_seconds": 68.061,
+              "total_tokens": 124399,
+              "model_requests": 6,
+              "api_estimated_usd": 0.0830467,
+              "native_workers": 0,
+              "hook_context_bytes": 1433,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            },
+            "before": {
+              "run_id": "scored-investigation-reuse-r3-before",
+              "wall_seconds": 72.228,
+              "total_tokens": 192901,
+              "model_requests": 7,
+              "api_estimated_usd": 0.1103531,
+              "native_workers": 0,
+              "hook_context_bytes": 16866,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            }
+          }
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": 1.4591396327873492,
+        "token_ratio": 1.0707923646516144,
+        "estimated_cost_ratio": 0.8623922764707876
+      },
+      "paired_ratio_ranges": {
+        "wall_ratio": [
+          0.9423076923076925,
+          2.4703018206012217
+        ],
+        "token_ratio": [
+          0.6448852001804034,
+          3.4147409268426157
+        ],
+        "estimated_cost_ratio": [
+          0.7525543006947698,
+          1.6473185596264923
+        ]
+      },
+      "exploratory_artifact_and_economics_pass": false
+    },
+    "serial-escalation": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "quality_parity": true,
+          "wall_ratio": 1.1932247235534688,
+          "token_ratio": 0.9079251229385714,
+          "estimated_cost_ratio": 0.9280983351873879,
+          "arms": {
+            "after": {
+              "run_id": "scored-serial-escalation-r1-after",
+              "wall_seconds": 159.595,
+              "total_tokens": 501270,
+              "model_requests": 21,
+              "api_estimated_usd": 0.148291965,
+              "native_workers": 1,
+              "hook_context_bytes": 1996,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            },
+            "before": {
+              "run_id": "scored-serial-escalation-r1-before",
+              "wall_seconds": 133.751,
+              "total_tokens": 552105,
+              "model_requests": 20,
+              "api_estimated_usd": 0.159780445,
+              "native_workers": 1,
+              "hook_context_bytes": 22109,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            }
+          }
+        },
+        {
+          "repetition": 2,
+          "quality_parity": true,
+          "wall_ratio": 1.1049357619125062,
+          "token_ratio": 1.0110604376775483,
+          "estimated_cost_ratio": 0.986155519473215,
+          "arms": {
+            "after": {
+              "run_id": "scored-serial-escalation-r2-after",
+              "wall_seconds": 190.239,
+              "total_tokens": 631385,
+              "model_requests": 24,
+              "api_estimated_usd": 0.169195235,
+              "native_workers": 1,
+              "hook_context_bytes": 1996,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            },
+            "before": {
+              "run_id": "scored-serial-escalation-r2-before",
+              "wall_seconds": 172.172,
+              "total_tokens": 624478,
+              "model_requests": 22,
+              "api_estimated_usd": 0.17157054,
+              "native_workers": 1,
+              "hook_context_bytes": 22109,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            }
+          }
+        },
+        {
+          "repetition": 3,
+          "quality_parity": true,
+          "wall_ratio": 0.8764881785702285,
+          "token_ratio": 0.6909668392870887,
+          "estimated_cost_ratio": 0.8690580070960191,
+          "arms": {
+            "after": {
+              "run_id": "scored-serial-escalation-r3-after",
+              "wall_seconds": 156.518,
+              "total_tokens": 502753,
+              "model_requests": 18,
+              "api_estimated_usd": 0.162876905,
+              "native_workers": 1,
+              "hook_context_bytes": 1996,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            },
+            "before": {
+              "run_id": "scored-serial-escalation-r3-before",
+              "wall_seconds": 178.574,
+              "total_tokens": 727608,
+              "model_requests": 25,
+              "api_estimated_usd": 0.18741776,
+              "native_workers": 1,
+              "hook_context_bytes": 22109,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            }
+          }
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": 1.1049357619125062,
+        "token_ratio": 0.9079251229385714,
+        "estimated_cost_ratio": 0.9280983351873879
+      },
+      "paired_ratio_ranges": {
+        "wall_ratio": [
+          0.8764881785702285,
+          1.1932247235534688
+        ],
+        "token_ratio": [
+          0.6909668392870887,
+          1.0110604376775483
+        ],
+        "estimated_cost_ratio": [
+          0.8690580070960191,
+          0.986155519473215
+        ]
+      },
+      "exploratory_artifact_and_economics_pass": true
+    },
+    "parallel-disjoint": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "quality_parity": true,
+          "wall_ratio": 0.910592551825353,
+          "token_ratio": 0.6977982109291714,
+          "estimated_cost_ratio": 0.7819025213456877,
+          "arms": {
+            "after": {
+              "run_id": "scored-parallel-disjoint-r1-after",
+              "wall_seconds": 124.091,
+              "total_tokens": 483720,
+              "model_requests": 21,
+              "api_estimated_usd": 0.141976945,
+              "native_workers": 3,
+              "hook_context_bytes": 3126,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            },
+            "before": {
+              "run_id": "scored-parallel-disjoint-r1-before",
+              "wall_seconds": 136.275,
+              "total_tokens": 693209,
+              "model_requests": 25,
+              "api_estimated_usd": 0.18157883,
+              "native_workers": 3,
+              "hook_context_bytes": 32603,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            }
+          }
+        },
+        {
+          "repetition": 2,
+          "quality_parity": true,
+          "wall_ratio": 1.0451102532608059,
+          "token_ratio": 0.8467347910486027,
+          "estimated_cost_ratio": 0.9481308163641052,
+          "arms": {
+            "after": {
+              "run_id": "scored-parallel-disjoint-r2-after",
+              "wall_seconds": 142.946,
+              "total_tokens": 577960,
+              "model_requests": 23,
+              "api_estimated_usd": 0.161956435,
+              "native_workers": 3,
+              "hook_context_bytes": 3126,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            },
+            "before": {
+              "run_id": "scored-parallel-disjoint-r2-before",
+              "wall_seconds": 136.776,
+              "total_tokens": 682575,
+              "model_requests": 26,
+              "api_estimated_usd": 0.17081655,
+              "native_workers": 3,
+              "hook_context_bytes": 32603,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            }
+          }
+        },
+        {
+          "repetition": 3,
+          "quality_parity": true,
+          "wall_ratio": 0.9178482381567484,
+          "token_ratio": 1.0892541459331684,
+          "estimated_cost_ratio": 0.9114533717967721,
+          "arms": {
+            "after": {
+              "run_id": "scored-parallel-disjoint-r3-after",
+              "wall_seconds": 122.217,
+              "total_tokens": 592124,
+              "model_requests": 25,
+              "api_estimated_usd": 0.155110155,
+              "native_workers": 3,
+              "hook_context_bytes": 3126,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            },
+            "before": {
+              "run_id": "scored-parallel-disjoint-r3-before",
+              "wall_seconds": 133.156,
+              "total_tokens": 543605,
+              "model_requests": 20,
+              "api_estimated_usd": 0.170178925,
+              "native_workers": 3,
+              "hook_context_bytes": 32603,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            }
+          }
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": 0.9178482381567484,
+        "token_ratio": 0.8467347910486027,
+        "estimated_cost_ratio": 0.9114533717967721
+      },
+      "paired_ratio_ranges": {
+        "wall_ratio": [
+          0.910592551825353,
+          1.0451102532608059
+        ],
+        "token_ratio": [
+          0.6977982109291714,
+          1.0892541459331684
+        ],
+        "estimated_cost_ratio": [
+          0.7819025213456877,
+          0.9481308163641052
+        ]
+      },
+      "exploratory_artifact_and_economics_pass": true
+    },
+    "architecture-review": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "quality_parity": true,
+          "wall_ratio": 1.0515497481004066,
+          "token_ratio": 0.829207099205342,
+          "estimated_cost_ratio": 0.9903957807121233,
+          "arms": {
+            "after": {
+              "run_id": "scored-architecture-review-r1-after",
+              "wall_seconds": 190.565,
+              "total_tokens": 679512,
+              "model_requests": 26,
+              "api_estimated_usd": 0.250410555,
+              "native_workers": 2,
+              "hook_context_bytes": 2563,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            },
+            "before": {
+              "run_id": "scored-architecture-review-r1-before",
+              "wall_seconds": 181.223,
+              "total_tokens": 819472,
+              "model_requests": 29,
+              "api_estimated_usd": 0.252838875,
+              "native_workers": 2,
+              "hook_context_bytes": 27364,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            }
+          }
+        },
+        {
+          "repetition": 2,
+          "quality_parity": true,
+          "wall_ratio": 1.3115463076295388,
+          "token_ratio": 1.2641272468565787,
+          "estimated_cost_ratio": 0.5325411031155571,
+          "arms": {
+            "after": {
+              "run_id": "scored-architecture-review-r2-after",
+              "wall_seconds": 176.803,
+              "total_tokens": 696524,
+              "model_requests": 28,
+              "api_estimated_usd": 0.244950825,
+              "native_workers": 2,
+              "hook_context_bytes": 2563,
+              "resolver_decisions_in_mixed_command_outputs": 2
+            },
+            "before": {
+              "run_id": "scored-architecture-review-r2-before",
+              "wall_seconds": 134.805,
+              "total_tokens": 550992,
+              "model_requests": 20,
+              "api_estimated_usd": 0.459966045,
+              "native_workers": 2,
+              "hook_context_bytes": 27364,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            }
+          }
+        },
+        {
+          "repetition": 3,
+          "quality_parity": true,
+          "wall_ratio": 1.0908272271080095,
+          "token_ratio": 0.945128045250078,
+          "estimated_cost_ratio": 0.6656130497090614,
+          "arms": {
+            "after": {
+              "run_id": "scored-architecture-review-r3-after",
+              "wall_seconds": 150.208,
+              "total_tokens": 530524,
+              "model_requests": 22,
+              "api_estimated_usd": 0.149201435,
+              "native_workers": 2,
+              "hook_context_bytes": 2563,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            },
+            "before": {
+              "run_id": "scored-architecture-review-r3-before",
+              "wall_seconds": 137.701,
+              "total_tokens": 561325,
+              "model_requests": 21,
+              "api_estimated_usd": 0.224156415,
+              "native_workers": 2,
+              "hook_context_bytes": 27364,
+              "resolver_decisions_in_mixed_command_outputs": 1
+            }
+          }
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": 1.0908272271080095,
+        "token_ratio": 0.945128045250078,
+        "estimated_cost_ratio": 0.6656130497090614
+      },
+      "paired_ratio_ranges": {
+        "wall_ratio": [
+          1.0515497481004066,
+          1.3115463076295388
+        ],
+        "token_ratio": [
+          0.829207099205342,
+          1.2641272468565787
+        ],
+        "estimated_cost_ratio": [
+          0.5325411031155571,
+          0.9903957807121233
+        ]
+      },
+      "exploratory_artifact_and_economics_pass": true
+    }
+  },
+  "verdict": "NOT_PASSED_INVESTIGATION_WALL_AND_TOKENS",
+  "scope": "Exploratory artifact/overhead regression only; not full routing compliance or general latency evidence.",
+  "billing_status": "Standard API-price estimates only; copilot-bridge billing and upstream identity unverified."
+}

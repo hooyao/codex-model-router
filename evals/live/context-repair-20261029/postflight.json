@@ -1,0 +1,22 @@
+{
+  "captured_utc": "2026-10-29T01:46:22.299406+00:00",
+  "observations": {
+    "before": {
+      "subject_ref": "e75ef8785d960b12e6d1ce27ad4c6b184b8a0fc0",
+      "plugin_version": "1.3.0",
+      "verified_files": 26,
+      "tracked_subject_bytes_unchanged": true
+    },
+    "after": {
+      "subject_ref": "9f72e6aead1b28e11e7e8da385609cf1ba11f698",
+      "plugin_version": "1.3.3",
+      "verified_files": 34,
+      "tracked_subject_bytes_unchanged": true
+    }
+  },
+  "cli_unchanged": true,
+  "runner_unchanged": true,
+  "capability_adapter_unchanged": true,
+  "fixture_definitions_unchanged": true,
+  "model_calls": 0
+}

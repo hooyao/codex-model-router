@@ -1,0 +1,169 @@
+{
+  "scope": "unscored capability/setup attempts; every original retained privately",
+  "records": [
+    {
+      "arm": "before",
+      "phase": "activation-result",
+      "outcome": "failed: command execution blocked before Windows sandbox settings were inherited",
+      "original_record_sha256": "2e96ea701821058f8f30c32e57d940de5dd6cfabc8b6d51f05cf3b751a476cc4",
+      "original_api_estimated_usd": 0.0590262,
+      "reconciled_api_estimated_usd": 0.0590262,
+      "responses": 3,
+      "token_classes": {
+        "input_tokens": 58973,
+        "cached_input_tokens": 37077,
+        "cache_write_input_tokens": 20213,
+        "output_tokens": 142,
+        "reasoning_output_tokens": 10
+      },
+      "sessions": 1,
+      "timing_scored": false
+    },
+    {
+      "arm": "after",
+      "phase": "activation-result",
+      "outcome": "failed: command execution blocked before Windows sandbox settings were inherited",
+      "original_record_sha256": "6482edfa96f699d8d84b9238f2d8ee6e25d94eac4731248c8d29157f6b96a8ed",
+      "original_api_estimated_usd": 0.0519929,
+      "reconciled_api_estimated_usd": 0.0519929,
+      "responses": 4,
+      "token_classes": {
+        "input_tokens": 67561,
+        "cached_input_tokens": 50014,
+        "cache_write_input_tokens": 17535,
+        "output_tokens": 313,
+        "reasoning_output_tokens": 25
+      },
+      "sessions": 1,
+      "timing_scored": false
+    },
+    {
+      "arm": "after",
+      "phase": "activation-windows-result",
+      "outcome": "failed: public skill asset ACL denied the required read",
+      "original_record_sha256": "71f492dbeee9ded634ea3e61c25406745868fa75bdcc18f0d01b675296a87e20",
+      "original_api_estimated_usd": 0.0566537,
+      "reconciled_api_estimated_usd": 0.0566537,
+      "responses": 3,
+      "token_classes": {
+        "input_tokens": 56618,
+        "cached_input_tokens": 36357,
+        "cache_write_input_tokens": 20252,
+        "output_tokens": 237,
+        "reasoning_output_tokens": 12
+      },
+      "sessions": 1,
+      "timing_scored": false
+    },
+    {
+      "arm": "before",
+      "phase": "activation-readable-result",
+      "outcome": "activation read and decision passed",
+      "original_record_sha256": "b32024fde55ae220e0050b8087255e569eb46fde977a5faff89fe6bf031f24c1",
+      "original_api_estimated_usd": 0.0727073,
+      "reconciled_api_estimated_usd": 0.0727073,
+      "responses": 4,
+      "token_classes": {
+        "input_tokens": 89300,
+        "cached_input_tokens": 64058,
+        "cache_write_input_tokens": 23555,
+        "output_tokens": 404,
+        "reasoning_output_tokens": 0
+      },
+      "sessions": 1,
+      "timing_scored": false
+    },
+    {
+      "arm": "after",
+      "phase": "activation-readable-result",
+      "outcome": "activation read and decision passed",
+      "original_record_sha256": "b51580c9dfdcc13ad2e6921167d343c35657d57f53859a81f4f67905c47e8c50",
+      "original_api_estimated_usd": 0.0695957,
+      "reconciled_api_estimated_usd": 0.0695957,
+      "responses": 5,
+      "token_classes": {
+        "input_tokens": 103328,
+        "cached_input_tokens": 80982,
+        "cache_write_input_tokens": 22331,
+        "output_tokens": 564,
+        "reasoning_output_tokens": 0
+      },
+      "sessions": 1,
+      "timing_scored": false
+    },
+    {
+      "arm": "after",
+      "phase": "native-probe-result",
+      "outcome": "native worker and complete usage passed; unscored",
+      "original_record_sha256": "24619db14d5344f7541ce3073b9936d1fef94540a0f22985348c8b8084785866",
+      "original_api_estimated_usd": 0.12248434,
+      "reconciled_api_estimated_usd": 0.12248434,
+      "responses": 10,
+      "token_classes": {
+        "input_tokens": 244915,
+        "cached_input_tokens": 194094,
+        "cache_write_input_tokens": 50056,
+        "output_tokens": 2151,
+        "reasoning_output_tokens": 65
+      },
+      "sessions": 2,
+      "timing_scored": false
+    },
+    {
+      "arm": "before",
+      "phase": "native-read-note-r1-before",
+      "outcome": "native worker and complete usage passed; unscored",
+      "original_record_sha256": "45bb3346c93e7fd8eac1d8009b56e66232cdbe76669b1da0bcc7b587bf7a8770",
+      "original_api_estimated_usd": 0.13432804,
+      "reconciled_api_estimated_usd": 0.13432804,
+      "responses": 9,
+      "token_classes": {
+        "input_tokens": 256227,
+        "cached_input_tokens": 198591,
+        "cache_write_input_tokens": 54327,
+        "output_tokens": 2144,
+        "reasoning_output_tokens": 104
+      },
+      "sessions": 2,
+      "timing_scored": false
+    },
+    {
+      "arm": "after",
+      "phase": "cancellation-read-note-r1-after",
+      "outcome": "original UNKNOWN preserved; derived closed-native replay reconciles complete usage",
+      "original_record_sha256": "fb4b813324f03a06541cae7c0b5f4146db97df90ff952314b9f5c1d329918c1b",
+      "original_api_estimated_usd": 0.1145954,
+      "reconciled_api_estimated_usd": 0.116595075,
+      "responses": 7,
+      "token_classes": {
+        "input_tokens": 178979,
+        "cached_input_tokens": 129144,
+        "cache_write_input_tokens": 49449,
+        "output_tokens": 1728,
+        "reasoning_output_tokens": 24
+      },
+      "sessions": 2,
+      "timing_scored": false
+    },
+    {
+      "arm": "before",
+      "phase": "cancellation-read-note-r1-before",
+      "outcome": "live child/parent interrupt and complete usage passed",
+      "original_record_sha256": "d0100d9a4e25ab4b7db041dc92df87f09b5db94bfc828ba5a71762c43d29eb3b",
+      "original_api_estimated_usd": 0.112996175,
+      "reconciled_api_estimated_usd": 0.112996175,
+      "responses": 7,
+      "token_classes": {
+        "input_tokens": 184568,
+        "cached_input_tokens": 134850,
+        "cache_write_input_tokens": 46613,
+        "output_tokens": 1671,
+        "reasoning_output_tokens": 41
+      },
+      "sessions": 2,
+      "timing_scored": false
+    }
+  ],
+  "responses": 52,
+  "api_estimated_usd": 0.79637943
+}

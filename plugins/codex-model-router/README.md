@@ -40,6 +40,13 @@ controller sends one decision-request-v1 JSON object to
 `execution_decision.py --config <routing.json>` on standard input and uses the
 validated JSON result. The full request schema and example are documented in
 [`skills/model-router/references/decision-contract.md`](skills/model-router/references/decision-contract.md).
+One decision covers the same owner's declared reads, receipt, bounded edit,
+and self-check. Resolve new business requests and separately owned stages;
+reassess changes to configuration, inputs, scope, permissions, risk, or failed
+validation before further work. A file or command is not itself a new stage.
+Matched `evaluate` examples defer to the hard-signal gate; they do not conflict
+with `direct`. Any matched `delegate` example still wins. See
+[decision lifetime](docs/decision-lifetime.md) for the regression and fix.
 
 A delegated decision resolves to `PARALLEL` only for multiple bounded,
 independent, dependency-free tasks with disjoint write scopes. Any unknown,
@@ -87,12 +94,14 @@ selection require an independent reviewer separate from the author/implementer,
 using the highest suitable available model. An implementation request must also
 have an implementation worker; review advice alone does not complete it.
 
-`SessionStart` and every `UserPromptSubmit` repeat the full controller contract,
-explicitly scoped to the primary agent, including the meta-task rule even when
-a follow-up lacks router keywords. Inherited controller context does not apply
-to dispatched workers.
+`SessionStart` emits a short skill/config entrypoint on startup and recovery,
+including `source: compact`. `UserPromptSubmit` emits no context when the same
+session/config path already received the current revision. Configuration or
+instruction changes, missing session identity, or an unavailable cache cause a
+fresh entrypoint. The skill still requires an ownership decision for every
+request and applies meta-task review to semantic follow-ups.
 
-`SubagentStart` emits an explicit worker-role override: the worker is authorized
+`SubagentStart` emits a short worker-role override without controller config: the worker is authorized
 and required to perform assigned analysis, repository inspection, edits, commands,
 tests, and task validation within its bounded packet. Verification workers must
 inspect the relevant files and run their assigned checks. Workers do not apply
@@ -105,10 +114,14 @@ delegation.
 
 ## Workspace Routing Configuration
 
-Every supported hook loads and validates an editable workspace file at
-`.codex-model-router/routing.json` on every invocation. The emitted context
-contains a deterministic `ROUTING_CONFIG_BEGIN`/`ROUTING_CONFIG_END` block, so
-edits take effect on the next hook without rebuilding the plugin.
+Controller hooks load and validate the editable workspace file at
+`.codex-model-router/routing.json`. A nonempty controller emission contains a
+`ROUTING_CONFIG_BEGIN`/`ROUTING_CONFIG_END` block with file pointers and a config
+digest, not the config contents, signal schema, or effective policy. Edits take
+effect on the next event. The temporary per-session cache contains only hashed
+identity and a revision signature; it never caches a routing decision.
+See [context loading](docs/context-loading.md) for official guidance, recovery,
+privacy, and measurement boundaries.
 
 Discovery starts at the event `cwd`. An existing routing file at that directory
 or any parent wins. If none exists, the closest parent containing a `.git` file
@@ -154,9 +167,10 @@ and interpreter failures. On POSIX it runs every event through the resolved
 launches, so `hooks.json` and the package validator also require the literal
 `python` command on Windows.
 
-Schema version 3 is a JSON object with exactly these fields:
+Schema version 4 is a JSON object with exactly these fields (version 3 remains
+supported with the legacy Terra behavior described below):
 
-- `schema_version`: integer `3`.
+- `schema_version`: integer `4` for new configurations, or `3` for legacy files.
 - `selection_principle` and `runtime_resolution`: non-empty strings.
 - `execution_policy`: `default_mode` (`direct`, `delegate`, or `evaluate`),
   non-empty `direct_requires_all` and `delegate_if_any` arrays of supported
@@ -164,35 +178,36 @@ Schema version 3 is a JSON object with exactly these fields:
   topology rules, bounded depth/concurrency/retry limits, and verification
   minima. Required signal arrays are exact sets.
 - `effort_guidance`: non-empty string guidance for `low`, `medium`, `high`, and
-  `xhigh`, with optional `max` guidance for existing schema-v3 files. The
-  bundled template includes `max` and reserves it for extreme cases.
+  `xhigh`, with optional `max` guidance. The bundled template includes `max`
+  and reserves it for extreme cases.
 - `official_sources`: a non-empty array of HTTPS URLs.
 - `examples`: one to 64 objects with a unique lower-case hyphenated `id`, a
   non-empty `task_signals` string array, `execution_mode` set to `direct`,
   `delegate`, or `evaluate`, `preferred_model_class` set to `Astra`, `Sol`,
-  or `Luna`, a `reasoning_effort` of `low`, `medium`, `high`, `xhigh`, or `max`,
+  `Terra`, or `Luna`, a `reasoning_effort` of `low`, `medium`, `high`, `xhigh`, or `max`,
   and a non-empty `rationale`.
   Legacy schema-v3 workspace files may still use `Terra`; the loader maps that
   advisory role to Sol in memory.
 
 Obsolete schema v1 and v2 files are rejected rather than silently translated.
-Regenerate or deliberately migrate them to schema v3. `direct` is an eligibility
+Regenerate or deliberately migrate them to schema v4. `direct` is an eligibility
 hint subject to every direct criterion, `delegate` is mandatory, and `evaluate`
 applies the structured semantic gate. These fields are machine-readable policy
 inputs, not a claim that static config can completely classify arbitrary
 natural-language tasks.
 
-Precedence is: hard delegation signals first; one matching example overrides
-`execution_policy.default_mode`; no match uses the global default; disagreeing
-matches fail closed to delegation. A `direct` result from either level remains
-subject to every direct criterion.
+Precedence is: hard delegation signals first; matching examples override
+`execution_policy.default_mode`; no match uses the global default. Among
+matches, any `delegate` wins; otherwise `direct` wins over neutral `evaluate`,
+and evaluate-only matches use the structured gate. A `direct` result from
+either level remains subject to every direct criterion.
 
 Model classes are preferences, not assumed runtime identifiers. The controller
 resolves them against the current runtime catalog only after choosing DELEGATE.
 The defaults prefer GPT-6 Astra for the hardest work, GPT-6.1 Sol for coding, technical
-discovery, documentation, triage, and review, and Luna for focused repeatable
-work. They include
-architecture, security, complex tool workflows, 3D modeling, image analysis,
+discovery, documentation, triage, and review, GPT-6.1 Terra for bounded visual,
+application-screen, and natural-writing work, and Luna for focused repeatable
+work. They include architecture, security, complex tool workflows, 3D modeling, image analysis,
 code analysis, debugging, open-ended and everyday implementation, discovery,
 documentation, test triage, detailed manual procedures, extraction,
 classification, normalization, and structured summarization. They follow the
@@ -201,8 +216,10 @@ which recommends `gpt-6.1-sol` for complex coding and agentic workflows,
 consulted on 2026-10-06. Sol resolves to `gpt-6.1-sol` only when the current
 runtime exposes that model and requested effort. `gpt-6-sol` remains a
 compatibility fallback when the preferred model/effort is unavailable and the
-runtime confirms the fallback model/effort. Astra and Luna retain their roles
-and runtime availability checks. The router permits `low`, `medium`, `high`,
+runtime confirms the fallback model/effort. Terra resolves to `gpt-6.1-terra`
+only when the runtime exposes that model and requested effort. If unavailable,
+choose another capable available model or report a blocker. Astra and Luna
+retain their roles and runtime availability checks. The router permits `low`, `medium`, `high`,
 `xhigh`, and `max` only when supported; it does not select `ultra`.
 
 Verify exact model prices against the current official
@@ -212,11 +229,12 @@ do not establish GPT-6.1 Sol prices, Codex subscription charges, or savings.
 
 An existing workspace `routing.json` is not overwritten by an updated plugin.
 Its schema-v3 `Terra` examples remain valid for compatibility; the loader
-normalizes their preferred class to Sol in memory without rewriting the
-workspace file. To adopt the new example IDs and rationales, deliberately edit
-that workspace file after reviewing local customizations. See the
-[Sol upgrade note](docs/sol-upgrade.md) for the model preference update and
-historical evaluation boundaries.
+normalizes their preferred class to Sol in memory without rewriting the file.
+To adopt Terra, back up and review the file, replace legacy Terra preferences
+with Sol to preserve their old behavior, change the version to 4, then add the
+new Terra examples and resolution guidance deliberately. See the
+[Terra support note](docs/terra-support.md) for sources, migration and
+evaluation limits.
 
 The controller model is selected by Codex, not by this plugin. Codex's
 [model selection guide](https://developers.openai.com/codex/models) documents
@@ -229,9 +247,10 @@ Terra on controller planning, routing, and result synthesis; a representative
 matched evaluation is needed before recommending it as this plugin's controller
 default.
 
-The raw file limit is 32,768 bytes. Its validated deterministic serialization
-must be no more than 16,384 bytes, smaller than the 24,576-byte hook context
-limit to reserve space for the controller or worker contract. Malformed,
+The raw file limit is 32,768 bytes and its deterministic serialization must be
+no more than 16,384 bytes. The complete hook JSON has a separate 4,096-byte cap;
+handlers set a 1,500 approximate-token `additionalContextLimit`. These are
+different units, and full configuration is never injected. Malformed,
 schema-invalid, oversized, unreadable, or uncreatable config fails the hook or
 init with a non-zero exit and an actionable diagnostic. There is no fallback to
 bundled defaults once a workspace config exists, and input is never truncated.
@@ -284,7 +303,7 @@ python -m unittest discover -s tests -v
 
 The validation command checks package structure and synthetic lifecycle outputs
 without a network connection or a live Codex session. Regression tests check
-schema v3 and obsolete-version rejection, ownership/topology precedence,
+schemas v3/v4 and obsolete-version rejection, ownership/topology precedence,
 escalation records, verification, deterministic worker naming, worker
 responsibilities, and context size. These are
 instruction-contract checks, not evidence of live-model compliance or savings.

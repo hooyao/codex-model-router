@@ -1,0 +1,19 @@
+{
+  "reason": "Recover permitted sandbox-owned artifact grading without solver retries",
+  "runtime": {
+    "version": "codex-cli 0.165.0-alpha.1.2",
+    "cli_sha256": "5c1b55966bf9f757dcbf00065c9a6cb862ead55d34b015f1be1939ff18e43943",
+    "request_schema_sha256": "9b89e2459362d20cec67a429ef9430fe6b0e9fb8bd87d445d4c9a6acccd87450",
+    "required_methods": [
+      "hooks/list",
+      "initialize",
+      "model/list",
+      "thread/start",
+      "turn/interrupt",
+      "turn/start"
+    ],
+    "version_allowlist": false
+  },
+  "runner_sha256": "2a318eabc948429963e1e9bbd62152b8b7c86299006165dc6020506dac8f1d0e",
+  "capability_adapter_sha256": "33b182646be42ee60358273df376eb6cfac7a3433178acd866e7eff0322267e3"
+}

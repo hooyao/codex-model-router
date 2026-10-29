@@ -1,0 +1,63 @@
+{
+  "before_ref": "e75ef8785d960b12e6d1ce27ad4c6b184b8a0fc0",
+  "after_ref": "6f925d760a6c820a282041b43ec847e6d8281818",
+  "cases": [
+    "direct-small-control",
+    "investigation-reuse",
+    "serial-escalation",
+    "parallel-disjoint",
+    "architecture-review"
+  ],
+  "repetitions": 3,
+  "semantic_architecture": true,
+  "campaign_stop_usd": 7.0,
+  "model": "gpt-6.1-sol",
+  "effort": "low",
+  "platform": "Windows",
+  "fixture_sha256": {
+    "direct-small-control": "df877fe2bc9c2df1022c59f8f4842fb97f77d0b42db15af516fda03d11b745f8",
+    "investigation-reuse": "2ee174db4f3b87b695685ede6ab09c03825d444a6afa5a059b1109ef19f812c2",
+    "serial-escalation": "1890e13eb70b5a6f0dd03797382f67d08d254dcc4085e4d94afdcd773f310a66",
+    "parallel-disjoint": "fa31b82da8d29460d45f2a2e2abcfa57895b0d0bb78f0ba1c4ede6aacd64d4e1",
+    "architecture-review": "a54d73227804ca0d308d83332b2919729098e242dc7d656609e29c34788e3919"
+  },
+  "runner_sha256": "b726af390a082d830ba81c5ce0fdb50100207b6a24fa42c05681645da9a280d6",
+  "capability_adapter_sha256": "98059dbef9ee79831ca661137d2b21d0ffd053fd56024823b6c3ff92fbda890b",
+  "rate_card": {
+    "date": "2026-10-28",
+    "tier": "Standard",
+    "per_million": {
+      "gpt-6.1-sol": [
+        2.0,
+        0.1,
+        2.5,
+        10.0
+      ],
+      "gpt-6-luna": [
+        0.1,
+        0.01,
+        0.125,
+        0.5
+      ],
+      "gpt-6-astra": [
+        10.0,
+        1.0,
+        12.5,
+        50.0
+      ],
+      "gpt-6.1-terra": [
+        1.0,
+        0.05,
+        1.25,
+        5.0
+      ]
+    },
+    "sources": [
+      "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "https://developers.openai.com/api/docs/models/gpt-6-luna",
+      "https://developers.openai.com/api/docs/models/gpt-6-astra",
+      "https://developers.openai.com/api/docs/models/gpt-6.1-terra"
+    ]
+  },
+  "billing": "API-price estimate; provider billing and upstream model identity not independently verified"
+}

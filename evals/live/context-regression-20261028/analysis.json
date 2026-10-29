@@ -1,0 +1,172 @@
+{
+  "records": 30,
+  "all_response_accounting_recomputed": true,
+  "strict_artifact_passes": 24,
+  "strict_artifact_failures": 6,
+  "scored_responses": 547,
+  "scored_api_estimated_usd": 5.9632609500000004,
+  "cases": {
+    "direct-small-control": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "wall_ratio": 1.640318123325528,
+          "token_ratio": 1.1283720133595958,
+          "estimated_cost_ratio": 0.9232319544970653
+        },
+        {
+          "repetition": 2,
+          "wall_ratio": 1.0656575557298085,
+          "token_ratio": 1.0077310126865604,
+          "estimated_cost_ratio": 0.9243412575024679
+        },
+        {
+          "repetition": 3,
+          "wall_ratio": 1.4607171532534977,
+          "token_ratio": 1.0019068033134615,
+          "estimated_cost_ratio": 0.8924935563164625
+        }
+      ],
+      "median_paired_ratios": {
+        "wall": 1.4607171532534977,
+        "tokens": 1.0077310126865604,
+        "estimated_cost": 0.9232319544970653
+      },
+      "samples": {
+        "wall": 3,
+        "tokens": 3,
+        "estimated_cost": 3
+      }
+    },
+    "investigation-reuse": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "wall_ratio": 1.109005594658004,
+          "token_ratio": 0.9634584378637815,
+          "estimated_cost_ratio": 0.8748089140096037
+        },
+        {
+          "repetition": 2,
+          "wall_ratio": 0.9036932391523713,
+          "token_ratio": 0.7963466448885076,
+          "estimated_cost_ratio": 0.7934012301856309
+        },
+        {
+          "repetition": 3,
+          "wall_ratio": 1.1376274098425652,
+          "token_ratio": 0.9566230384430892,
+          "estimated_cost_ratio": 0.8572576626026369
+        }
+      ],
+      "median_paired_ratios": {
+        "wall": 1.109005594658004,
+        "tokens": 0.9566230384430892,
+        "estimated_cost": 0.8572576626026369
+      },
+      "samples": {
+        "wall": 3,
+        "tokens": 3,
+        "estimated_cost": 3
+      }
+    },
+    "serial-escalation": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "wall_ratio": 1.0720712620942925,
+          "token_ratio": 1.1599597415497627,
+          "estimated_cost_ratio": 0.9955306086955212
+        },
+        {
+          "repetition": 2,
+          "wall_ratio": 1.0043821563440296,
+          "token_ratio": 0.8397832316876038,
+          "estimated_cost_ratio": 0.8897206686738094
+        },
+        {
+          "repetition": 3,
+          "wall_ratio": 1.5822617823327068,
+          "token_ratio": 1.7867053939919375,
+          "estimated_cost_ratio": 1.1704235865061714
+        }
+      ],
+      "median_paired_ratios": {
+        "wall": 1.0720712620942925,
+        "tokens": 1.1599597415497627,
+        "estimated_cost": 0.9955306086955212
+      },
+      "samples": {
+        "wall": 3,
+        "tokens": 3,
+        "estimated_cost": 3
+      }
+    },
+    "parallel-disjoint": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "wall_ratio": 1.0007416817238577,
+          "token_ratio": 0.9833521221615449,
+          "estimated_cost_ratio": 0.9252530228644822
+        },
+        {
+          "repetition": 2,
+          "wall_ratio": 0.9176182884514115,
+          "token_ratio": 0.825552005864998,
+          "estimated_cost_ratio": 0.804249450876586
+        },
+        {
+          "repetition": 3,
+          "wall_ratio": 0.9549756732089086,
+          "token_ratio": 0.7830409924697137,
+          "estimated_cost_ratio": 0.8065050282833995
+        }
+      ],
+      "median_paired_ratios": {
+        "wall": 0.9549756732089086,
+        "tokens": 0.825552005864998,
+        "estimated_cost": 0.8065050282833995
+      },
+      "samples": {
+        "wall": 3,
+        "tokens": 3,
+        "estimated_cost": 3
+      }
+    },
+    "architecture-review": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "wall_ratio": null,
+          "token_ratio": 0.6508977557676959,
+          "estimated_cost_ratio": 2.1775104868647635
+        },
+        {
+          "repetition": 2,
+          "wall_ratio": 1.2835118788789184,
+          "token_ratio": 1.1647811238927435,
+          "estimated_cost_ratio": 1.0580026443487167
+        },
+        {
+          "repetition": 3,
+          "wall_ratio": 1.0886295321511268,
+          "token_ratio": 0.8371236594839228,
+          "estimated_cost_ratio": 2.041143530795124
+        }
+      ],
+      "median_paired_ratios": {
+        "wall": 1.1860707055150226,
+        "tokens": 0.8371236594839228,
+        "estimated_cost": 2.041143530795124
+      },
+      "samples": {
+        "wall": 2,
+        "tokens": 3,
+        "estimated_cost": 3
+      }
+    }
+  },
+  "architecture_failures_only_missing_final_LF": true,
+  "verdict": "NOT_PASSED: direct wall regression, serial token regression, strict architecture failures, and one unknown wall timer"
+}

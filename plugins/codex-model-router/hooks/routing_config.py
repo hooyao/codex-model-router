@@ -14,14 +14,14 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
+SUPPORTED_SCHEMA_VERSIONS = {3, SCHEMA_VERSION}
 CONFIG_DIRECTORY = ".codex-model-router"
 CONFIG_FILENAME = "routing.json"
 MAX_CONFIG_FILE_BYTES = 32_768
 MAX_SERIALIZED_CONFIG_BYTES = 16_384
 MAX_EXAMPLES = 64
-# Terra remains accepted for existing schema-v3 workspace files; new defaults
-# use only the current GPT-6 Astra, Sol, and Luna roles.
+# In v3 Terra is a legacy alias for Sol; v4 uses it as a distinct role.
 MODEL_CLASSES = {"Astra", "Sol", "Terra", "Luna"}
 REASONING_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 EXAMPLE_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -321,8 +321,9 @@ def configured_execution_mode(
 ) -> str:
     """Resolve config precedence after semantic matching, before hard-signal gating.
 
-    One matching route overrides the global default. No match uses the global
-    default. Conflicting matching routes fail closed to delegation.
+    Matched routes override the global default. Evaluate defers to the hard
+    gate and does not conflict with direct. Any explicit delegate still wins.
+    No match uses the global default.
     """
 
     if isinstance(matched_example_ids, (str, bytes)):
@@ -341,14 +342,16 @@ def configured_execution_mode(
         return effective_execution_policy(config)["default_mode"]
 
     modes = {effective_execution_mode(config, examples[route_id]) for route_id in route_ids}
-    return next(iter(modes)) if len(modes) == 1 else "delegate"
+    if "delegate" in modes:
+        return "delegate"
+    return "direct" if "direct" in modes else "evaluate"
 
 
 def validate_config(config: Any, source: str = "routing config") -> dict[str, Any]:
     root = _require_object(config, source)
     version = root.get("schema_version")
-    if type(version) is not int or version != SCHEMA_VERSION:
-        raise RoutingConfigError(f"{source}.schema_version must be integer {SCHEMA_VERSION}")
+    if type(version) is not int or version not in SUPPORTED_SCHEMA_VERSIONS:
+        raise RoutingConfigError(f"{source}.schema_version must be integer 3 or 4")
     _require_exact_fields(root, TOP_LEVEL_FIELDS, source)
     _require_string(root["selection_principle"], f"{source}.selection_principle", 1_000)
     _require_string(root["runtime_resolution"], f"{source}.runtime_resolution", 1_000)
@@ -463,11 +466,11 @@ def load_config(path: Path) -> dict[str, Any]:
             f"routing config {path} is malformed JSON at line {error.lineno}, column {error.colno}: {error.msg}"
         ) from error
     config = validate_config(parsed, str(path))
-    # Existing schema-v3 files are preserved on disk, while their retired
-    # Terra preference is resolved to the current Sol role in hook context.
-    for example in config["examples"]:
-        if example["preferred_model_class"] == "Terra":
-            example["preferred_model_class"] = "Sol"
+    # Preserve the v3 meaning of Terra without changing the workspace file.
+    if config["schema_version"] == 3:
+        for example in config["examples"]:
+            if example["preferred_model_class"] == "Terra":
+                example["preferred_model_class"] = "Sol"
     return config
 
 
@@ -530,28 +533,13 @@ def load_workspace_config(workspace_cwd: Path) -> tuple[Path, dict[str, Any], bo
 def routing_context_block(path: Path, config: dict[str, Any]) -> str:
     serialized = serialized_config(config, str(path))
     config_digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
-    resolver = plugin_root() / "hooks" / "execution_decision.py"
-    effective_policy = json.dumps(
-        effective_execution_policy(config), ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    )
+    root = plugin_root()
     return (
         "ROUTING_CONFIG_BEGIN\n"
         f"Workspace routing config: {path}\n"
         f"Validated config SHA256 (canonical JSON): {config_digest}\n"
-        "Read this config for routing examples and model guidance before selecting matched_example_ids. "
-        "The resolver reads it too.\n"
-        "Routing decision contract version: 1. Ownership is resolved before delegate topology, verification, "
-        "and model selection. Unknown decision signals cannot qualify for DIRECT.\n"
-        f"Decision resolver program: {resolver}\n"
-        "Invocation: use Python 3.9+ to run the resolver with --config set to the workspace config path above; "
-        "send one decision-request-v1 JSON on stdin and use its validated JSON result.\n"
-        "Request fields: schema_version=1, decision_id, phase, prior_ownership, escalation_trigger, "
-        "matched_example_ids, and signals. Signals: one_local_scope, bounded_known_outcome, "
-        "network_or_sync, long_running_or_monitoring, failure_or_recovery, named_multistep_runbook, "
-        "substantive_research_or_investigation, independent_review_required, high_risk, "
-        "multiple_bounded_tasks, tasks_independent, dependencies_absent, write_scopes_disjoint, "
-        "permissions_confirmed, safety_constraints_known, verification_plan_present, write_scope_known. "
-        "Every signal is true, false, or null; null is unknown.\n"
-        f"EFFECTIVE_EXECUTION_POLICY:{effective_policy}\n"
+        f"Router skill: {root / 'skills' / 'model-router' / 'SKILL.md'}\n"
+        f"Decision context program: {root / 'hooks' / 'describe_router.py'}\n"
+        f"Decision resolver program: {root / 'hooks' / 'execution_decision.py'}\n"
         "ROUTING_CONFIG_END"
     )

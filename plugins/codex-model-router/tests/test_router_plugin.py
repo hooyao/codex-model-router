@@ -4,6 +4,7 @@ import importlib.util
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -59,7 +60,7 @@ class RouterPluginTests(unittest.TestCase):
         workspace = config_module.load_config(workspace_path)
         for label, config in (("default", default), ("workspace", workspace)):
             with self.subTest(config=label):
-                self.assertEqual(3, config["schema_version"])
+                self.assertEqual(4, config["schema_version"])
                 self.assertEqual("evaluate", config["execution_policy"]["default_mode"])
                 self.assertLessEqual(
                     len(config_module.serialized_config(config).encode("utf-8")),
@@ -70,14 +71,14 @@ class RouterPluginTests(unittest.TestCase):
         template = json.loads(
             (PLUGIN_ROOT / "defaults" / "default-routing.json").read_text(encoding="utf-8")
         )
-        for old_version in (1, 2):
+        for old_version in (1, 2, 5):
             with self.subTest(version=old_version):
                 obsolete = json.loads(json.dumps(template))
                 obsolete["schema_version"] = old_version
-                with self.assertRaisesRegex(config_module.RoutingConfigError, "must be integer 3"):
+                with self.assertRaisesRegex(config_module.RoutingConfigError, "must be integer 3 or 4"):
                     config_module.validate_config(obsolete)
 
-    def test_v3_execution_policy_and_route_modes_are_strictly_validated(self) -> None:
+    def test_v3_and_v4_execution_policy_and_route_modes_are_strictly_validated(self) -> None:
         template = json.loads(
             (PLUGIN_ROOT / "defaults" / "default-routing.json").read_text(encoding="utf-8")
         )
@@ -88,12 +89,14 @@ class RouterPluginTests(unittest.TestCase):
             ("execution_policy.limits.max_concurrency", lambda value: value["execution_policy"]["limits"].__setitem__("max_concurrency", 0)),
             ("examples[0].execution_mode", lambda value: value["examples"][0].__setitem__("execution_mode", "controller")),
         )
-        for expected, mutate in cases:
-            with self.subTest(field=expected):
-                config = json.loads(json.dumps(template))
-                mutate(config)
-                with self.assertRaisesRegex(config_module.RoutingConfigError, expected.replace("[", r"\[").replace("]", r"\]")):
-                    config_module.validate_config(config)
+        for version in (3, 4):
+            for expected, mutate in cases:
+                with self.subTest(version=version, field=expected):
+                    config = json.loads(json.dumps(template))
+                    config["schema_version"] = version
+                    mutate(config)
+                    with self.assertRaisesRegex(config_module.RoutingConfigError, expected.replace("[", r"\[").replace("]", r"\]")):
+                        config_module.validate_config(config)
 
     def test_default_config_includes_required_routing_examples(self) -> None:
         config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
@@ -101,6 +104,9 @@ class RouterPluginTests(unittest.TestCase):
         expected = {
             "astra-3d-modeling": ("Astra", "high"),
             "astra-image-analysis": ("Astra", "high"),
+            "terra-visual-analysis": ("Terra", "medium"),
+            "terra-computer-use": ("Terra", "medium"),
+            "terra-natural-writing": ("Terra", "medium"),
             "sol-code-reading-analysis": ("Sol", "high"),
             "luna-detailed-manual-procedure": ("Luna", "medium"),
             "astra-architecture": ("Astra", "xhigh"),
@@ -125,13 +131,14 @@ class RouterPluginTests(unittest.TestCase):
         self.assertEqual("direct", examples["luna-local-bounded-change"]["execution_mode"])
         self.assertEqual("delegate", examples["astra-complex-tools"]["execution_mode"])
         self.assertEqual("evaluate", examples["sol-documentation"]["execution_mode"])
-        self.assertEqual({"Astra", "Sol", "Luna"}, {example["preferred_model_class"] for example in examples.values()})
+        self.assertEqual({"Astra", "Sol", "Terra", "Luna"}, {example["preferred_model_class"] for example in examples.values()})
         self.assertIn("max", config["effort_guidance"])
         self.assertTrue(any(example["reasoning_effort"] == "xhigh" for example in examples.values()))
         self.assertTrue(all(example["reasoning_effort"] != "max" for example in examples.values()))
 
     def test_existing_v3_terra_config_and_optional_max_guidance_remain_valid(self) -> None:
         template = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        template["schema_version"] = 3
         template["effort_guidance"].pop("max")
         template["examples"][0]["preferred_model_class"] = "Terra"
         self.assertEqual(template, config_module.validate_config(template))
@@ -159,12 +166,24 @@ class RouterPluginTests(unittest.TestCase):
 
     def test_existing_terra_workspace_is_loaded_as_sol_without_rewriting_file(self) -> None:
         template = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        template["schema_version"] = 3
         template["examples"][0]["preferred_model_class"] = "Terra"
         config_path = self.policy_workspace / "legacy-routing.json"
         config_path.write_text(json.dumps(template), encoding="utf-8")
         original = config_path.read_bytes()
         loaded = config_module.load_config(config_path)
         self.assertEqual("Sol", loaded["examples"][0]["preferred_model_class"])
+        self.assertEqual(original, config_path.read_bytes())
+
+    def test_v4_terra_workspace_is_preserved_without_rewriting_file(self) -> None:
+        template = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        config_path = self.policy_workspace / "terra-routing.json"
+        config_path.write_text(json.dumps(template), encoding="utf-8")
+        original = config_path.read_bytes()
+        loaded = config_module.load_config(config_path)
+        self.assertEqual("Terra", next(item for item in loaded["examples"]
+                                      if item["id"] == "terra-visual-analysis")["preferred_model_class"])
+        self.assertIn("gpt-6.1-terra", loaded["runtime_resolution"])
         self.assertEqual(original, config_path.read_bytes())
 
     def test_config_rejects_none_and_ultra_efforts(self) -> None:
@@ -278,6 +297,15 @@ class RouterPluginTests(unittest.TestCase):
         self.assertEqual("INDEPENDENT_REVIEW", result["verification_requirement"])
         self.assertEqual("ISOLATED_SERIAL", result["delegate_topology"])
 
+    def test_terra_example_does_not_bypass_high_risk_review(self) -> None:
+        config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
+        result = decision.resolve_routing_decision(
+            config, self.decision_request(matched_example_ids=["terra-visual-analysis"],
+                                          signals={"high_risk": True}),
+        )
+        self.assertEqual("DELEGATE", result["ownership"])
+        self.assertEqual("INDEPENDENT_REVIEW", result["verification_requirement"])
+
     def test_direct_bound_escalation_is_recorded_and_reclassified(self) -> None:
         config = config_module.load_config(PLUGIN_ROOT / "defaults" / "default-routing.json")
         request = self.decision_request(
@@ -363,8 +391,8 @@ class RouterPluginTests(unittest.TestCase):
             config_path = workspace / ".codex-model-router" / "routing.json"
             resolver_path = PLUGIN_ROOT / "hooks" / "execution_decision.py"
             self.assertIn(f"Decision resolver program: {resolver_path}", context)
-            self.assertIn("decision-request-v1 JSON on stdin", context)
-            self.assertIn("named_multistep_runbook", context)
+            self.assertIn("Router skill:", context)
+            self.assertNotIn("signals:", context)
             completed = subprocess.run(
                 [sys.executable, str(resolver_path), "--config", str(config_path)],
                 input=json.dumps(self.decision_request()),
@@ -428,10 +456,7 @@ class RouterPluginTests(unittest.TestCase):
                         self.assertNotIn("CLAUDE_PLUGIN_ROOT", handler["command"])
                         self.assertNotIn("CLAUDE_PLUGIN_ROOT", handler["commandWindows"])
                         self.assertNotIn("py -3", handler["commandWindows"])
-                        self.assertGreater(
-                            handler["additionalContextLimit"],
-                            config_module.MAX_SERIALIZED_CONFIG_BYTES,
-                        )
+                        self.assertLessEqual(handler["additionalContextLimit"], hook.CONTEXT_TOKEN_THRESHOLD)
 
     def test_existing_config_is_discovered_above_nested_cwd_before_git(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -495,7 +520,7 @@ class RouterPluginTests(unittest.TestCase):
             self.assertNotEqual(first, second)
             self.assertIn("Validated config SHA256 (canonical JSON): ", second)
             self.assertNotIn("Unique reloaded selection principle.", second)
-            self.assertIn("Read this config for routing examples", second)
+            self.assertIn("Router skill:", second)
             self.assertIn(str(path), second)
             self.assertEqual(1, second.count("ROUTING_CONFIG_BEGIN"))
             self.assertEqual(1, second.count("ROUTING_CONFIG_END"))
@@ -504,14 +529,13 @@ class RouterPluginTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             workspace = Path(temporary_directory).resolve()
             blocks = []
-            for event_name in validator.REQUIRED_HOOK_EVENTS:
+            for event_name in ("SessionStart", "UserPromptSubmit"):
                 context = self.build_hook_output({
                     "hook_event_name": event_name,
                     "cwd": str(workspace),
                 })["hookSpecificOutput"]["additionalContext"]
                 blocks.append(context.split("ROUTING_CONFIG_BEGIN\n", 1)[1].split("\nROUTING_CONFIG_END", 1)[0])
             self.assertEqual(blocks[0], blocks[1])
-            self.assertEqual(blocks[1], blocks[2])
 
     def test_hook_payload_keeps_routing_contract_within_visible_budget(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -521,7 +545,7 @@ class RouterPluginTests(unittest.TestCase):
             config = json.loads((PLUGIN_ROOT / "defaults" / "default-routing.json").read_text(encoding="utf-8"))
             config["selection_principle"] = "s" * 1_000
             config["runtime_resolution"] = "r" * 1_000
-            for example in config["examples"][:12]:
+            for example in config["examples"][:11]:
                 example["rationale"] = "r" * 500
             config_module.validate_config(config)
             self.assertGreater(len(config_module.serialized_config(config).encode("utf-8")), 12_000)
@@ -531,7 +555,7 @@ class RouterPluginTests(unittest.TestCase):
             ).hexdigest()
             resolver_path = PLUGIN_ROOT / "hooks" / "execution_decision.py"
 
-            for event_name in ("SessionStart", "UserPromptSubmit", "SubagentStart"):
+            for event_name in ("SessionStart", "UserPromptSubmit"):
                 with self.subTest(event=event_name):
                     result = subprocess.run(
                         [sys.executable, str(PLUGIN_ROOT / "hooks" / "router_hook.py")],
@@ -540,12 +564,12 @@ class RouterPluginTests(unittest.TestCase):
                     )
                     self.assertEqual(0, result.returncode, result.stderr)
                     raw_output = result.stdout.encode("utf-8")
-                    self.assertLess(len(raw_output), 9_500)
+                    self.assertLess(len(raw_output), hook.MAX_HOOK_OUTPUT_BYTES)
                     visible_prefix = raw_output[:10_000].decode("utf-8")
                     for required in (
                         "ROUTING_CONFIG_BEGIN", "ROUTING_CONFIG_END",
                         str(config_path), str(resolver_path), expected_digest,
-                        "decision-request-v1", "EFFECTIVE_EXECUTION_POLICY:",
+                        "Router skill:",
                     ):
                         self.assertIn(json.dumps(required)[1:-1], visible_prefix)
                     output = json.loads(result.stdout)["hookSpecificOutput"]
@@ -560,7 +584,7 @@ class RouterPluginTests(unittest.TestCase):
         resolver_path = PLUGIN_ROOT / "hooks" / "execution_decision.py"
 
         with mock.patch.object(hook, "load_workspace_config", return_value=(long_path, config, False)):
-            for event_name in ("SessionStart", "UserPromptSubmit", "SubagentStart"):
+            for event_name in ("SessionStart", "UserPromptSubmit"):
                 with self.subTest(event=event_name):
                     output = self.build_hook_output({"hook_event_name": event_name})
                     serialized = json.dumps(output, separators=(",", ":")) + os.linesep
@@ -571,7 +595,7 @@ class RouterPluginTests(unittest.TestCase):
                     self.assertEqual(1, context.count(str(long_path)))
                     for required in (
                         "ROUTING_CONFIG_BEGIN", "ROUTING_CONFIG_END",
-                        str(resolver_path), "decision-request-v1", "EFFECTIVE_EXECUTION_POLICY:",
+                        str(resolver_path), "Router skill:",
                     ):
                         self.assertIn(required, context)
 
@@ -615,7 +639,6 @@ class RouterPluginTests(unittest.TestCase):
             example["task_signals"] = ["signal-" + ("x" * 180)]
             example["rationale"] = "r" * 450
             config["examples"].append(example)
-        self.assertLess(config_module.MAX_SERIALIZED_CONFIG_BYTES, validator.MINIMUM_CONTEXT_LIMIT)
         with self.assertRaisesRegex(config_module.RoutingConfigError, "serialized size"):
             config_module.validate_config(config)
 
@@ -1038,29 +1061,23 @@ class RouterPluginTests(unittest.TestCase):
         self.assertNotIn("codex exec --ephemeral", procedure)
         self.assertNotIn("DELEGATE then appears before any read or", procedure)
 
-    def test_controller_context_contains_policy_roles(self) -> None:
-        fixture = json.loads((PLUGIN_ROOT / "tests" / "fixtures" / "session-start.json").read_text(encoding="utf-8"))
-        context = self.build_hook_output(fixture)["hookSpecificOutput"]["additionalContext"]
-        for expected in ("Active controller model", "Astra", "native spawn/wait", "independent reviewer"):
-            self.assertIn(expected, context)
+    def test_controller_entrypoint_points_to_current_skill_and_workspace(self) -> None:
         workspace_config = self.policy_workspace / ".codex-model-router" / "routing.json"
-        self.assertIn(str(workspace_config), context)
-        configured_classes = {
-            example["preferred_model_class"] for example in config_module.load_config(workspace_config)["examples"]
-        }
-        self.assertTrue({"Luna", "Sol", "Astra"}.issubset(configured_classes))
-        self.assertNotIn(str(PLUGIN_ROOT.parents[1] / ".codex-model-router" / "routing.json"), context)
+        for _event, context in self.controller_contexts():
+            self.assertIn(str(workspace_config), context)
+            self.assertIn(str(PLUGIN_ROOT / "skills/model-router/SKILL.md"), context)
+            self.assertIn(str(PLUGIN_ROOT / "hooks/execution_decision.py"), context)
+            self.assertNotIn('"examples":', context)
+            self.assertNotIn("EFFECTIVE_EXECUTION_POLICY", context)
 
-    def test_controller_context_declares_selective_stage_boundary(self) -> None:
-        for event_name, context in self.controller_contexts():
-            with self.subTest(event=event_name):
-                for required in (
-                    "separate decision-request-v1 for that stage independently resolves DIRECT",
-                    "exclusive write scope", "context budget", "self-check",
-                    "hard kernel", "Never duplicate worker-owned",
-                    "whole-request independent-review requirement",
-                ):
-                    self.assertIn(required, context)
+    def test_skill_entrypoint_is_small_and_references_are_discoverable(self) -> None:
+        skill = PLUGIN_ROOT / "skills/model-router/SKILL.md"
+        content = skill.read_text(encoding="utf-8")
+        self.assertLess(len(content.encode("utf-8")), 4000)
+        references = re.findall(r'\]\((references/[^)]+)\)', content)
+        self.assertEqual(4, len(references))
+        for reference in references:
+            self.assertTrue((skill.parent / reference).is_file(), reference)
 
     def controller_contexts(self):
         for event_name in ("SessionStart", "UserPromptSubmit"):
@@ -1068,85 +1085,20 @@ class RouterPluginTests(unittest.TestCase):
             fixture = json.loads((PLUGIN_ROOT / "tests" / "fixtures" / fixture_name).read_text(encoding="utf-8"))
             yield event_name, self.build_hook_output(fixture)["hookSpecificOutput"]["additionalContext"]
 
-    def test_both_controller_events_require_pre_action_execution_routing(self) -> None:
-        for event_name, context in self.controller_contexts():
-            with self.subTest(event=event_name):
-                for expected in (
-                    "Decide execution ownership before the first business action",
-                    "validated decision-contract-v1 result",
-                    "ROUTE: DIRECT — <rule/reason>",
-                    "ROUTE: DELEGATE — <topology/rule/model/effort/reason>",
-                    "Skills define HOW work is performed, not WHO performs it",
-                    "structured signals; keyword matching alone is insufficient",
-                ):
-                    self.assertIn(expected, context)
 
-    def test_controller_direct_and_delegate_criteria_are_explicit(self) -> None:
-        for event_name, context in self.controller_contexts():
-            with self.subTest(event=event_name):
-                for expected in (
-                    "DIRECT is a bounded fast path only when every fact is explicitly known",
-                    "one local scope", "one bounded known outcome", "no network/sync",
-                    "permissions and safety constraints are known", "self-check plan",
-                    "Unknown signals never qualify", "DIRECT owns its implementation",
-                    "PARALLEL only when", "ISOLATED_SERIAL",
-                ):
-                    self.assertIn(expected, context)
 
-    def test_delegation_topology_and_reroute_are_ordered(self) -> None:
-        for event_name, context in self.controller_contexts():
-            with self.subTest(event=event_name):
-                self.assertIn("exceeds approved bounds, stop before the next business action", context)
-                self.assertIn("record a reclassification from DIRECT to DELEGATE", context)
-                self.assertIn("validation-failed", context)
-                self.assertIn("Any dependency, overlapping/shared write scope", context)
-                self.assertIn("requires ISOLATED_SERIAL", context)
-                self.assertIn("Only after DELEGATE", context)
-                self.assertIn("dispatch-contract-v1", context)
-                self.assertIn("missing evidence is a capability blocker", context)
 
-    def test_packet_validation_and_conflict_resolution_do_not_allow_rework(self) -> None:
-        for event_name, context in self.controller_contexts():
-            with self.subTest(event=event_name):
-                for expected in (
-                    "task identity", "scope and write ownership", "permissions/safety constraints",
-                    "acceptance and verification criteria", "topology position", "limits",
-                    "compact evidence receipts", "retain successful receipts",
-                    "exclusive write ownership and serialize overlap",
-                ):
-                    self.assertIn(expected, context)
 
-    def test_controller_requires_canonical_user_visible_worker_names(self) -> None:
-        for event_name, context in self.controller_contexts():
-            with self.subTest(event=event_name):
-                for expected in (
-                    "purpose-model-effort", "documented native transport adaptation",
-                    "task identity", "actual model/effort",
-                ):
-                    self.assertIn(expected, context)
 
-    def test_worker_result_echoes_canonical_name(self) -> None:
+
+
+
+
+
+    def test_worker_result_keeps_identity_and_validation(self) -> None:
         context = self.build_hook_output({"hook_event_name": "SubagentStart"})["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("Worker name: the unchanged canonical purpose-model-effort identifier", context)
-        self.assertIn("Task ID: the same canonical purpose-model-effort identifier", context)
-
-    def test_naming_policy_documents_normalization_validation_and_fallback(self) -> None:
-        for relative_path in (
-            "skills/model-router/SKILL.md",
-            "skills/model-router/references/routing-policy.md",
-        ):
-            with self.subTest(path=relative_path):
-                content = (PLUGIN_ROOT / relative_path).read_text(encoding="utf-8")
-                normalized_content = content.lower()
-                for expected in (
-                    "<purpose>-<model>-<effort>", "unicode nfkd",
-                    "discard non-ASCII code points", "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-                    "worker name: <canonical-name>", "native worker card",
-                    "native task name", "task_name", "underscore",
-                ):
-                    self.assertIn(expected.lower(), normalized_content)
-        skill = (PLUGIN_ROOT / "skills" / "model-router" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("implement-naming-gpt-6-1-sol-high", skill)
+        for field in ("Worker name", "Task ID", "evidence", "validation", "risks or blockers"):
+            self.assertIn(field, context)
 
     def test_current_sol_name_normalizes_dot_without_changing_selector(self) -> None:
         model = "gpt-6.1-sol"
@@ -1193,160 +1145,49 @@ class RouterPluginTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             naming.native_task_name("review_naming_gpt_6_sol_high")
 
-    def test_meta_prompt_requires_high_capability_independent_review(self) -> None:
-        for prompt in (
-            "Optimize codex-model-router evaluation and benchmark selection.",
-            "Implement the routing-policy fix.",
-            "Select benchmarks for this router.",
-            "Fix the issues from that review.",
-            "那么去修复及evaluation本身吧",
-            "",
-        ):
-            with self.subTest(prompt=prompt):
-                context = self.build_hook_output({
-                    "hook_event_name": "UserPromptSubmit", "prompt": prompt,
-                })["hookSpecificOutput"]["additionalContext"]
-                for expected in (
-                    "Router self-improvement", "routing-policy review", "evaluation design",
-                    "benchmark selection", "Independent-review or high-risk signals",
-                    "require an independent reviewer",
-                ):
-                    self.assertIn(expected, context)
 
-    def test_simple_prompt_and_missing_prompt_keep_full_contract(self) -> None:
-        for event in (
-            {"hook_event_name": "UserPromptSubmit", "prompt": "Fix one documentation typo."},
-            {"hook_event_name": "UserPromptSubmit"},
-        ):
-            context = self.build_hook_output(event)["hookSpecificOutput"]["additionalContext"]
-            self.assertIn("ROUTE: DIRECT — <rule/reason>", context)
-            self.assertIn("ROUTE: DELEGATE — <topology/rule/model/effort/reason>", context)
-            self.assertIn("decision-contract-v1", context)
 
-    def test_worker_context_requires_structured_result(self) -> None:
-        fixture = json.loads((PLUGIN_ROOT / "tests" / "fixtures" / "subagent-start.json").read_text(encoding="utf-8"))
-        context = self.build_hook_output(fixture)["hookSpecificOutput"]["additionalContext"]
-        for expected in ("Do not start subagents", "Task ID:", "Outcome:", "Evidence:", "Validation:", "Risks or blockers:"):
-            self.assertIn(expected, context)
 
-    def test_worker_owns_execution_and_validation_within_scope(self) -> None:
+
+    def test_worker_context_contains_no_controller_config(self) -> None:
         context = self.build_hook_output({"hook_event_name": "SubagentStart"})["hookSpecificOutput"]["additionalContext"]
-        for expected in (
-            "bounded worker, not the controller", "Controller-only prohibitions do not apply",
-            "business-domain analysis", "repository/file inspection", "command execution",
-            "file edits", "testing", "business-result validation",
-            "read-only review does not permit edits", "implementation task requires implementation",
-            "preserve unrelated changes", "do not send execution or testing back to the controller",
-            "explicitly not run with a reason",
-        ):
-            self.assertIn(expected, context)
-        self.assertNotIn("Allowed controller actions ONLY:", context)
-
-    def test_controller_contract_excludes_dispatched_workers(self) -> None:
-        for event_name, context in self.controller_contexts():
-            with self.subTest(event=event_name):
-                self.assertIn("CONTROLLER ROLE ONLY: SessionStart/UserPromptSubmit", context)
-                self.assertIn("does not apply to dispatched workers", context)
-                self.assertIn("minimal bounded packet", context)
+        self.assertTrue(context.startswith("WORKER ROLE OVERRIDE (SubagentStart)"))
+        self.assertNotIn("ROUTING_CONFIG_BEGIN", context)
+        self.assertNotIn("Decision resolver", context)
+        self.assertLess(len(context.encode("utf-8")), 800)
 
     def test_worker_role_override_authorizes_work_without_controller_preflight(self) -> None:
-        fixture = json.loads((PLUGIN_ROOT / "tests" / "fixtures" / "subagent-start.json").read_text(encoding="utf-8"))
-        # Exercise the executable hook for the role that exposed the regression.
-        fixture["agent_type"] = "verification"
-        fixture["cwd"] = str(self.policy_workspace)
-        result = subprocess.run(
-            [sys.executable, str(PLUGIN_ROOT / "hooks" / "router_hook.py")],
-            input=json.dumps(fixture), capture_output=True, text=True, timeout=10,
-            check=False,
-        )
+        event = {"hook_event_name": "SubagentStart", "cwd": str(self.policy_workspace), "agent_type": "verification"}
+        result = subprocess.run([sys.executable, str(PLUGIN_ROOT / "hooks/router_hook.py")],
+                                input=json.dumps(event), capture_output=True, text=True, timeout=10)
         self.assertEqual(0, result.returncode, result.stderr)
-        output = json.loads(result.stdout)["hookSpecificOutput"]
-        self.assertEqual("SubagentStart", output["hookEventName"])
-        context = output["additionalContext"]
-        self.assertTrue(context.startswith("WORKER ROLE OVERRIDE (SubagentStart)"))
-        for expected in (
-            "supersedes inherited Codex Model Router controller-only restrictions",
-            "authorized and required", "business-domain analysis", "repository/file inspection",
-            "file edits", "command execution", "testing", "task validation",
-            "within your bounded packet", "verification worker must inspect",
-            "run the assigned checks/tests", "does not depend on native multi-agent tooling",
-            "Do not dispatch subworkers.", "Do not start subagents.",
-        ):
-            self.assertIn(expected, context)
-        for forbidden in (
-            "capability discovery", "capability preflight", "BLOCKED",
-            "CONTROLLER ROLE ONLY", "Allowed controller actions ONLY:",
-            "Prohibited controller actions:", "independent review is mandatory",
-            "unless the parent explicitly instructs", "highest suitable available model",
-        ):
-            self.assertNotIn(forbidden.lower(), context.lower())
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        for invariant in ("assignment yourself", "tests, and validation", "Do not start subagents", "read-only"):
+            self.assertIn(invariant, context)
+        self.assertNotIn("CONTROLLER:", context)
+        self.assertNotIn("ROUTING_CONFIG_BEGIN", context)
 
     def test_worker_role_does_not_depend_on_agent_type_or_prompt(self) -> None:
-        for agent_type in ("worker", "verification", "review", "implementation"):
-            with self.subTest(agent_type=agent_type):
-                context = self.build_hook_output({
-                    "hook_event_name": "SubagentStart", "agent_type": agent_type,
-                    "prompt": "Review codex-model-router and run its tests.",
-                })["hookSpecificOutput"]["additionalContext"]
-                self.assertTrue(context.startswith("WORKER ROLE OVERRIDE (SubagentStart)"))
-                self.assertIn("authorized and required", context)
-                self.assertNotIn("CONTROLLER ROLE ONLY", context)
-                self.assertNotIn("BLOCKED", context)
+        outputs = [self.build_hook_output({"hook_event_name": "SubagentStart", "agent_type": role,
+                                          "prompt": "Review the router and run its tests."})
+                   for role in ("worker", "verification", "review", "implementation")]
+        self.assertTrue(all(output == outputs[0] for output in outputs))
 
-    def test_skill_and_policy_disallow_worker_recursive_delegation(self) -> None:
-        for relative_path in (
-            "skills/model-router/SKILL.md",
-            "skills/model-router/references/routing-policy.md",
-        ):
-            with self.subTest(path=relative_path):
-                content = " ".join((PLUGIN_ROOT / relative_path).read_text(encoding="utf-8").lower().split())
-                self.assertIn("worker-role override", content)
-                self.assertIn("workers must not dispatch subworkers", content)
-                self.assertNotIn("unless their parent explicitly authorizes", content)
-                self.assertNotIn("unless the parent explicitly authorizes", content)
-
-    def test_full_context_fits_configured_output_limits(self) -> None:
-        config = json.loads((PLUGIN_ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8"))
-        for event_name, fixture_name in validator.REQUIRED_HOOK_EVENTS.items():
-            fixture = json.loads((PLUGIN_ROOT / "tests" / "fixtures" / fixture_name).read_text(encoding="utf-8"))
-            context = self.build_hook_output(fixture)["hookSpecificOutput"]["additionalContext"]
+    def test_hook_output_and_runtime_threshold_have_separate_units(self) -> None:
+        config = json.loads((PLUGIN_ROOT / "hooks/hooks.json").read_text(encoding="utf-8"))
+        for event_name in validator.REQUIRED_HOOK_EVENTS:
+            output = self.build_hook_output({"hook_event_name": event_name})
+            self.assertLessEqual(len(json.dumps(output).encode("utf-8")), hook.MAX_HOOK_OUTPUT_BYTES)
             for group in config["hooks"][event_name]:
                 for handler in group["hooks"]:
-                    with self.subTest(event=event_name):
-                        self.assertLessEqual(len(context.encode("utf-8")), handler["additionalContextLimit"])
-
-    def test_policy_documents_define_bounded_direct_execution_without_escape_hatches(self) -> None:
-        paths = (
-            PLUGIN_ROOT / "skills" / "model-router" / "SKILL.md",
-            PLUGIN_ROOT / "skills" / "model-router" / "references" / "routing-policy.md",
-        )
-        texts = list(self.controller_contexts()) + [(str(path), path.read_text(encoding="utf-8")) for path in paths]
-        for label, text in texts:
-            with self.subTest(source=label):
-                normalized = " ".join(text.lower().split())
-                for forbidden in (
-                    "all business work, including simple tasks",
-                    "there is no simple-task exception",
-                    "if it is unavailable, continue safely",
-                ):
-                    self.assertNotIn(forbidden, normalized)
-                for required in (
-                    "route: direct — <rule/reason>",
-                    "route: delegate — <topology/rule/model/effort/reason>",
-                    "one local scope", "unknown", "isolated_serial", "parallel",
-                    "overlapping", "self-check", "os/tool permission barrier",
-                ):
-                    self.assertIn(required, normalized)
+                    self.assertLessEqual(handler["additionalContextLimit"], hook.CONTEXT_TOKEN_THRESHOLD)
 
     def test_hook_context_is_instruction_policy_not_tool_interception(self) -> None:
         for event_name, context in self.controller_contexts():
-            with self.subTest(event=event_name):
-                self.assertIn("instruction-layer policy", context)
-                self.assertIn("context injection cannot erase history, intercept tool calls, create a sandbox", context)
-                self.assertIn("OS/tool permission barrier", context)
-                output = self.build_hook_output({"hook_event_name": event_name})
-                self.assertEqual({"hookSpecificOutput"}, set(output))
-                self.assertEqual({"hookEventName", "additionalContext"}, set(output["hookSpecificOutput"]))
+            self.assertIn("instruction-layer policy", context)
+            output = self.build_hook_output({"hook_event_name": event_name})
+            self.assertEqual({"hookSpecificOutput"}, set(output))
+            self.assertEqual({"hookEventName", "additionalContext"}, set(output["hookSpecificOutput"]))
 
     def test_missing_manifest_reference_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -1494,6 +1335,30 @@ class RouterPluginTests(unittest.TestCase):
         value = self.dispatch_contract(model="gpt-6.1-sol")
         value["selection"]["reasoning_effort"] = "ultra"
         with self.assertRaisesRegex(dispatch.DispatchContractError, "unsupported by the router"):
+            dispatch.validate_dispatch_contract(value)
+
+    def test_terra_dispatch_requires_runtime_catalog_and_preserves_selector(self) -> None:
+        value = self.dispatch_contract(model="gpt-6.1-terra", efforts=["medium", "high"])
+        canonical = naming.build_subagent_name("edit", "gpt-6.1-terra", "medium")
+        native = naming.native_task_name(canonical)
+        value["canonical_name"] = canonical
+        value["packet"] = {"worker_name": canonical, "task_id": canonical, "native_task_name": native}
+        value["native_dispatch"]["native_name"] = native
+        value["selection"]["reasoning_effort"] = "medium"
+        checked = dispatch.validate_dispatch_contract(value)
+        self.assertEqual("gpt-6.1-terra", checked["selection"]["model"])
+        self.assertEqual("medium", checked["selection"]["reasoning_effort"])
+        value = self.dispatch_contract(model="gpt-6.1-terra", efforts=["medium"])
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "high is unsupported for model gpt-6.1-terra"):
+            dispatch.validate_dispatch_contract(value)
+        value = self.dispatch_contract(model="gpt-6.1-terra")
+        catalog_item = next(item for item in value["capability_evidence"] if item["kind"] == "model_catalog")
+        catalog_path = Path(catalog_item["source"])
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        catalog["models"][0]["id"] = "gpt-6-sol"
+        catalog_path.write_text(json.dumps(catalog), encoding="utf-8")
+        catalog_item["sha256"] = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(dispatch.DispatchContractError, "selected model is absent from model catalog"):
             dispatch.validate_dispatch_contract(value)
 
     def test_dispatch_contract_requires_observed_selectors_and_resolved_values(self) -> None:

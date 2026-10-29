@@ -5,6 +5,23 @@ Use the bundled pure resolver before the first business action. The injected
 paths. Invoke the shown Python 3.9+ program with `--config <routing.json>`, send
 one JSON request on standard input, and use its JSON result. Calling this
 routing-only program is part of the ownership preflight, not a business action.
+Reuse this schema and already-loaded config while current; resolve a new
+decision for every request or separately owned stage without rereading the
+same reference. The hook's config digest signals when to reload config.
+
+A decision covers the declared source reads, hash-bound receipt preparation
+and consumption, bounded edit, and self-check within the same owner's stage.
+Do not resolve again merely because the next tool reads, edits, or validates
+within those approved bounds. A new business request, separately owned stage,
+changed config or decision inputs, expanded scope, changed permissions/risk,
+or failed validation requires reassessment before further work. Keep user-
+required independent units, separate review owners, and real prerequisite or
+recovery boundaries separate. Status-only replies reuse accepted results.
+
+Matched `evaluate` examples defer to the direct gate and do not conflict with
+matched `direct` examples. Any matched `delegate` example still mandates
+delegation. With no matches, use the workspace default. Unknown facts and all
+mandatory-delegation predicates remain binding regardless of matched modes.
 
 Example invocation in PowerShell:
 

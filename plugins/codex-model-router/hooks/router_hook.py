@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Emit model-visible routing context for supported Codex lifecycle hooks."""
+"""Emit bounded routing entrypoints only when the context needs refreshing."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -10,102 +11,96 @@ from pathlib import Path
 from typing import Any
 
 
+if __name__ == "__main__":
+    sys.dont_write_bytecode = True
+
 HOOK_DIRECTORY = Path(__file__).resolve().parent
 if str(HOOK_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(HOOK_DIRECTORY))
 
+from context_cache import already_emitted, remember_emission, state_path  # noqa: E402
 from routing_config import (  # noqa: E402
-    RoutingConfigError,
-    load_workspace_config,
-    resolve_workspace_cwd,
-    routing_context_block,
+    RoutingConfigError, load_workspace_config, resolve_workspace_cwd, routing_context_block,
 )
 
 
 SUPPORTED_EVENTS = {"SessionStart", "UserPromptSubmit", "SubagentStart"}
-MAX_HOOK_OUTPUT_BYTES = 9_500
-CONTROLLER_CONTRACT = """CONTROLLER ROLE ONLY: SessionStart/UserPromptSubmit policy for the primary agent.
-This contract does not apply to dispatched workers. Decide execution ownership before the first business action: construct the complete decision-request-v1 JSON described in the injected routing block, invoke its absolute resolver path with the injected workspace config, and record the validated decision-contract-v1 result, including ownership, delegate_topology, verification_requirement, matched_rule, reasons, constraints, and any reclassification trigger. Resolver invocation is a routing-only preflight action. Also emit one concise route line:
-ROUTE: DIRECT — <rule/reason>
-ROUTE: DELEGATE — <topology/rule/model/effort/reason>
-Skills define HOW work is performed, not WHO performs it. Interpret the whole request as structured signals; keyword matching alone is insufficient.
-
-DIRECT is a bounded fast path only when every fact is explicitly known: one local scope, one bounded known outcome, no network/sync, monitoring, recovery, substantive research, independent review, or high risk; permissions and safety constraints are known; and write scope and a self-check plan are declared. Unknown signals never qualify. A config `direct` value is eligibility only. A config `delegate` value mandates delegation. Hard delegate or unknown signals win before config precedence. One matching example overrides the default, no match uses the default, and disagreeing matches resolve to DELEGATE. DIRECT owns its implementation and required self-check; it never bypasses scope, permission, safety, write-ownership, or verification duties.
-
-For a whole-request DELEGATE route, build a stage DAG before business execution. Record each stage's stable ID, controller or worker owner, dependencies, exclusive write scope, context budget, acceptance criteria, and self-check. A lightweight controller may own a genuinely easy, low-context stage only after a separate decision-request-v1 for that stage independently resolves DIRECT. Keep inherited permissions, risks, and the whole-request independent-review requirement. Reclassify any stage whose bounds expand. Use a cheap worker when an easy stage's tool output would burden controller context. Reserve Astra/xhigh for a demanding hard kernel when justified, with max only in exceptional cases; do not delegate the entire mixed request to Astra merely because one stage is hard. Never duplicate worker-owned analysis, edits, or tests in the controller.
-
-If a DIRECT task exceeds approved bounds, stop before the next business action and record a reclassification from DIRECT to DELEGATE with one explicit trigger, such as scope-expanded, validation-failed, dependency-discovered, write-scope-overlap-discovered, permission-changed, or safety-constraint-changed. Reclassification is part of the decision record, not an unrecorded fallback.
-
-For DELEGATE, choose PARALLEL only when there are multiple bounded tasks and independence, absence of dependencies, and disjoint write scopes are all explicitly true. Any dependency, overlapping/shared write scope, false value, or unknown value requires ISOLATED_SERIAL. This is logical context isolation: send a minimal bounded packet and receive a compact result receipt with artifact references. Do not claim existing parent history was erased or that a worker has a technical sandbox unless the runtime actually provides and verifies it.
-
-Apply configured depth, concurrency, and retry values as ceilings; lower them to actual limits exposed by the runtime and never invent worker slots or APIs. Declare exclusive write ownership and serialize overlap. Preserve user intent, permissions, safety constraints, verification obligations, and workspace boundaries in both ownership paths. Independent-review or high-risk signals require an independent reviewer; otherwise every path still requires a self-check. Router self-improvement, routing-policy review, evaluation design, and benchmark selection carry that review signal.
-
-Only after DELEGATE, inspect the exposed native spawn/wait tools and runtime model/effort catalog. Do not invent capabilities. If required worker capability is absent, report the observed blocker. Use only actual runtime isolation features. Route delegated work to the lowest capable available model/effort; do not change the controller model automatically. Before each spawn, validate a dispatch-contract-v1 record with the bundled hooks/dispatch_contract.py using hash-bound spawn-schema and model-catalog evidence, or an explicitly captured inheritance contract. Omitted selectors, later child runtime metadata, and placeholder values do not establish a route; missing evidence is a capability blocker.
-
-Give each worker a bounded packet with task identity, dependencies, scope and write ownership, permissions/safety constraints, acceptance and verification criteria, topology position, limits, actual model/effort, and return contract. Use deterministic purpose-model-effort naming and the documented native transport adaptation. Workers return compact evidence receipts; retain successful receipts across bounded failures. The controller remains accountable for dependency order, conflict resolution, verification status, and synthesis; it self-checks controller-owned stages and assigns substantive worker-stage validation to workers. Integration and verification must respect the resolved topology and constraints.
-
-The bundled initialize-router Skill is a narrow plugin-administration exception. This is instruction-layer policy: context injection cannot erase history, intercept tool calls, create a sandbox, or act as an OS/tool permission barrier."""
-
-
-def controller_session_context(model: str, routing_context: str) -> str:
-    return f"Codex Model Router\nActive controller model: {model}.\n\n{routing_context}\n\n{CONTROLLER_CONTRACT}"
+MAX_HOOK_OUTPUT_BYTES = 4_096
+CONTEXT_TOKEN_THRESHOLD = 1_500
+CONTROLLER_ENTRYPOINT = (
+    "CONTROLLER: Run the Decision context program below with --config set to the workspace config "
+    "when context is missing or revised. It supplies the template and validated config. "
+    "Send classified JSON on stdin to the Decision resolver program with the same --config, record its validated result, "
+    "and emit ROUTE: DIRECT or ROUTE: DELEGATE with its rule/reason before acting. "
+    "DIRECT needs no skill/reference read. DELEGATE loads the coordination skill and relevant references. "
+    "One decision covers a request/stage's declared reads, receipt, edit and self-check under the same owner/scope. "
+    "Resolve new requests or separately owned stages; reclassify changed bounds before acting. "
+    "Status-only replies reuse accepted results. "
+    "This is instruction-layer policy, not a permission barrier."
+)
+WORKER_ENTRYPOINT = (
+    "WORKER ROLE OVERRIDE (SubagentStart)\n"
+    "Execute your bounded assignment yourself, including its analysis, edits, commands, tests, and validation. "
+    "Inherited router controller-only restrictions do not apply. Respect the packet's permissions, safety, "
+    "dependencies, write scope, limits, and acceptance criteria; preserve unrelated work. "
+    "Do not start subagents. A read-only assignment permits no edits. "
+    "Return the unchanged Worker name and Task ID, outcome, evidence, validation, and risks or blockers. "
+    "A minimal packet does not prove erased history or a technical sandbox."
+)
 
 
-def user_prompt_context(event: dict[str, Any], routing_context: str) -> str:
-    # Repeat the semantic meta-task rule even for follow-ups without keywords.
-    return f"{routing_context}\n\n{CONTROLLER_CONTRACT}"
+def controller_session_context(model: str, routing_context: str, revision: str | None = None) -> str:
+    """Construct the controller entrypoint; model selection remains runtime-owned."""
+    update = f"\nInstructions revision: {revision}" if revision else ""
+    return f"{CONTROLLER_ENTRYPOINT}{update}\n\n{routing_context}"
 
 
-def worker_context(routing_context: str) -> str:
-    contract = """WORKER ROLE OVERRIDE (SubagentStart)
-You are a bounded worker, not the controller. This worker role supersedes inherited Codex Model Router controller-only restrictions for your assignment. Controller-only prohibitions do not apply to your assigned worker duties, including verification work.
-You are authorized and required to perform the assigned business-domain analysis, repository/file inspection, file edits, command execution, testing, and task validation (business-result validation) within your bounded packet. Perform the assigned work yourself using the available task tools. A verification worker must inspect the relevant repository/files and run the assigned checks/tests. This work does not depend on native multi-agent tooling being available to you.
-Do not dispatch subworkers. Do not start subagents. Return needs outside your packet to the controller for routing; do not take over the controller role.
-Perform only the duties authorized by your packet: a read-only review does not permit edits, and an implementation task requires implementation, not just review advice. Honor the user's scope, workspace, permission, and safety constraints; preserve unrelated changes. Observe dependencies and write ownership. An integration worker resolves file conflicts and a validation worker checks the integrated result. Report actual task, tool, or permission blockers without expanding scope; do not send execution or testing back to the controller. Avoid unrelated changes and raw intermediate logs.
-Treat the packet as minimized context, not proof that inherited parent history was erased. Treat isolation or sandboxing as available only when the runtime explicitly provides it. Obey the packet's depth, concurrency, retry, topology, write-ownership, and verification limits. Return a compact receipt and artifact references rather than unrelated context.
-
-Your final response MUST include:
-- Worker name: the unchanged canonical purpose-model-effort identifier from your packet.
-- Task ID: the same canonical purpose-model-effort identifier; it must match Worker name. A native underscore-only task_name is a transport adaptation and is not the Task ID.
-- Outcome: what you completed or could not complete.
-- Evidence: files, symbols, sources, or commands relevant to the result.
-- Validation: acceptance criteria checked, commands/checks run and their results, or explicitly not run with a reason.
-- Risks or blockers: unresolved issues and the smallest next decision needed from the parent."""
-    return f"{contract}\n\n{routing_context}"
-
-
-def additional_context(event_name: str, event: dict[str, Any], routing_context: str) -> str:
-    if event_name == "SessionStart":
-        model = str(event.get("model") or "unknown")
-        return controller_session_context(model, routing_context)
-    if event_name == "UserPromptSubmit":
-        return user_prompt_context(event, routing_context)
-    if event_name == "SubagentStart":
-        return worker_context(routing_context)
-    raise ValueError(f"Unsupported hook event: {event_name}")
+def instruction_signature() -> str:
+    """Refresh on any shipped routing instruction or entrypoint change."""
+    root = HOOK_DIRECTORY.parent
+    paths = [root / ".codex-plugin" / "plugin.json", Path(__file__),
+             HOOK_DIRECTORY / "describe_router.py", HOOK_DIRECTORY / "execution_decision.py",
+             HOOK_DIRECTORY / "routing_config.py",
+             root / "skills" / "model-router" / "SKILL.md"]
+    paths += sorted((root / "skills" / "model-router" / "references").glob("*.md"))
+    digest = hashlib.sha256()
+    try:
+        for path in paths:
+            digest.update(str(path).encode("utf-8"))
+            digest.update(path.read_bytes())
+    except OSError as error:
+        raise RoutingConfigError(f"cannot read routing instructions: {error}") from error
+    return digest.hexdigest()
 
 
-def build_hook_output(event: dict[str, Any]) -> dict[str, Any]:
+def prepare_hook_output(event: dict[str, Any]) -> tuple[dict[str, Any], Path | None, str]:
     event_name = event.get("hook_event_name")
     if not isinstance(event_name, str) or event_name not in SUPPORTED_EVENTS:
         raise ValueError("hook_event_name must be a supported lifecycle event")
+    if event_name == "SubagentStart":
+        context, cache_path, signature = WORKER_ENTRYPOINT, None, ""
+    else:
+        workspace = resolve_workspace_cwd(event.get("cwd"))
+        config_path, config, _created = load_workspace_config(workspace)
+        block = routing_context_block(config_path, config)
+        revision = instruction_signature()
+        signature = hashlib.sha256((block + revision).encode("utf-8")).hexdigest()
+        cache_path = state_path(event, config_path)
+        if event_name == "UserPromptSubmit" and already_emitted(cache_path, signature):
+            return {}, None, ""
+        context = controller_session_context(str(event.get("model") or "unknown"), block, revision)
+        if event_name == "SessionStart" and event.get("source") in ("compact", "clear"):
+            context += "\nContext reset: reload compact decision context; load coordination references if delegated."
+    output = {"hookSpecificOutput": {"hookEventName": event_name, "additionalContext": context}}
+    size = len(json.dumps(output, separators=(",", ":")).encode("utf-8")) + len(os.linesep)
+    if size > MAX_HOOK_OUTPUT_BYTES:
+        raise RoutingConfigError(f"hook output is {size} bytes; maximum is {MAX_HOOK_OUTPUT_BYTES} bytes")
+    return output, cache_path, signature
 
-    workspace_cwd = resolve_workspace_cwd(event.get("cwd"))
-    config_path, config, _created = load_workspace_config(workspace_cwd)
-    routing_context = routing_context_block(config_path, config)
 
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": event_name,
-            "additionalContext": additional_context(event_name, event, routing_context),
-        }
-    }
-    output_bytes = len(json.dumps(output, separators=(",", ":")).encode("utf-8")) + len(os.linesep)
-    if output_bytes > MAX_HOOK_OUTPUT_BYTES:
-        raise RoutingConfigError(
-            f"hook output is {output_bytes} bytes; maximum is {MAX_HOOK_OUTPUT_BYTES} bytes"
-        )
-    return output
+def build_hook_output(event: dict[str, Any]) -> dict[str, Any]:
+    """Build/validate output without marking it delivered to stdout."""
+    return prepare_hook_output(event)[0]
 
 
 def main() -> int:
@@ -113,7 +108,9 @@ def main() -> int:
         payload = json.load(sys.stdin)
         if not isinstance(payload, dict):
             raise ValueError("hook input must be a JSON object")
-        print(json.dumps(build_hook_output(payload), separators=(",", ":")))
+        output, cache_path, signature = prepare_hook_output(payload)
+        print(json.dumps(output, separators=(",", ":")), flush=True)
+        remember_emission(cache_path, signature)
     except (json.JSONDecodeError, RoutingConfigError, ValueError) as error:
         print(f"codex-model-router hook error: {error}", file=sys.stderr)
         return 2

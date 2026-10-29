@@ -16,13 +16,15 @@ native dispatch selector remains exactly `gpt-6.1-sol`.
 
 ## Workspace adoption
 
-The template remains schema v3. Reinstalling creates a missing workspace
+At the time of this upgrade the template was schema v3. Reinstalling creates a missing workspace
 config but preserves an existing one. Review local customizations before
 updating `runtime_resolution` to the new preference; preserve example IDs,
 execution modes, efforts, rationales, and local policy. Legacy `Terra` model
 classes still normalize to the Sol role in memory without rewriting the file.
 Schema v1/v2 files require an explicit migration to v3 and an original backup;
 the loader continues to reject obsolete schemas rather than silently migrate.
+The subsequent [Terra update](terra-support.md) introduces schema v4; its
+migration instructions supersede this historical workspace-adoption guidance.
 
 Source changes require the normal release bump, reinstall through the existing
 marketplace, and a new task to load the updated skills and hooks. The plugin

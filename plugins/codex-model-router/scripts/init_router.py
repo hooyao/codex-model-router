@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 from typing import Any, Optional, Tuple
 
@@ -119,7 +120,7 @@ def _python_runtime() -> tuple[Path, str]:
 def _hook_fixture(event_name: str, workspace: Path) -> dict[str, str]:
     return {
         "hook_event_name": event_name,
-        "session_id": "init-preflight",
+        "session_id": f"init-preflight-{uuid.uuid4().hex}",
         "cwd": str(workspace),
         "source": "startup",
         "model": "preflight",
@@ -140,6 +141,10 @@ def _validate_smoke_output(
         raise PreflightError(f"{label} returned invalid output: {error}") from error
     if hook_output.get("hookEventName") != event_name:
         raise PreflightError(f"{label} returned the wrong lifecycle event")
+    if event_name == "SubagentStart":
+        if not isinstance(context, str) or not context.startswith("WORKER ROLE OVERRIDE (SubagentStart)"):
+            raise PreflightError(f"{label} did not inject the worker role override")
+        return
     if "ROUTING_CONFIG_BEGIN" not in context or "ROUTING_CONFIG_END" not in context:
         raise PreflightError(f"{label} did not inject the routing config block")
     if str(config_path) not in context:

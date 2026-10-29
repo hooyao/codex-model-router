@@ -16,19 +16,21 @@ are explicitly independent, dependency-free, and write-disjoint.
 
 ## What It Does
 
-- Repeats an explicit pre-business-action DIRECT/DELEGATE gate on
-  `SessionStart` and `UserPromptSubmit`.
+- Loads a short routing entrypoint at session start and recovery; unchanged
+  user submissions add no repeated hook context. Each request still resolves
+  its own DIRECT/DELEGATE decision.
 - Records a versioned decision that separates ownership, delegate topology,
   and verification requirements; unknown signals cannot take the direct path.
 - Injects a bounded worker contract on `SubagentStart`.
-- Loads, validates, and injects editable repo-local routing examples on every
-  supported lifecycle event.
+- Validates editable repo-local routing configuration on lifecycle events and
+  reloads model guidance only when needed or changed.
 - Gives every dispatch a deterministic user-visible
   `<purpose>-<model>-<effort>` name, with a packet/result fallback when native
   dispatch cannot name the worker card.
-- Routes clear and repeatable work toward GPT-6 Luna, everyday coding and
-  read-heavy work toward GPT-6.1 Sol, and demanding hard-kernel work toward
-  GPT-6 Astra. Existing Terra workspace preferences load as Sol.
+- Routes repeatable work toward GPT-6 Luna, bounded visual, screen, and natural
+  writing tasks toward GPT-6.1 Terra, coding toward GPT-6.1 Sol, and demanding
+  hard-kernel work toward GPT-6 Astra. Legacy schema-v3 Terra preferences load
+  as Sol; schema v4 treats Terra as a distinct role.
 - Records each stage's owner, dependencies, write scope, context budget,
   acceptance criteria, and self-check. A lightweight primary may own a
   qualifying easy stage; a cheap worker is preferable when local tool context
@@ -193,6 +195,12 @@ serial delegation, and selective execution. Validate and generate the matrix:
 python evals/scripts/evaluate.py validate-manifest --manifest evals/benchmark.json
 python evals/scripts/runner.py --manifest evals/benchmark.json --output evals/generated
 ```
+
+The [plugin baseline history](evals/BASELINE_HISTORY.md) records the current
+accepted reference, earlier rejected candidates, measured comparators, and
+acceptance exceptions. Plugin 1.3.3 is the latest accepted reference with a
+serial-performance exception; historical context comparisons retain their
+original 1.3.0 baseline and scores.
 
 The scenarios target noisy investigation and receipt reuse, direct-to-delegate
 escalation, dependent serial work, safe parallelism with disjoint artifacts,

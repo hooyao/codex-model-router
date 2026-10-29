@@ -211,11 +211,17 @@ class LiveEvidenceTests(unittest.TestCase):
         manifest.parent.mkdir(parents=True)
         source = ROOT / "plugins" / "codex-model-router" / "hooks" / "execution_decision.py"
         shutil.copyfile(source, resolver)
+        source_skill = source.parent.parent / "skills" / "model-router"
+        installed_skill = installed / "skills" / "model-router"
+        shutil.copytree(source_skill, installed_skill)
         shutil.copyfile(self.root / "raw" / "plugin-manifest.json", manifest)
         content = self.activation_items[1]["payload"]["content"][0]
         content["text"] = content["text"].replace(
             "Decision resolver program: " + str(source),
             "Decision resolver program: " + str(resolver), 1)
+        content["text"] = content["text"].replace(
+            "Router skill: " + str(source_skill / "SKILL.md"),
+            "Router skill: " + str(installed_skill / "SKILL.md"), 1)
         self.write_activation_session()
         return content, resolver, manifest
 
@@ -607,6 +613,15 @@ class LiveEvidenceTests(unittest.TestCase):
         self.write_activation_session()
         self.assert_activation_fails("actual-hook-context")
 
+    def test_retained_v1_controller_context_remains_accepted(self):
+        config = live.parse_json(self.config_path)
+        content = self.activation_items[1]["payload"]["content"][0]
+        content["text"] = (live.LEGACY_CONTROLLER_CONTRACT + "\n" +
+                           live.legacy_routing_context_block(self.config_path, config))
+        self.write_activation_session()
+        report = self.report()
+        self.assertEqual("pass", report["activation_gate"]["status"], report["activation_gate"])
+
     def test_relocated_installed_resolver_passes_with_recomputed_session_index(self):
         _content, resolver, _manifest = self.relocate_activation_resolver()
         self.assertNotEqual(resolver, ROOT / "plugins" / "codex-model-router" / "hooks" / "execution_decision.py")
@@ -620,8 +635,7 @@ class LiveEvidenceTests(unittest.TestCase):
         changes = {
             "digest": original.replace("Validated config SHA256 (canonical JSON): ",
                                        "Validated config SHA256 (canonical JSON): 0", 1),
-            "policy": original.replace("EFFECTIVE_EXECUTION_POLICY:{",
-                                       'EFFECTIVE_EXECUTION_POLICY:{"tampered":true,', 1),
+            "skill-path": original.replace("Router skill: ", "Router skill: wrong-", 1),
             "config-path": original.replace("Workspace routing config: " + str(self.config_path),
                                             "Workspace routing config: " + str(self.root / "wrong-routing.json"), 1),
             "resolver-path": original.replace("Decision resolver program: " + str(resolver),

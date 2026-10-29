@@ -1,0 +1,73 @@
+{
+  "baseline": "e75ef8785d960b12e6d1ce27ad4c6b184b8a0fc0",
+  "unit": "UTF-8 bytes, not tokens or billed usage",
+  "events": [
+    "SessionStart",
+    "UserPromptSubmit",
+    "UserPromptSubmit",
+    "UserPromptSubmit",
+    "SubagentStart"
+  ],
+  "measurements": {
+    "before": [
+      {
+        "event": "SessionStart",
+        "context_bytes": 8274,
+        "output_bytes": 8501
+      },
+      {
+        "event": "UserPromptSubmit",
+        "context_bytes": 8214,
+        "output_bytes": 8442
+      },
+      {
+        "event": "UserPromptSubmit",
+        "context_bytes": 8214,
+        "output_bytes": 8442
+      },
+      {
+        "event": "UserPromptSubmit",
+        "context_bytes": 8214,
+        "output_bytes": 8442
+      },
+      {
+        "event": "SubagentStart",
+        "context_bytes": 5059,
+        "output_bytes": 5271
+      }
+    ],
+    "after": [
+      {
+        "event": "SessionStart",
+        "context_bytes": 734,
+        "output_bytes": 837
+      },
+      {
+        "event": "UserPromptSubmit",
+        "context_bytes": 0,
+        "output_bytes": 3
+      },
+      {
+        "event": "UserPromptSubmit",
+        "context_bytes": 0,
+        "output_bytes": 3
+      },
+      {
+        "event": "UserPromptSubmit",
+        "context_bytes": 0,
+        "output_bytes": 3
+      },
+      {
+        "event": "SubagentStart",
+        "context_bytes": 565,
+        "output_bytes": 646
+      }
+    ]
+  },
+  "instruction_bytes": {
+    "before_skill": 16452,
+    "after_skill": 3464,
+    "before_policy": 17746,
+    "after_policy": 3588
+  }
+}

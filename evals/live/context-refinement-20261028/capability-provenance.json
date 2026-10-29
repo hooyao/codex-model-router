@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "scope": "Retained platform capability evidence only, not a new refined-plugin probe.",
+  "source_ref": "050b8b7",
+  "canonicalization": "UTF-8 json.dumps(value, sort_keys=True, separators=(comma, colon), ensure_ascii=True), without terminal newline; original preflight hashes describe local byte streams before Git newline normalization.",
+  "files": {
+    "cancellation-read-note-r1-after.json": {
+      "source_path": "evals/live/context-regression-20261028/capability/cancellation-read-note-r1-after.json",
+      "original_local_sha256": "fe1eb761c810938b17ffbe85028521d7e410744e0e5c79d3e043beade99f019b",
+      "canonical_json_sha256": "0448d1ff9fb75538a73042e85d300d135f70a58e2b4573e93faa7a9ce39e1bc3"
+    },
+    "cancellation-read-note-r1-before.json": {
+      "source_path": "evals/live/context-regression-20261028/capability/cancellation-read-note-r1-before.json",
+      "original_local_sha256": "d0100d9a4e25ab4b7db041dc92df87f09b5db94bfc828ba5a71762c43d29eb3b",
+      "canonical_json_sha256": "5400b302270d1f051a603bbfdb411f8fa3e630d27e988260d1a963d8768c16b7"
+    },
+    "native-read-note-r1-after.json": {
+      "source_path": "evals/live/context-regression-20261028/capability/native-read-note-r1-after.json",
+      "original_local_sha256": "975e1beef99195c1fc96c12043ca539fd39866ba09569f9dbcc5633e56ab18d0",
+      "canonical_json_sha256": "41a12921ede94dd282f177cd364de9be41e11bfa8629af0c700de3d05e6be24b"
+    },
+    "native-read-note-r1-before.json": {
+      "source_path": "evals/live/context-regression-20261028/capability/native-read-note-r1-before.json",
+      "original_local_sha256": "f024da2df9df151332378799928e19304c60483b92b353ae81a6dfe21c8a9ca2",
+      "canonical_json_sha256": "e25d8e506f984079daa1013ccc435b0496d059c28a7c5ab623f0e42ebf02056d"
+    }
+  }
+}

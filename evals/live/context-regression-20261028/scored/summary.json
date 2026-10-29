@@ -1,0 +1,134 @@
+{
+  "scope": "small functional/overhead regression; process proof remains separate",
+  "records": 8,
+  "cases": {
+    "direct-small-control": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.640318123325528,
+          "token_ratio": 1.1283720133595958,
+          "estimated_cost_ratio": 0.9232319544970653
+        },
+        {
+          "repetition": 2,
+          "status": "incomplete"
+        },
+        {
+          "repetition": 3,
+          "status": "incomplete"
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": null,
+        "token_ratio": null,
+        "estimated_cost_ratio": null
+      },
+      "exploratory_artifact_and_economics_pass": false
+    },
+    "investigation-reuse": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.109005594658004,
+          "token_ratio": 0.9634584378637815,
+          "estimated_cost_ratio": 0.8748089140096037
+        },
+        {
+          "repetition": 2,
+          "status": "incomplete"
+        },
+        {
+          "repetition": 3,
+          "status": "incomplete"
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": null,
+        "token_ratio": null,
+        "estimated_cost_ratio": null
+      },
+      "exploratory_artifact_and_economics_pass": false
+    },
+    "serial-escalation": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.0720712620942925,
+          "token_ratio": 1.1599597415497627,
+          "estimated_cost_ratio": 0.9955306086955212
+        },
+        {
+          "repetition": 2,
+          "status": "incomplete"
+        },
+        {
+          "repetition": 3,
+          "status": "incomplete"
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": null,
+        "token_ratio": null,
+        "estimated_cost_ratio": null
+      },
+      "exploratory_artifact_and_economics_pass": false
+    },
+    "parallel-disjoint": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "status": "complete",
+          "quality_parity": true,
+          "wall_ratio": 1.0007416817238577,
+          "token_ratio": 0.9833521221615449,
+          "estimated_cost_ratio": 0.9252530228644822
+        },
+        {
+          "repetition": 2,
+          "status": "incomplete"
+        },
+        {
+          "repetition": 3,
+          "status": "incomplete"
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": null,
+        "token_ratio": null,
+        "estimated_cost_ratio": null
+      },
+      "exploratory_artifact_and_economics_pass": false
+    },
+    "architecture-review": {
+      "pairs": [
+        {
+          "repetition": 1,
+          "status": "incomplete"
+        },
+        {
+          "repetition": 2,
+          "status": "incomplete"
+        },
+        {
+          "repetition": 3,
+          "status": "incomplete"
+        }
+      ],
+      "median_paired_ratios": {
+        "wall_ratio": null,
+        "token_ratio": null,
+        "estimated_cost_ratio": null
+      },
+      "exploratory_artifact_and_economics_pass": false
+    }
+  },
+  "billing_status": "API-price estimates only; provider billing and upstream identity unverified",
+  "observed_campaign_usd_upper_bound": 1.8790505299999998
+}

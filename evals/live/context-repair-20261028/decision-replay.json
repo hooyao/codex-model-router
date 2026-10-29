@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "scope": "Zero-model deterministic replay of original classified requests. No performance claim.",
+  "original_subject": "6f925d760a6c820a282041b43ec847e6d8281818",
+  "candidate_version": "1.3.3",
+  "candidate_resolver_sha256": "54e9a4d1f7a6956e4255bfcb40537217fc068a5fd205d9650d4453e7048638c9",
+  "candidate_config_loader_sha256": "bcf2bc173fdcc489bb1ad70d0808f9c18940d26d85bfaf2cd3c1a3e8dcc7e03f",
+  "config_sha256": "7ab308c651760e5cc25c35ae085b20a6e1566b722b4a88c6eed182c701bb0027",
+  "records": [
+    {
+      "source_run_id": "scored-investigation-reuse-r1-after",
+      "source_receipt": "../context-refinement-20261028/scored/scored-investigation-reuse-r1-after.json",
+      "raw_events_sha256": "c671b304a82f9bf0b7bad316c4b1b29cd948d0e8767b5193bfced8490ccc45a8",
+      "source_command_sha256": "f193e601aec1cdbdd29efa8bb639978e96a549258a37fe590083f95d5482ef33",
+      "request": {
+        "schema_version": 1,
+        "decision_id": "ttl-authoritative-extraction",
+        "phase": "initial",
+        "prior_ownership": null,
+        "escalation_trigger": null,
+        "matched_example_ids": [
+          "luna-extraction",
+          "luna-local-bounded-change"
+        ],
+        "signals": {
+          "bounded_known_outcome": true,
+          "dependencies_absent": true,
+          "failure_or_recovery": false,
+          "high_risk": false,
+          "independent_review_required": false,
+          "long_running_or_monitoring": false,
+          "multiple_bounded_tasks": false,
+          "named_multistep_runbook": false,
+          "network_or_sync": false,
+          "one_local_scope": true,
+          "permissions_confirmed": true,
+          "safety_constraints_known": true,
+          "substantive_research_or_investigation": false,
+          "tasks_independent": false,
+          "verification_plan_present": true,
+          "write_scope_known": true,
+          "write_scopes_disjoint": true
+        }
+      },
+      "old_result": {
+        "configured_mode": "delegate",
+        "constraints": {
+          "context_policy": "minimal-packet-compact-receipt",
+          "max_concurrency": 3,
+          "max_depth": 1,
+          "max_retries": 1,
+          "write_policy": "exclusive-ownership-serialize-overlap"
+        },
+        "decision_id": "ttl-authoritative-extraction",
+        "delegate_topology": "ISOLATED_SERIAL",
+        "escalation_trigger": null,
+        "matched_rule": "configured-delegate",
+        "ownership": "DELEGATE",
+        "reasons": [
+          "effective configuration mandates delegation",
+          "parallel safety requirements are not all explicitly satisfied"
+        ],
+        "reclassified_from": null,
+        "schema_version": 1,
+        "verification_requirement": "SELF_CHECK"
+      },
+      "candidate_result": {
+        "configured_mode": "direct",
+        "constraints": {
+          "context_policy": "minimal-packet-compact-receipt",
+          "max_concurrency": 3,
+          "max_depth": 1,
+          "max_retries": 1,
+          "write_policy": "exclusive-ownership-serialize-overlap"
+        },
+        "decision_id": "ttl-authoritative-extraction",
+        "delegate_topology": "NONE",
+        "escalation_trigger": null,
+        "matched_rule": "bounded-direct-fast-path",
+        "ownership": "DIRECT",
+        "reasons": [
+          "all bounded direct requirements are explicitly satisfied"
+        ],
+        "reclassified_from": null,
+        "schema_version": 1,
+        "verification_requirement": "SELF_CHECK"
+      }
+    },
+    {
+      "source_run_id": "scored-investigation-reuse-r2-after",
+      "source_receipt": "../context-refinement-20261028/scored/scored-investigation-reuse-r2-after.json",
+      "raw_events_sha256": "52b7d80060da90e8ea773d418c6526c064b0d303e80c9d74e05e4c6966a42bb5",
+      "source_command_sha256": "344de9dcf751d66aeb13cd8a916b852a9bcf11364e8a12f6d0f72641ce7e62e7",
+      "request": {
+        "decision_id": "cache-ttl-update",
+        "phase": "initial",
+        "schema_version": 1,
+        "prior_ownership": null,
+        "escalation_trigger": null,
+        "matched_example_ids": [
+          "luna-local-bounded-change"
+        ],
+        "signals": {
+          "bounded_known_outcome": true,
+          "dependencies_absent": true,
+          "failure_or_recovery": false,
+          "high_risk": false,
+          "independent_review_required": false,
+          "long_running_or_monitoring": false,
+          "multiple_bounded_tasks": false,
+          "named_multistep_runbook": false,
+          "network_or_sync": false,
+          "one_local_scope": true,
+          "permissions_confirmed": true,
+          "safety_constraints_known": true,
+          "substantive_research_or_investigation": false,
+          "tasks_independent": false,
+          "verification_plan_present": true,
+          "write_scope_known": true,
+          "write_scopes_disjoint": true
+        }
+      },
+      "old_result": {
+        "configured_mode": "direct",
+        "constraints": {
+          "context_policy": "minimal-packet-compact-receipt",
+          "max_concurrency": 3,
+          "max_depth": 1,
+          "max_retries": 1,
+          "write_policy": "exclusive-ownership-serialize-overlap"
+        },
+        "decision_id": "cache-ttl-update",
+        "delegate_topology": "NONE",
+        "escalation_trigger": null,
+        "matched_rule": "bounded-direct-fast-path",
+        "ownership": "DIRECT",
+        "reasons": [
+          "all bounded direct requirements are explicitly satisfied"
+        ],
+        "reclassified_from": null,
+        "schema_version": 1,
+        "verification_requirement": "SELF_CHECK"
+      },
+      "candidate_result": {
+        "configured_mode": "direct",
+        "constraints": {
+          "context_policy": "minimal-packet-compact-receipt",
+          "max_concurrency": 3,
+          "max_depth": 1,
+          "max_retries": 1,
+          "write_policy": "exclusive-ownership-serialize-overlap"
+        },
+        "decision_id": "cache-ttl-update",
+        "delegate_topology": "NONE",
+        "escalation_trigger": null,
+        "matched_rule": "bounded-direct-fast-path",
+        "ownership": "DIRECT",
+        "reasons": [
+          "all bounded direct requirements are explicitly satisfied"
+        ],
+        "reclassified_from": null,
+        "schema_version": 1,
+        "verification_requirement": "SELF_CHECK"
+      }
+    },
+    {
+      "source_run_id": "scored-investigation-reuse-r3-after",
+      "source_receipt": "../context-refinement-20261028/scored/scored-investigation-reuse-r3-after.json",
+      "raw_events_sha256": "9b51d4b837437e6e7d1f2dcb8238e65cecad654bdc52bc18bbe8c14d5e1f109f",
+      "source_command_sha256": "133ce4f50d291b59b53088fdb3529ca3dbe38231f179c79de992d81e41487db7",
+      "request": {
+        "schema_version": 1,
+        "decision_id": "ttl-authoritative-extraction",
+        "phase": "initial",
+        "prior_ownership": null,
+        "escalation_trigger": null,
+        "matched_example_ids": [
+          "luna-local-bounded-change"
+        ],
+        "signals": {
+          "bounded_known_outcome": true,
+          "dependencies_absent": true,
+          "failure_or_recovery": false,
+          "high_risk": false,
+          "independent_review_required": false,
+          "long_running_or_monitoring": false,
+          "multiple_bounded_tasks": false,
+          "named_multistep_runbook": false,
+          "network_or_sync": false,
+          "one_local_scope": true,
+          "permissions_confirmed": true,
+          "safety_constraints_known": true,
+          "substantive_research_or_investigation": false,
+          "tasks_independent": false,
+          "verification_plan_present": true,
+          "write_scope_known": true,
+          "write_scopes_disjoint": true
+        }
+      },
+      "old_result": {
+        "configured_mode": "direct",
+        "constraints": {
+          "context_policy": "minimal-packet-compact-receipt",
+          "max_concurrency": 3,
+          "max_depth": 1,
+          "max_retries": 1,
+          "write_policy": "exclusive-ownership-serialize-overlap"
+        },
+        "decision_id": "ttl-authoritative-extraction",
+        "delegate_topology": "NONE",
+        "escalation_trigger": null,
+        "matched_rule": "bounded-direct-fast-path",
+        "ownership": "DIRECT",
+        "reasons": [
+          "all bounded direct requirements are explicitly satisfied"
+        ],
+        "reclassified_from": null,
+        "schema_version": 1,
+        "verification_requirement": "SELF_CHECK"
+      },
+      "candidate_result": {
+        "configured_mode": "direct",
+        "constraints": {
+          "context_policy": "minimal-packet-compact-receipt",
+          "max_concurrency": 3,
+          "max_depth": 1,
+          "max_retries": 1,
+          "write_policy": "exclusive-ownership-serialize-overlap"
+        },
+        "decision_id": "ttl-authoritative-extraction",
+        "delegate_topology": "NONE",
+        "escalation_trigger": null,
+        "matched_rule": "bounded-direct-fast-path",
+        "ownership": "DIRECT",
+        "reasons": [
+          "all bounded direct requirements are explicitly satisfied"
+        ],
+        "reclassified_from": null,
+        "schema_version": 1,
+        "verification_requirement": "SELF_CHECK"
+      }
+    }
+  ]
+}

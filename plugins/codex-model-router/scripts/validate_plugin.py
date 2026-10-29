@@ -20,8 +20,8 @@ HOOK_DIRECTORY = PLUGIN_ROOT / "hooks"
 if str(HOOK_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(HOOK_DIRECTORY))
 
+from router_hook import CONTEXT_TOKEN_THRESHOLD  # noqa: E402
 from routing_config import (  # noqa: E402
-    MAX_SERIALIZED_CONFIG_BYTES,
     RoutingConfigError,
     load_config,
 )
@@ -49,7 +49,6 @@ POSIX_HOOK_COMMAND = 'python3 "$PLUGIN_ROOT/hooks/router_hook.py"'
 WINDOWS_AUDIT_COMMAND = 'cmd.exe /d /c python "%PLUGIN_ROOT%\\hooks\\dispatch_audit.py"'
 POSIX_AUDIT_COMMAND = 'python3 "$PLUGIN_ROOT/hooks/dispatch_audit.py"'
 AUDIT_MATCHER = "^(Agent|spawn_agent|collaborationspawn_agent)$"
-MINIMUM_CONTEXT_LIMIT = MAX_SERIALIZED_CONFIG_BYTES + 8_192
 VERSION_BUMP_IGNORED_PATH_PARTS = {"__pycache__", ".pytest_cache"}
 VERSION_BUMP_IGNORED_SUFFIXES = {".pyc", ".pyo"}
 
@@ -204,10 +203,12 @@ def validate_hook_configuration(plugin_root: Path, errors: list[str]) -> None:
                 if handler.get("commandWindows") != WINDOWS_HOOK_COMMAND:
                     errors.append(f"{label} commandWindows must be {WINDOWS_HOOK_COMMAND!r}")
                 context_limit = handler.get("additionalContextLimit")
-                if type(context_limit) is not int or context_limit < MINIMUM_CONTEXT_LIMIT:
+                if type(context_limit) is not int or not 1 <= context_limit <= CONTEXT_TOKEN_THRESHOLD:
                     errors.append(
-                        f"{label} additionalContextLimit must be at least {MINIMUM_CONTEXT_LIMIT} bytes"
+                        f"{label} additionalContextLimit must be 1 to {CONTEXT_TOKEN_THRESHOLD} approximate tokens"
                     )
+            if event_name == "SessionStart" and group.get("matcher"):
+                errors.append("SessionStart must cover startup, resume, clear, fork, and compact recovery")
 
     for event_name in ("PreToolUse", "PostToolUse"):
         event_groups = hooks.get(event_name)
@@ -249,7 +250,9 @@ def validate_policy_files(plugin_root: Path, errors: list[str]) -> None:
         (skill_path, "model-router Skill"),
         (init_skill_path, "initialize-router Skill"),
         (policy_path, "routing policy"),
+        (policy_path.with_name("delegation.md"), "delegation contract"),
         (decision_contract_path, "routing decision contract"),
+        (plugin_root / "hooks" / "describe_router.py", "compact decision context program"),
         (naming_path, "worker naming helper"),
         (plugin_root / "scripts" / "init_router.py", "router init script"),
     ):
@@ -443,6 +446,8 @@ def validate_hook_output(raw_output: str, expected_event: str, label: str) -> li
     except json.JSONDecodeError as error:
         return [f"{label}: invalid JSON hook output: {error.msg}"]
 
+    if payload == {} and expected_event == "UserPromptSubmit":
+        return []
     output = payload.get("hookSpecificOutput") if isinstance(payload, dict) else None
     if not isinstance(output, dict):
         return [f"{label}: missing hookSpecificOutput object"]
@@ -451,6 +456,9 @@ def validate_hook_output(raw_output: str, expected_event: str, label: str) -> li
     context = output.get("additionalContext")
     if not isinstance(context, str) or not context.strip():
         errors.append(f"{label}: additionalContext must be non-empty")
+    elif expected_event == "SubagentStart":
+        if not context.startswith("WORKER ROLE OVERRIDE (SubagentStart)"):
+            errors.append(f"{label}: worker role override is missing")
     elif "ROUTING_CONFIG_BEGIN" not in context or "ROUTING_CONFIG_END" not in context:
         errors.append(f"{label}: additionalContext is missing the delimited routing config")
     return errors
@@ -484,7 +492,7 @@ def run_hook_fixture(plugin_root: Path, event_name: str, fixture_name: str) -> l
             return [f"fixture {fixture_name}: could not run hook program with {runtime}: {error}"]
 
         initialized_config = Path(temporary_directory) / ".codex-model-router" / "routing.json"
-        if result.returncode == 0 and not initialized_config.is_file():
+        if result.returncode == 0 and event_name != "SubagentStart" and not initialized_config.is_file():
             return [f"fixture {fixture_name}: hook did not initialize {initialized_config}"]
 
     if result.returncode != 0:

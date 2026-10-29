@@ -4,6 +4,9 @@ Every delegated spawn requires a validated `dispatch-contract-v1` record before
 the native tool call. Run the bundled `hooks/dispatch_contract.py` with the JSON
 record on standard input. A nonzero exit is a capability blocker. Omitted
 selectors are permitted only by the separately evidenced role route below.
+Read this contract when first dispatching or when it changes or is unavailable
+in context. Reuse its text and still-current evidence between spawns; run the
+validator on each new dispatch record.
 
 The record has these exact top-level fields:
 
