@@ -1,0 +1,1232 @@
+{
+  "schema_version": 1,
+  "scope": "Supplementary offline observations bound to original raw events; not a replacement artifact or full routing-compliance oracle.",
+  "parser": "Decode line-start resolver JSON in successful completed command outputs, including mixed outputs; retain original scored receipts unchanged. Command-failure categories are diagnostic heuristics, not solver failures.",
+  "records": [
+    {
+      "run_id": "scored-architecture-review-r1-after",
+      "raw_events_sha256": "59e1021508ca2bfa7d79b1df4a15fe33991e58bffc686f133a2f6f5b62df6ecf",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "decision-artifact",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "independent-review",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 12,
+        "worker": 5
+      },
+      "command_output_characters_by_role": {
+        "controller": 56743,
+        "worker": 2168
+      },
+      "nonzero_command_exits_by_role": {
+        "worker": 1,
+        "controller": 1
+      },
+      "nonzero_exit_categories": {
+        "script_syntax": 1,
+        "unclassified_nonzero_exit": 1
+      },
+      "native_tool_completions": {
+        "wait": 3
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a1852b-ea00-7121-9cec-7decd82cb259",
+          "message_sha256": "b0b4fb9e4e5d96fa563bdffa01cee982efd62c90daac22bf480e37327b8ea800",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a1852c-eeb2-79e2-a87a-5eaa22cad00e",
+          "message_sha256": "280533bca8335bbd21a9b032a8afaf3c00f187423cc146471b53cc52097130b3",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-architecture-review-r1-before",
+      "raw_events_sha256": "f634b5827c2d8d31bd8fd1f2d9bc63868eeaec4fc3b3d76a1d523177587fcefd",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "create-decision",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 4,
+        "worker": 9
+      },
+      "command_output_characters_by_role": {
+        "controller": 49116,
+        "worker": 18894
+      },
+      "nonzero_command_exits_by_role": {
+        "worker": 1
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1
+      },
+      "native_tool_completions": {
+        "wait": 7
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a18529-4426-7922-843f-c4b6a1ec5830",
+          "message_sha256": "53fe7652dd706e5577210fb09bcf9cd55e45cc5a21b4030c94f6db6c426a44fc",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a1852a-1545-7753-b1fa-48a96e897833",
+          "message_sha256": "6454660b4f0ada35281717b9275fa42345b043da75d7013ffd17dfa8c42a53df",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-architecture-review-r2-after",
+      "raw_events_sha256": "660c99df21acb911dd40de70e5315df112bb20e74457a1f02924e26cdbe70603",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "decision-artifact",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "independent-review",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 7,
+        "worker": 5
+      },
+      "command_output_characters_by_role": {
+        "controller": 55557,
+        "worker": 4808
+      },
+      "nonzero_command_exits_by_role": {},
+      "nonzero_exit_categories": {},
+      "native_tool_completions": {
+        "wait": 5
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a1853c-6c3e-7941-83fd-5f3dc2b3c463",
+          "message_sha256": "cd2d46d7e1390ce4a9c26c759beba9e034fb5a30c113badba29b682fe697fa02",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a1853d-017d-7a22-b92f-b959e8b0645a",
+          "message_sha256": "dba6b38c892ce288201cd57e1f8c55ad254d0e6db7df5cc905dd5a16b2603091",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-architecture-review-r2-before",
+      "raw_events_sha256": "b48d331db7a60a39a55bc22311b7da803ab8981e3503ff52b23bf1cbf752080e",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "create-decision",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 6,
+        "worker": 11
+      },
+      "command_output_characters_by_role": {
+        "controller": 61446,
+        "worker": 9131
+      },
+      "nonzero_command_exits_by_role": {
+        "worker": 1
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1
+      },
+      "native_tool_completions": {
+        "wait": 8
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a1853e-a85a-7f00-9bb7-a60f2bbbc154",
+          "message_sha256": "983ddf43f36ed472f6571d2b68fb295ec1a4e7f5dddcad477dd9af2e5319b027",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a1853f-60a5-7342-a020-e8c19a4fea2c",
+          "message_sha256": "a0000e95e664e373a8358b459ef4aee1f1c3c69bde847605b6528dcb09d002ef",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-architecture-review-r3-after",
+      "raw_events_sha256": "c6e228d94415cdd1c5a87afb747aca87c3f935aaee0d9c5f9359881db539ca67",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "create-decision",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "independent-review",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 10,
+        "worker": 8
+      },
+      "command_output_characters_by_role": {
+        "controller": 59361,
+        "worker": 4998
+      },
+      "nonzero_command_exits_by_role": {
+        "worker": 3
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 2,
+        "missing_git_metadata": 1
+      },
+      "native_tool_completions": {
+        "wait": 4
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a18552-7b69-7c11-b4de-953dbaf04fe1",
+          "message_sha256": "29cabf005ca9205d7a829e63b37290a53c93593271082ae16d03bed71fc3ea3d",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a18553-37ae-71e2-aa23-ec00e7c0d772",
+          "message_sha256": "1566ae16a70ec8e9132ad2697a4fb3726fe683bd47e274be277a315d498785ef",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-architecture-review-r3-before",
+      "raw_events_sha256": "a9d6749c6ec5bdb918906d7b9f2b7ed9ecfc38f8bfb9768ad48966b5f67a1258",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "create-decision",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "INDEPENDENT_REVIEW",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 6,
+        "worker": 7
+      },
+      "command_output_characters_by_role": {
+        "controller": 80545,
+        "worker": 5989
+      },
+      "nonzero_command_exits_by_role": {
+        "worker": 1
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1
+      },
+      "native_tool_completions": {
+        "wait": 6
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a1854f-8389-75a3-87b7-c28e4b386cc2",
+          "message_sha256": "012520140477d7009ed42587ef91fee823c70d1f650f10e5c3393c5efc8812fb",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a18550-4f0d-7c83-81b0-a0598ab7b300",
+          "message_sha256": "70681702379f0eb1f6152e0497ae9e4cb9524a29f9091783e096ddc2617598ca",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r1-after",
+      "raw_events_sha256": "e18b3baead5e954f2bcc336c12d3301e8b824200109a100cd09edfde82562b6f",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 4
+      },
+      "command_output_characters_by_role": {
+        "controller": 15531
+      },
+      "nonzero_command_exits_by_role": {},
+      "nonzero_exit_categories": {},
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a1851c-8df2-7710-9871-06d035293c83",
+          "completed_commands": 3,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a1851d-253f-7780-afe4-1fac4da59df5",
+          "completed_commands": 1,
+          "route_lines": 0
+        },
+        {
+          "turn_id": "01a1851d-493d-7070-87ec-2e861c46a0ab",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r1-before",
+      "raw_events_sha256": "8412bd78788ab0ddc06a59d3b69d2a2a8826aeda680ead63ae336d519c00e935",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-single-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "verify-readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 5
+      },
+      "command_output_characters_by_role": {
+        "controller": 13898
+      },
+      "nonzero_command_exits_by_role": {},
+      "nonzero_exit_categories": {},
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a1851b-75ef-7ed1-84e5-7f2c8cd745dc",
+          "completed_commands": 3,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a1851c-25c6-7cf3-86a2-a9c34547ec81",
+          "completed_commands": 2,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a1851c-6f76-7923-97d2-19c1d22b4555",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r2-after",
+      "raw_events_sha256": "0fb29c97dd70dc67b49d7514447c4339191215feb5c91cf8b3c2af813da8a254",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "verify-readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 5
+      },
+      "command_output_characters_by_role": {
+        "controller": 16003
+      },
+      "nonzero_command_exits_by_role": {},
+      "nonzero_exit_categories": {},
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a1852d-8e20-7720-998b-7dd05dfe4fab",
+          "completed_commands": 3,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a1852e-06d0-70b0-9f30-76fd1332a133",
+          "completed_commands": 2,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a1852e-4b6b-7cd1-89bf-8b9d3eea3437",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r2-before",
+      "raw_events_sha256": "bcd466a19438dd3b7c8ab846608f4aa1a7b2df5f4e769c6729872ed4d72b42f5",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "verify-readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 6
+      },
+      "command_output_characters_by_role": {
+        "controller": 13886
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1
+      },
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a1852e-6921-74d0-aeb9-08557880049b",
+          "completed_commands": 4,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a1852f-2e7a-71a3-ab98-139c1609ccf8",
+          "completed_commands": 2,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a1852f-76cc-7932-8518-df74abfddb51",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r3-after",
+      "raw_events_sha256": "dd9f2de793f77b0262ebc56a56642b82095c35c9abe313b67a61989de3a12528",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "verify-readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 5
+      },
+      "command_output_characters_by_role": {
+        "controller": 16015
+      },
+      "nonzero_command_exits_by_role": {},
+      "nonzero_exit_categories": {},
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a18541-621d-73f1-94e3-fe49b13b37ea",
+          "completed_commands": 3,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a18541-fe8e-7101-888a-9893e96531d4",
+          "completed_commands": 2,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a18542-5031-7db2-802e-c7e11a555c5e",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-direct-small-control-r3-before",
+      "raw_events_sha256": "60882d47afe723d8b8e04a84b8a9c5b7cf81991a74830680f5a6272ce4d98417",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "verify-readme-typo",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 6
+      },
+      "command_output_characters_by_role": {
+        "controller": 13885
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1
+      },
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": [],
+      "parent_turn_observations": [
+        {
+          "turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+          "completed_commands": 4,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a18540-f3e1-72d1-af11-0965cdd42fee",
+          "completed_commands": 2,
+          "route_lines": 1
+        },
+        {
+          "turn_id": "01a18541-355d-7963-ae90-9f8fb0ec0764",
+          "completed_commands": 0,
+          "route_lines": 0
+        }
+      ]
+    },
+    {
+      "run_id": "scored-investigation-reuse-r1-after",
+      "raw_events_sha256": "54f94545367ac1158c8f39f95e1dbbdc72391a4eea6d98cadfe876a673683f83",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "ttl-update",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 5
+      },
+      "command_output_characters_by_role": {
+        "controller": 15867
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1
+      },
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-investigation-reuse-r1-before",
+      "raw_events_sha256": "ffd8aff6556c5c1db717ec2cebbf8582a3a32e0720e90382a0200e69abed93ce",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "ttl-update",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 4
+      },
+      "command_output_characters_by_role": {
+        "controller": 30644
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1
+      },
+      "nonzero_exit_categories": {
+        "missing_git_metadata": 1
+      },
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-investigation-reuse-r2-after",
+      "raw_events_sha256": "70143dc233bdeef1417aa0f971c99663b1d2b911e9affc2abd0c27dc76600d1f",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "ttl-authoritative-update",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 4
+      },
+      "command_output_characters_by_role": {
+        "controller": 15932
+      },
+      "nonzero_command_exits_by_role": {},
+      "nonzero_exit_categories": {},
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-investigation-reuse-r2-before",
+      "raw_events_sha256": "96a890c89fe5400c6deac4b30f8f6e5ee58b2d27f12576f97daf1f95683703ed",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "ttl-update",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 5
+      },
+      "command_output_characters_by_role": {
+        "controller": 30928
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1
+      },
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-investigation-reuse-r3-after",
+      "raw_events_sha256": "8e0b9732874b53aac7eb7dc19a790db855a9fea9fcaed6ad0ed6b47c81b2e890",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "ttl-authoritative-update",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 5
+      },
+      "command_output_characters_by_role": {
+        "controller": 16425
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1
+      },
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-investigation-reuse-r3-before",
+      "raw_events_sha256": "cac4f1c95f72bdabc3919f4703377af0f03ee598c9ec10ad08d38055817bed23",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "ttl-update",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 5
+      },
+      "command_output_characters_by_role": {
+        "controller": 30699
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1
+      },
+      "native_tool_completions": {},
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r1-after",
+      "raw_events_sha256": "a173da8fb29b641e00ac5374d932ccbd748aac6b36ae5ba9f8a46bbc8027a499",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "replace-report-todos",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 7,
+        "worker": 3
+      },
+      "command_output_characters_by_role": {
+        "controller": 55933,
+        "worker": 585
+      },
+      "nonzero_command_exits_by_role": {},
+      "nonzero_exit_categories": {},
+      "native_tool_completions": {
+        "wait": 4
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a18527-a5a4-7ae2-b7a6-d588e084c57f",
+          "message_sha256": "eb5871b80527d70c1e9c961ac3c57e674e2cca30d0099544b8b46b4d71b602ec",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a18527-c853-71f3-9e22-aa2115585bcf",
+          "message_sha256": "2c02a55d2cfd30d7f163c054ff314239847b8a926b12b377822a77b734a83c46",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a18527-fa3c-7d43-9a84-b79a95340e9f",
+          "message_sha256": "9be367a31be5606424e04409b3176c1396207d30f0b2daa8c39fad5022bed65e",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r1-before",
+      "raw_events_sha256": "393cfbe2ef6af699b30ab713548ca71aff8fc0abc304884b537f6e3c99dbaaf2",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "replace-three-reports",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 6,
+        "worker": 8
+      },
+      "command_output_characters_by_role": {
+        "controller": 68725,
+        "worker": 8522
+      },
+      "nonzero_command_exits_by_role": {
+        "worker": 1
+      },
+      "nonzero_exit_categories": {
+        "missing_git_metadata": 1
+      },
+      "native_tool_completions": {
+        "wait": 3
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a18525-7ff2-7603-90d4-8876b500b519",
+          "message_sha256": "023d129a69f80ff00e29fa868dbf0f3681be506df9d3fe88e297f28190ea560a",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r2-after",
+      "raw_events_sha256": "0a54d7c80206b8160ae60ca3658045376bb3bb728ec74f014595c9631f617daa",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "reports-request",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 8,
+        "worker": 4
+      },
+      "command_output_characters_by_role": {
+        "controller": 47985,
+        "worker": 720
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1,
+        "worker": 1
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 2
+      },
+      "native_tool_completions": {
+        "wait": 2
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a18538-65fa-75b0-bb7c-85582d757c5d",
+          "message_sha256": "4c913f16139b24859d2f5b88cbd295daab21e521c94cae9fb879d82ca01a0b20",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r2-before",
+      "raw_events_sha256": "174a75a8e59ed2905b1ddee57c780b939eee34d4751700296250886d6a5f6444",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "reports-replacement",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 7,
+        "worker": 8
+      },
+      "command_output_characters_by_role": {
+        "controller": 80432,
+        "worker": 650
+      },
+      "nonzero_command_exits_by_role": {},
+      "nonzero_exit_categories": {},
+      "native_tool_completions": {
+        "wait": 4
+      },
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r3-after",
+      "raw_events_sha256": "eb2100eec5b1fe65a6e80caaef42773dd4d9d0df87d61c16e16c436190a8c3e8",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "reports-replacements",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 9,
+        "worker": 7
+      },
+      "command_output_characters_by_role": {
+        "controller": 69613,
+        "worker": 2262
+      },
+      "nonzero_command_exits_by_role": {},
+      "nonzero_exit_categories": {},
+      "native_tool_completions": {
+        "wait": 3
+      },
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-parallel-disjoint-r3-before",
+      "raw_events_sha256": "47991b6c0269708bb796c3af5f244bd03b7ff63090d684329f7c54b3f30408a7",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "replace-reports",
+          "configured_mode": "evaluate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "PARALLEL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 7,
+        "worker": 7
+      },
+      "command_output_characters_by_role": {
+        "controller": 64310,
+        "worker": 1992
+      },
+      "nonzero_command_exits_by_role": {},
+      "nonzero_exit_categories": {},
+      "native_tool_completions": {
+        "wait": 3
+      },
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-serial-escalation-r1-after",
+      "raw_events_sha256": "66551ae5bf074ff5bd3a77677374dcad15f47f8072c4161a4d45751677cdf686",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "schema-bounded",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "migration-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 9,
+        "worker": 9
+      },
+      "command_output_characters_by_role": {
+        "controller": 47471,
+        "worker": 5919
+      },
+      "nonzero_command_exits_by_role": {
+        "worker": 1
+      },
+      "nonzero_exit_categories": {
+        "json_numeric_guard": 1
+      },
+      "native_tool_completions": {
+        "wait": 3
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a18522-de40-7dd0-ad95-0880ff210762",
+          "message_sha256": "3dc5a40e54a882735f7f889cc549abd0911267aa5a4171dcc87686d741af9ee6",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-serial-escalation-r1-before",
+      "raw_events_sha256": "875fb073af8805592022ecbf6a99f8ab50bc5eb8909f2d02f1b89c69d357ca28",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "bounded-schema",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "migration-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 8,
+        "worker": 4
+      },
+      "command_output_characters_by_role": {
+        "controller": 50904,
+        "worker": 3513
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1,
+        "worker": 1
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1,
+        "missing_git_metadata": 1
+      },
+      "native_tool_completions": {
+        "wait": 3
+      },
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-serial-escalation-r2-after",
+      "raw_events_sha256": "a39b0d0e7a931281275bfef5cd9e69cfdf3093727ed736d000ed52953e15dae3",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "schema-bounded",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "migration-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 8,
+        "worker": 7
+      },
+      "command_output_characters_by_role": {
+        "controller": 44849,
+        "worker": 2047
+      },
+      "nonzero_command_exits_by_role": {
+        "worker": 2
+      },
+      "nonzero_exit_categories": {
+        "byte_guard": 1,
+        "json_numeric_guard": 1
+      },
+      "native_tool_completions": {
+        "wait": 5
+      },
+      "worker_messages_with_pass_text": []
+    },
+    {
+      "run_id": "scored-serial-escalation-r2-before",
+      "raw_events_sha256": "7e2b90ee7d47b3dbb86d24d832d8167f259b09f664ff0bf30676c9caf2365dc5",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "bounded-schema",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "migration-scope-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 9,
+        "worker": 6
+      },
+      "command_output_characters_by_role": {
+        "controller": 51109,
+        "worker": 4485
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1,
+        "worker": 2
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1,
+        "json_numeric_guard": 1,
+        "missing_git_metadata": 1
+      },
+      "native_tool_completions": {
+        "wait": 4
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a18535-a16b-7742-8f5a-c09e37035f0f",
+          "message_sha256": "f8139d3b5ce22a0bf20ce7c1514c3e833e5273ef90e64b91f604de758c723dad",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-serial-escalation-r3-after",
+      "raw_events_sha256": "582ada349056e3255c3a4bae36faad1f307ebdcf9878701814b12aef72a648d2",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "schema-bounded",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "migration-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 10,
+        "worker": 6
+      },
+      "command_output_characters_by_role": {
+        "controller": 56498,
+        "worker": 10686
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1,
+        "worker": 2
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1,
+        "missing_git_metadata": 1,
+        "json_numeric_guard": 1
+      },
+      "native_tool_completions": {
+        "wait": 6
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a18548-7ea7-7002-8f44-2d6ef679d484",
+          "message_sha256": "387802177f9c2fbfe7437b23bb9ea9706b4316b46d59e35b8ff0f8fd4c2f4e0d",
+          "contains_pass_text": true
+        }
+      ]
+    },
+    {
+      "run_id": "scored-serial-escalation-r3-before",
+      "raw_events_sha256": "86b9560e411ba1d09c2d45fc5534f714c9beebf3ab90c4fe5ae103ccd94998aa",
+      "resolver_decisions_in_mixed_command_outputs": [
+        {
+          "decision_id": "bounded-schema",
+          "configured_mode": "direct",
+          "ownership": "DIRECT",
+          "delegate_topology": "NONE",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": null
+        },
+        {
+          "decision_id": "migration-expanded",
+          "configured_mode": "delegate",
+          "ownership": "DELEGATE",
+          "delegate_topology": "ISOLATED_SERIAL",
+          "verification_requirement": "SELF_CHECK",
+          "escalation_trigger": "scope-expanded"
+        }
+      ],
+      "completed_commands_by_role": {
+        "controller": 8,
+        "worker": 7
+      },
+      "command_output_characters_by_role": {
+        "controller": 65047,
+        "worker": 3509
+      },
+      "nonzero_command_exits_by_role": {
+        "controller": 1,
+        "worker": 2
+      },
+      "nonzero_exit_categories": {
+        "unclassified_nonzero_exit": 1,
+        "missing_git_metadata": 1,
+        "script_syntax": 1
+      },
+      "native_tool_completions": {
+        "wait": 6
+      },
+      "worker_messages_with_pass_text": [
+        {
+          "session_id": "01a18545-ffd7-7b60-a53b-b9b96ea59930",
+          "message_sha256": "9743142539aa99bc98182f95eb7500b9f4b7cee48a49d1a4da1c975baa3be158",
+          "contains_pass_text": true
+        },
+        {
+          "session_id": "01a18545-ffd7-7b60-a53b-b9b96ea59930",
+          "message_sha256": "6408e93617aa2dd7bb2da8344faedefc83d8526824d614aab2855158b8f5b730",
+          "contains_pass_text": true
+        }
+      ]
+    }
+  ]
+}

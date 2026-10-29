@@ -1,0 +1,351 @@
+{
+  "run_id": "scored-direct-small-control-r3-before",
+  "mode": "scored",
+  "arm": "before",
+  "case_id": "direct-small-control",
+  "repetition": 3,
+  "model": "gpt-6.1-sol",
+  "effort": "low",
+  "started_utc": "2026-10-29T01:22:35.590356+00:00",
+  "complete": true,
+  "hooks": [
+    {
+      "eventName": "preToolUse",
+      "pluginId": "codex-model-router@context-before",
+      "currentHash": "sha256:4fadcc93db5f6b143fbecdfb0a5c5953f0822c3a04fca88a16376d7fe6f40b05/sha256:17dcfb25265a297c570a1e54562158e645cc7f9cfa3ae11e29cab473b1ac4ba9",
+      "trustStatus": "trusted"
+    },
+    {
+      "eventName": "postToolUse",
+      "pluginId": "codex-model-router@context-before",
+      "currentHash": "sha256:0bd6433353822ddb51cf5c07e44a3cc66e93f1ace78a602d9676835384e2435e/sha256:17dcfb25265a297c570a1e54562158e645cc7f9cfa3ae11e29cab473b1ac4ba9",
+      "trustStatus": "trusted"
+    },
+    {
+      "eventName": "sessionStart",
+      "pluginId": "codex-model-router@context-before",
+      "currentHash": "sha256:358081920e9cbe4ef259ea048891ed884a61c0c35f78960b1b86f88fd9f49738/sha256:17dcfb25265a297c570a1e54562158e645cc7f9cfa3ae11e29cab473b1ac4ba9",
+      "trustStatus": "trusted"
+    },
+    {
+      "eventName": "userPromptSubmit",
+      "pluginId": "codex-model-router@context-before",
+      "currentHash": "sha256:303a53cc211acc4c71b2bab72424f557455821b52dfb821823ff8bf8d4676659/sha256:17dcfb25265a297c570a1e54562158e645cc7f9cfa3ae11e29cab473b1ac4ba9",
+      "trustStatus": "trusted"
+    },
+    {
+      "eventName": "subagentStart",
+      "pluginId": "codex-model-router@context-before",
+      "currentHash": "sha256:cdf685a22f7a63aac0f9948d20dbf40f1d89ddd7f2f09fdcdf37541cf13cf74f/sha256:17dcfb25265a297c570a1e54562158e645cc7f9cfa3ae11e29cab473b1ac4ba9",
+      "trustStatus": "trusted"
+    }
+  ],
+  "wall_seconds": 55.504,
+  "usage_issues": [],
+  "usage": {
+    "estimated_usd": 0.1079253,
+    "estimated_usd_lower_bound": 0.1079253,
+    "estimated_usd_upper_bound": 0.1079253,
+    "model_calls": 9,
+    "long_context_calls": 0,
+    "token_classes": {
+      "input_tokens": 221851,
+      "cached_input_tokens": 190138,
+      "cache_write_input_tokens": 26631,
+      "output_tokens": 1217,
+      "reasoning_output_tokens": 39
+    },
+    "unknown_models": [],
+    "unknown_usage": [],
+    "sessions": [
+      {
+        "id": "01a18540-73c7-7b10-91b0-2b3d9499b85d",
+        "parent_id": null,
+        "agent_path": null,
+        "model": "gpt-6.1-sol",
+        "effort": "low",
+        "turns": [
+          {
+            "turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "terminal": "task_complete",
+            "calls": 5,
+            "terminal_timestamp": "2026-10-29T01:23:08.239Z"
+          },
+          {
+            "turn_id": "01a18540-f3e1-72d1-af11-0965cdd42fee",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "terminal": "task_complete",
+            "calls": 3,
+            "terminal_timestamp": "2026-10-29T01:23:25.184Z"
+          },
+          {
+            "turn_id": "01a18541-355d-7963-ae90-9f8fb0ec0764",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "terminal": "task_complete",
+            "calls": 1,
+            "terminal_timestamp": "2026-10-29T01:23:30.109Z"
+          }
+        ],
+        "terminal": "task_complete",
+        "calls": 9,
+        "responses": [
+          {
+            "turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+            "root_turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "response_id_sha256": "f8fb7b017db9635c428045c70b448d058d540bbc8d9de4ef0a59b73ee04a5cca",
+            "token_classes": {
+              "input_tokens": 19565,
+              "cached_input_tokens": 0,
+              "cache_write_input_tokens": 17877,
+              "output_tokens": 56,
+              "reasoning_output_tokens": 0
+            },
+            "estimated_usd": 0.0486285,
+            "estimated_usd_lower_bound": 0.0486285,
+            "estimated_usd_upper_bound": 0.0486285
+          },
+          {
+            "turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+            "root_turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "response_id_sha256": "1b3a3eb55fe04837c97fba75dc59fa03453b3917392e3748bbd12f47060b4caf",
+            "token_classes": {
+              "input_tokens": 23246,
+              "cached_input_tokens": 17877,
+              "cache_write_input_tokens": 5366,
+              "output_tokens": 347,
+              "reasoning_output_tokens": 0
+            },
+            "estimated_usd": 0.0186787,
+            "estimated_usd_lower_bound": 0.0186787,
+            "estimated_usd_upper_bound": 0.0186787
+          },
+          {
+            "turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+            "root_turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "response_id_sha256": "8c734ee284834dd9db076d1018527ae9b7fc21cfb9f9a148343bbff4e1187a87",
+            "token_classes": {
+              "input_tokens": 23775,
+              "cached_input_tokens": 23243,
+              "cache_write_input_tokens": 529,
+              "output_tokens": 82,
+              "reasoning_output_tokens": 15
+            },
+            "estimated_usd": 0.0044728,
+            "estimated_usd_lower_bound": 0.0044728,
+            "estimated_usd_upper_bound": 0.0044728
+          },
+          {
+            "turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+            "root_turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "response_id_sha256": "ed3049c1db99a2930c9fdeba237bd7bf2a22aa9a859e58ec7a8134c7bbafcd4a",
+            "token_classes": {
+              "input_tokens": 23914,
+              "cached_input_tokens": 23772,
+              "cache_write_input_tokens": 139,
+              "output_tokens": 170,
+              "reasoning_output_tokens": 0
+            },
+            "estimated_usd": 0.0044307,
+            "estimated_usd_lower_bound": 0.0044307,
+            "estimated_usd_upper_bound": 0.0044307
+          },
+          {
+            "turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+            "root_turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "response_id_sha256": "b11927c6a2db13d0868f62f284d7a2c19a3bef60aec7fbcd28c1e03cfa36eaca",
+            "token_classes": {
+              "input_tokens": 24152,
+              "cached_input_tokens": 23911,
+              "cache_write_input_tokens": 238,
+              "output_tokens": 26,
+              "reasoning_output_tokens": 0
+            },
+            "estimated_usd": 0.0032521,
+            "estimated_usd_lower_bound": 0.0032521,
+            "estimated_usd_upper_bound": 0.0032521
+          },
+          {
+            "turn_id": "01a18540-f3e1-72d1-af11-0965cdd42fee",
+            "root_turn_id": "01a18540-f3e1-72d1-af11-0965cdd42fee",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "response_id_sha256": "19f4d2e43090432ae9f7c1c5ebf7628efae96bbe34b17295603d429f0d68bb00",
+            "token_classes": {
+              "input_tokens": 25882,
+              "cached_input_tokens": 24149,
+              "cache_write_input_tokens": 45,
+              "output_tokens": 341,
+              "reasoning_output_tokens": 0
+            },
+            "estimated_usd": 0.0093134,
+            "estimated_usd_lower_bound": 0.0093134,
+            "estimated_usd_upper_bound": 0.0093134
+          },
+          {
+            "turn_id": "01a18540-f3e1-72d1-af11-0965cdd42fee",
+            "root_turn_id": "01a18540-f3e1-72d1-af11-0965cdd42fee",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "response_id_sha256": "12d0908c655f1347ecf1686ea86ec2669aa6ecde15b6443b421fccec75db52ea",
+            "token_classes": {
+              "input_tokens": 26404,
+              "cached_input_tokens": 24194,
+              "cache_write_input_tokens": 2207,
+              "output_tokens": 117,
+              "reasoning_output_tokens": 0
+            },
+            "estimated_usd": 0.0091129,
+            "estimated_usd_lower_bound": 0.0091129,
+            "estimated_usd_upper_bound": 0.0091129
+          },
+          {
+            "turn_id": "01a18540-f3e1-72d1-af11-0965cdd42fee",
+            "root_turn_id": "01a18540-f3e1-72d1-af11-0965cdd42fee",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "response_id_sha256": "5b1e7cddbea01874ec089e16b7246ba617d2080ad2c636e62750b72e175f6310",
+            "token_classes": {
+              "input_tokens": 26594,
+              "cached_input_tokens": 26401,
+              "cache_write_input_tokens": 190,
+              "output_tokens": 23,
+              "reasoning_output_tokens": 0
+            },
+            "estimated_usd": 0.0033511,
+            "estimated_usd_lower_bound": 0.0033511,
+            "estimated_usd_upper_bound": 0.0033511
+          },
+          {
+            "turn_id": "01a18541-355d-7963-ae90-9f8fb0ec0764",
+            "root_turn_id": "01a18541-355d-7963-ae90-9f8fb0ec0764",
+            "model": "gpt-6.1-sol",
+            "effort": "low",
+            "response_id_sha256": "cdde81548ccda4cca41de8f89243c03b2a50412b72f0acd60d2a65cdb9e4ec0c",
+            "token_classes": {
+              "input_tokens": 28319,
+              "cached_input_tokens": 26591,
+              "cache_write_input_tokens": 40,
+              "output_tokens": 55,
+              "reasoning_output_tokens": 24
+            },
+            "estimated_usd": 0.0066851,
+            "estimated_usd_lower_bound": 0.0066851,
+            "estimated_usd_upper_bound": 0.0066851
+          }
+        ],
+        "token_classes": {
+          "input_tokens": 221851,
+          "cached_input_tokens": 190138,
+          "cache_write_input_tokens": 26631,
+          "output_tokens": 1217,
+          "reasoning_output_tokens": 39
+        },
+        "reported_total_usage": {
+          "input_tokens": 221851,
+          "cached_input_tokens": 190138,
+          "cache_write_input_tokens": 26631,
+          "output_tokens": 1217,
+          "reasoning_output_tokens": 39,
+          "total_tokens": 223068
+        },
+        "estimated_usd": 0.1079253,
+        "estimated_usd_lower_bound": 0.1079253,
+        "estimated_usd_upper_bound": 0.1079253
+      }
+    ]
+  },
+  "usage_complete": true,
+  "sessions": 1,
+  "native_evidence": [
+    {
+      "sha256": "d2280c4c5a2e15a9f4a4a14db6e2e2df91f39d0afc3382228731d2085932f1d0",
+      "bytes": 295128
+    }
+  ],
+  "artifact_pass": true,
+  "grader": "exact-tree-v2",
+  "grade_complete": true,
+  "actual_tree_sha256": "8eb5ca2d0badb62c8642abe90f254cfca01f5698e981082c94eaa6d525f2140d",
+  "sandbox_artifact_reads": [],
+  "initial_tree_sha256": "a72af7d358f233cb742ae53931a70d1beb5c1c73272bc15a77313fc7f9238f89",
+  "hook_events": [
+    {
+      "thread_id": "01a18540-73c7-7b10-91b0-2b3d9499b85d",
+      "event": "sessionStart",
+      "status": "completed",
+      "context_bytes": 8461
+    },
+    {
+      "thread_id": "01a18540-73c7-7b10-91b0-2b3d9499b85d",
+      "event": "userPromptSubmit",
+      "status": "completed",
+      "context_bytes": 8403
+    },
+    {
+      "thread_id": "01a18540-73c7-7b10-91b0-2b3d9499b85d",
+      "event": "userPromptSubmit",
+      "status": "completed",
+      "context_bytes": 8403
+    },
+    {
+      "thread_id": "01a18540-73c7-7b10-91b0-2b3d9499b85d",
+      "event": "userPromptSubmit",
+      "status": "completed",
+      "context_bytes": 8403
+    }
+  ],
+  "turns": [
+    {
+      "turn_id": "01a18540-74a2-70d3-836c-7ba1073f6ce7",
+      "thread_id": "01a18540-73c7-7b10-91b0-2b3d9499b85d",
+      "status": "completed"
+    },
+    {
+      "turn_id": "01a18540-f3e1-72d1-af11-0965cdd42fee",
+      "thread_id": "01a18540-73c7-7b10-91b0-2b3d9499b85d",
+      "status": "completed"
+    },
+    {
+      "turn_id": "01a18541-355d-7963-ae90-9f8fb0ec0764",
+      "thread_id": "01a18540-73c7-7b10-91b0-2b3d9499b85d",
+      "status": "completed"
+    }
+  ],
+  "observed_resolver_decisions": [
+    {
+      "decision_id": "readme-typo",
+      "ownership": "DIRECT",
+      "delegate_topology": "NONE",
+      "verification_requirement": "SELF_CHECK",
+      "escalation_trigger": null
+    },
+    {
+      "decision_id": "verify-readme-typo",
+      "ownership": "DIRECT",
+      "delegate_topology": "NONE",
+      "verification_requirement": "SELF_CHECK",
+      "escalation_trigger": null
+    }
+  ],
+  "raw_events_sha256": "60882d47afe723d8b8e04a84b8a9c5b7cf81991a74830680f5a6272ce4d98417",
+  "route_lines": [
+    "ROUTE: DIRECT \u2014 bounded local edit with a byte-for-byte self-check.",
+    "ROUTE: DIRECT \u2014 bounded, read-only verification."
+  ],
+  "final_answer": "Final verification passed: README.md contains `plugin`, and `plguin` is absent. All current files remain unchanged.",
+  "native_workers": 0
+}

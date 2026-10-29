@@ -1,7 +1,10 @@
 # Context regression diagnosis and 1.3.3 repair
 
-Status: deterministic repair verified; fresh live performance is not yet
-measured. No model calls were made for this diagnosis or repair.
+Update on 2026-10-29: the separately approved
+[fresh live cohort](../context-repair-20261029/REPORT.md) completed. The original
+investigation case meets its thresholds; overall performance still fails on
+serial token/cost usage. The zero-call diagnosis/replay below remains separate
+from that paid cohort. No model calls were made for this diagnosis or repair.
 
 The original [1.3.2 cohort](../context-refinement-20261028/REPORT.md) remains
 NOT PASSED. Its original scores, requests, costs, and receipts are unchanged.
