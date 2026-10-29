@@ -1,10 +1,14 @@
 # Plugin 1.3.3 repair validation, 2026-10-29
 
-**Overall verdict: NOT PASSED.** The original investigation/reuse regression
+**PR acceptance: accepted with a user-approved serial exception on 2026-10-29.**
+See the separate [acceptance decision](ACCEPTANCE.md).
+
+**Predeclared benchmark verdict: NOT PASSED.** The original investigation/reuse regression
 meets the predeclared thresholds in this fresh cohort, with no unnecessary
 worker and one observed decision in each after run. However, serial escalation
-fails the total-token (+9.0%) and API-estimated-cost (+18.3%) thresholds. PR #10
-still does not satisfy overall performance preservation.
+fails the total-token (+9.0%) and API-estimated-cost (+18.3%) thresholds. The
+user subsequently accepted these measured serial increases for PR #10; the
+benchmark measurements, thresholds, and original verdict remain unchanged.
 
 ## Subjects and protocol
 
@@ -129,10 +133,12 @@ proofs were not charged again. Actual copilot-bridge charges and upstream model
 identity remain unverified; this is not a provider bill.
 
 The original investigation defect is repaired and its fresh case meets the
-declared thresholds. Overall performance acceptance remains open because the
-serial token/cost regression fails. Correct artifacts and passing CI do not
-override this result. No extra paid experiments are authorized by unused
-estimate allowance from this completed cohort.
+declared thresholds. The user subsequently accepted the serial token/cost
+increases as a scoped exception for PR #10, documented separately in
+[ACCEPTANCE.md](ACCEPTANCE.md). The predeclared benchmark verdict remains a
+failure; PR acceptance records the later user decision. No extra paid
+experiments are authorized by unused estimate allowance from this completed
+cohort.
 
 Replay public arithmetic, medians, provenance, and behavior observations:
 

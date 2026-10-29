@@ -4,6 +4,8 @@ Completed: 30/30 artifact checks passed with complete response accounting.
 The API-price estimate was $4.759797715. Overall performance did not pass
 because serial escalation exceeded the token/cost thresholds. See the
 [retained report](REPORT.md); acceptance rules below are unchanged.
+The user subsequently [accepted the measured serial tradeoff](ACCEPTANCE.md)
+for PR #10 as an exception; the original benchmark rules and scores remain fixed.
 
 The user approved five scenarios, three fresh matched pairs per scenario
 (30 arms), and an additional $7 observed API-price-estimate stop on 2026-10-29.

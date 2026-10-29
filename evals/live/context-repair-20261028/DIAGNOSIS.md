@@ -5,6 +5,8 @@ Update on 2026-10-29: the separately approved
 investigation case meets its thresholds; overall performance still fails on
 serial token/cost usage. The zero-call diagnosis/replay below remains separate
 from that paid cohort. No model calls were made for this diagnosis or repair.
+The user subsequently [accepted the serial tradeoff](../context-repair-20261029/ACCEPTANCE.md)
+for PR #10 as a scoped exception; benchmark scores remain unchanged.
 
 The original [1.3.2 cohort](../context-refinement-20261028/REPORT.md) remains
 NOT PASSED. Its original scores, requests, costs, and receipts are unchanged.
